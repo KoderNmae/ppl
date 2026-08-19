@@ -195,7 +195,7 @@ a{color:var(--accent)}
 /* Профиль: у Егора — исходная программа (миграция), у новых — анкета первого запуска */
 const EGOR = {
   name:'Егор', sex:'m', age:31, height:180, startWeight:127,
-  w1:'2026-08-24', legacyWeek0:true,
+  w1:'2026-08-24', legacyWeek0:true, weeks:12,
   startsText:{bench:'50 кг', leg:'120 кг', thrust:'90–100 кг'},
   targets:{0:127.0,1:125.1,2:124.1,3:123.1,4:122.2,5:121.3,6:120.5,7:119.9,8:119.0,9:118.2,10:117.5,11:116.7,12:116.0},
   checkpoints:[
@@ -206,7 +206,9 @@ const EGOR = {
 };
 let PROF = null;
 let W1 = null, PROG_END = null, TARGETS = null, CHECKPOINTS = null, SESSIONS = null;
-const STEP_GOAL = w => w<=2 ? 7000 : (w<=7 ? 8500 : 10000);
+const WEEKS = () => (PROF && PROF.weeks) || 12;
+const deloadWeeks = () => { const n = WEEKS(); return n>=16 ? [7,13] : n>=10 ? [7] : []; };
+const STEP_GOAL = w => w<=2 ? 7000 : (w <= (WEEKS()>=16?9:WEEKS()>=10?7:4) ? 8500 : 10000);
 /* Расчёт плана по анкете: Миффлин—Сан-Жеор + правила программы */
 function calcPlan(p){
   const bmr = 10*p.startWeight + 6.25*p.height - 5*p.age + (p.sex==='m'?5:-161);
@@ -215,8 +217,9 @@ function calcPlan(p){
   const kcal = Math.max(p.sex==='m'?1800:1500, Math.round(bmr*1.45*(1-defPct)/50)*50);
   const prot = Math.min(200, Math.max(110, Math.round(p.startWeight*1.4/5)*5));
   const rate = bmi>=30?0.0075 : bmi>=25?0.0055 : 0.004;
+  const weeks = p.weeks || 12;
   const targets = {0: Math.round(p.startWeight*10)/10};
-  for (let w=1; w<=12; w++){
+  for (let w=1; w<=weeks; w++){
     const prev = targets[w-1];
     targets[w] = Math.round((prev - prev*rate*(w===1?2:1))*10)/10;
   }
@@ -226,22 +229,25 @@ function checkpointsFor(p){
   if (p.checkpoints) return p.checkpoints;
   const b = p.starts && p.starts.bench;
   const st = w => b
-    ? 'жим ≈'+(Math.round(b*(w===4?1:w===8?1.04:1.1)/2.5)*2.5)+' кг · остальные веса растут в том же темпе'
+    ? 'жим ≈'+(Math.round(b*(w<=4?1:w<=8?1.04:w<=12?1.1:1.15)/2.5)*2.5)+' кг · остальные веса растут в том же темпе'
     : 'рабочие веса заметно выше стартовых';
-  return [4,8,12].map(w => ({
+  const weeks = p.weeks || 12;
+  const pts = []; for (let w=4; w<=weeks; w+=4) pts.push(w);
+  return pts.map(w => ({
     week:w,
     wmin: Math.round((p.targets[w]-0.6)*10)/10,
-    wmax: Math.round((p.targets[w]+(w===12?2:1.2))*10)/10,
+    wmax: Math.round((p.targets[w]+(w===weeks?2:1.2))*10)/10,
     txt: st(w),
   }));
 }
 function buildProgram(){
   W1 = fromKey(PROF.w1);
-  PROG_END = new Date(W1.getTime() + 83*864e5);
+  PROG_END = new Date(W1.getTime() + (WEEKS()*7-1)*864e5);
   TARGETS = PROF.targets;
   CHECKPOINTS = checkpointsFor(PROF).map(c => ({...c, date: key(new Date(W1.getTime() + (c.week*7-1)*864e5))}));
   const stx = PROF.startsText || {};
   EXDB.Push[0].start = stx.bench || 'подбор';
+  EXDB.Pull[0].start = stx.pull || 'подбор';
   EXDB.Legs[0].start = stx.leg || 'подбор';
   EXDB.Legs[1].start = stx.thrust || 'подбор';
   SESSIONS = buildSessions();
@@ -390,7 +396,11 @@ function techFor(name){
   }
   return T;
 }
-function phaseOf(w){ return w<=2?'p0' : w<=6?'p1' : w===7?'deload' : 'p2'; }
+function phaseOf(w){
+  if (w<=2) return 'p0';
+  if (deloadWeeks().includes(w)) return 'deload';
+  return w <= (WEEKS()>=10?6:5) ? 'p1' : 'p2';
+}
 const PHASE_NAME = {p0:'Возвращение', p1:'Разгон', deload:'Разгрузка', p2:'Новая территория'};
 // тренировки: очередь по порядку (пропустил — делаешь следующую, даты — ориентир)
 function buildSessions(){
@@ -402,7 +412,7 @@ function buildSessions(){
   }
   const rot = ['Push','Pull','Legs'];
   let i = 0;
-  for (let w = 0; w < 12; w++)
+  for (let w = 0; w < WEEKS(); w++)
     for (const dow of [0,1,3,5]) {
       const d = new Date(W1); d.setDate(d.getDate() + w*7 + dow);
       list.push({w:w+1, d, t:rot[i++ % 3]});
@@ -451,7 +461,7 @@ function weekOf(d){                       // календарная неделя
   return Math.min(99, Math.floor((d - W1)/864e5/7) + 1);
 }
 function planWeight(d){                   // плановая траектория на день
-  const w = weekOf(d); if (w > 12) return TARGETS[12];
+  const w = weekOf(d); if (w > WEEKS()) return TARGETS[WEEKS()];
   if (w === 0 && !PROF.legacyWeek0) return TARGETS[0];
   const ws = w===0 ? new Date(2026,7,19) : new Date(W1.getTime()+ (w-1)*7*864e5);
   const we = w===0 ? new Date(2026,7,23) : new Date(ws.getTime()+6*864e5);
@@ -589,10 +599,10 @@ function exSuggest(sess, ex){
 /* ============ 6. ЭКРАН «СЕГОДНЯ» ============ */
 function vHome(){
   const d = today(), k = key(d), w = weekOf(d);
-  const ph = w<=12 ? PHASE_NAME[phaseOf(w)] : 'программа завершена';
+  const ph = w<=WEEKS() ? PHASE_NAME[phaseOf(w)] : 'программа завершена';
   const sub = (d < W1 && !PROF.legacyWeek0)
     ? fmtLong(d)+' · старт программы '+fmtD(W1)+' (Пн)'
-    : fmtLong(d)+' · неделя '+(w>12?'12+':w)+' · '+ph;
+    : fmtLong(d)+' · неделя '+(w>WEEKS()?WEEKS()+'+':w)+' · '+ph;
   header('PPL · '+PROF.name, sub);
   const ns = nextSession();
   const wToday = DB.weights[k];
@@ -628,7 +638,7 @@ function vHome(){
         <button class="btn sec sm" style="flex:1" onclick="event.stopPropagation();dateDlg(${ns.id})">Перенести</button>
         <button class="btn sec sm" style="flex:1" onclick="event.stopPropagation();skipDlg(${ns.id})">Пропустить</button></div>`;
   } else {
-    h += `<div class="small">Все 51 тренировка выполнены. Программа завершена — пора собирать итоги и строить следующую.</div>`;
+    h += `<div class="small">Все ${SESSIONS.length} тренировок выполнены. Программа завершена — пора собирать итоги и строить следующую.</div>`;
   }
   h += `</div>`;
   // питание
@@ -639,7 +649,7 @@ function vHome(){
     <div class="kv" style="margin-top:8px"><span>Белок</span><span><b>${Math.round(ft.p)}</b> / ${pt} г</span></div>
     <div class="bar"><i class="${ft.p>=pt*0.95?'good':''}" style="width:${Math.min(100,ft.p/pt*100)}%"></i></div></div>`;
   // шаги
-  const goal = STEP_GOAL(Math.min(w,12));
+  const goal = STEP_GOAL(Math.min(w,WEEKS()));
   h += `<div class="card"><h3>Шаги</h3><div class="row">
     <div class="grow"><div class="big">${stToday?(+stToday).toLocaleString('ru-RU'):'—'}</div>
     <div class="tiny">цель ${goal.toLocaleString('ru-RU')} · среднее 7 дн: ${avg7(DB.steps,d)?Math.round(avg7(DB.steps,d)).toLocaleString('ru-RU'):'—'}</div></div>
@@ -740,7 +750,7 @@ function vTrain(){
 }
 function trainList(){
   const skippedList = SESSIONS.filter(s=>DB.skips[s.id] && !DB.sessions[s.id]?.done);
-  header('Тренировки', '51 тренировка · очередь важнее дат');
+  header('Тренировки', SESSIONS.length+' тренировок за '+WEEKS()+' недель · очередь важнее дат');
   const next = nextSession();
   let h = '';
   let shown = 0;
@@ -967,8 +977,8 @@ function vWeight(){
       <div class="d ${lw&&PROF.startWeight-lw.v>0?'c-good':'c-mut'}">${lw?('−'+(PROF.startWeight-lw.v).toFixed(1)+' от старта'):''}</div></div>
     <div class="tile"><div class="l">Среднее 7 дн</div><div class="v">${a7?a7.toFixed(1):'—'}</div>
       <div class="d c-mut">ориентир ${planWeight(d).toFixed(1)}</div></div>
-    <div class="tile"><div class="l">Цель · ${fmtD(PROG_END)}</div><div class="v">${Math.round(TARGETS[12])}–${Math.round(TARGETS[12]+2)}</div>
-      <div class="d c-mut">${lw?('осталось '+Math.max(0,(lw.v-(TARGETS[12]+1))).toFixed(1)):''}</div></div>
+    <div class="tile"><div class="l">Цель · ${fmtD(PROG_END)}</div><div class="v">${Math.round(TARGETS[WEEKS()])}–${Math.round(TARGETS[WEEKS()]+2)}</div>
+      <div class="d c-mut">${lw?('осталось '+Math.max(0,(lw.v-(TARGETS[WEEKS()]+1))).toFixed(1)):''}</div></div>
   </div>`;
   h += `<div class="card"><div class="seg">
       <button class="${chartMode==='4w'?'on':''}" onclick="chartMode='4w';render()">4 недели</button>
@@ -980,7 +990,7 @@ function vWeight(){
   // недельная таблица
   const curW = weekOf(d);
   let rows = '';
-  for (let w = 0; w <= Math.min(12, curW); w++){
+  for (let w = 0; w <= Math.min(WEEKS(), curW); w++){
     const avg = weeklyAvg(DB.weights, w);
     const prev = w>0 ? weeklyAvg(DB.weights, w-1) : null;
     const dl = (avg!=null && prev!=null) ? avg-prev : null;
@@ -1229,7 +1239,7 @@ function insights(){
   }
   // 6. шаги
   const as7 = avg7(DB.steps, d);
-  const goal = STEP_GOAL(Math.min(w,12));
+  const goal = STEP_GOAL(Math.min(w,WEEKS()));
   if (as7!=null && as7 < goal*0.8) push('info','Шаги проседают: '+Math.round(as7).toLocaleString('ru-RU')+' в день','Цель '+goal.toLocaleString('ru-RU')+'. Самый дешёвый способ добрать — 25–30 минут прогулки вечером или пешком часть дороги.');
   // 7. прогрессия ключевых упражнений
   [['Push',0,'Жим лёжа'],['Legs',0,'Жим ногами'],['Legs',1,'Ягодичный мост']].forEach(([tp,ei,nm])=>{
@@ -1298,17 +1308,29 @@ function vMore(){
     }
   }
   if (moreSec==='plan'){
-    h += `<div class="card"><h3>Фазы</h3><table class="plan-table">
-      <tr><td>Нед. 0–2</td><td>Возвращение · RPE 6–7, по 2 подхода, веса 60–70%</td></tr>
-      <tr><td>Нед. 3–6</td><td>Разгон · RPE 7–8, вернуть прежние рабочие</td></tr>
-      <tr><td>Нед. 7</td><td>Разгрузка · −30% веса, 2 подхода, RPE ≤6</td></tr>
-      <tr><td>Нед. 8–12</td><td>Новая территория · RPE 8–9, топ-сеты</td></tr></table></div>
-    <div class="card"><h3>Ротация (Пн · Вт · Чт · Сб)</h3><table>
+    const N = WEEKS(), dls = deloadWeeks(), p1end = N>=10?6:5;
+    let phRows = `<tr><td>Нед. ${PROF.legacyWeek0?'0':'1'}–2</td><td>Возвращение · RPE 6–7, по 2 подхода, веса 60–70%</td></tr>
+      <tr><td>Нед. 3–${p1end}</td><td>Разгон · RPE 7–8, вернуть рабочие веса</td></tr>`;
+    if (!dls.length){
+      phRows += `<tr><td>Нед. ${p1end+1}–${N}</td><td>Новая территория · RPE 8–9, топ-сеты. Разгрузка не заложена — сделай лёгкую неделю после программы</td></tr>`;
+    } else {
+      let from = p1end+1;
+      for (const dw of dls){
+        if (dw > from) phRows += `<tr><td>Нед. ${from}–${dw-1}</td><td>Новая территория · RPE 8–9, топ-сеты</td></tr>`;
+        phRows += `<tr><td>Нед. ${dw}</td><td>Разгрузка · −30% веса, 2 подхода, RPE ≤6</td></tr>`;
+        from = dw+1;
+      }
+      if (from <= N) phRows += `<tr><td>Нед. ${from}–${N}</td><td>Новая территория · RPE 8–9, топ-сеты</td></tr>`;
+    }
+    h += `<div class="card"><h3>Фазы (${N} недель)</h3><table class="plan-table">${phRows}</table></div>`;
+    const cyc = i => { const arr=[]; for (let x=i+1; x<=N; x+=3) arr.push(x); return arr.join(', '); };
+    h += `<div class="card"><h3>Ротация (Пн · Вт · Чт · Сб)</h3><table>
       <tr><th>Неделя</th><th>Пн</th><th>Вт</th><th>Чт</th><th>Сб</th></tr>
-      <tr><td>1, 4, 7, 10</td><td>Push</td><td>Pull</td><td>Legs</td><td>Push</td></tr>
-      <tr><td>2, 5, 8, 11</td><td>Pull</td><td>Legs</td><td>Push</td><td>Pull</td></tr>
-      <tr><td>3, 6, 9, 12</td><td>Legs</td><td>Push</td><td>Pull</td><td>Legs</td></tr></table>
-      <div class="week-note">Пропустил день — не удваивай: просто делаешь следующую из очереди.</div></div>
+      <tr><td>${cyc(0)}</td><td>Push</td><td>Pull</td><td>Legs</td><td>Push</td></tr>
+      <tr><td>${cyc(1)}</td><td>Pull</td><td>Legs</td><td>Push</td><td>Pull</td></tr>
+      <tr><td>${cyc(2)}</td><td>Legs</td><td>Push</td><td>Pull</td><td>Legs</td></tr></table>
+      <div class="week-note">Пропустил день — не удваивай: просто делаешь следующую из очереди.</div></div>`;
+    h += `
     <div class="card"><h3>Прогрессия</h3><div class="small">
       Все рабочие подходы дошли до верха диапазона → добавляй: штанга +2,5 · гантели +2 · тренажёры +5 · жим ногами +10 кг.
       Не добрал 2 тренировки подряд — держи вес, добирай повторы. 3–4 без движения — минус 10% и разгон, либо замена.
@@ -1344,9 +1366,9 @@ function vMore(){
       <button class="btn danger full" onclick="if(confirm('Точно стереть все записи? Экспорт сделал?')){DB=defaultDB();save();location.reload();}">Стереть все данные</button></div>`;
     h += `<div class="card"><h3>Профиль</h3>
       <div class="kv"><span>${esc(PROF.name)} · ${PROF.sex==='m'?'муж':'жен'} · ${PROF.age} лет · ${PROF.height} см</span></div>
-      <div class="kv"><span>Старт ${PROF.startWeight} кг → цель ~${Math.round(TARGETS[12])} кг к ${fmtD(PROG_END)}</span></div>
+      <div class="kv"><span>Старт ${PROF.startWeight} кг → цель ~${Math.round(TARGETS[WEEKS()])} кг к ${fmtD(PROG_END)} (${WEEKS()} нед.)</span></div>
       <button class="btn sec full" style="margin-top:10px" onclick="if(confirm('Пересоздать программу заново через анкету? Вес, еда и шаги сохранятся, а журнал тренировок и замены очистятся.')){DB.profile=null;DB.sessions={};DB.swaps={};DB.skips={};DB.dateOv={};save();location.reload();}">Пересоздать программу (анкета)</button></div>`;
-    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 1.4 (профили: программа рассчитывается под каждого) · собрано для Егора и друзей · 19.08.2026. Фото упражнений: free-exercise-db, Public Domain.</div>`;
+    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 1.5 (срок 8/12/16 недель, якорные веса опциональны) · собрано для Егора и друзей · 19.08.2026. Фото упражнений: free-exercise-db, Public Domain.</div>`;
   }
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }
@@ -1397,8 +1419,9 @@ if ('serviceWorker' in navigator && location.protocol==='https:'){
   navigator.serviceWorker.register('./sw.js').catch(()=>{});
 }
 /* ============ 14. АНКЕТА ПЕРВОГО ЗАПУСКА ============ */
-let wzSex = 'm';
+let wzSex = 'm', wzWeeks = 12;
 window.wzSetSex = function(s){ wzSex = s; document.querySelectorAll('#wz-sex button').forEach(b=>b.classList.toggle('on', b.dataset.s===s)); };
+window.wzSetWeeks = function(n){ wzWeeks = n; document.querySelectorAll('#wz-weeks button').forEach(b=>b.classList.toggle('on', +b.dataset.w===n)); };
 function wizard(){
   header('PPL трекер', 'настройка программы под тебя · ~1 минута');
   $('#tabs').innerHTML = '';
@@ -1413,16 +1436,25 @@ function wizard(){
         <div class="grow"><div class="wlab">Рост, см</div><input type="number" id="wz-h" inputmode="numeric" placeholder="180"></div>
         <div class="grow"><div class="wlab">Вес, кг</div><input type="number" id="wz-w" step="0.1" inputmode="decimal" placeholder="90"></div>
       </div></div>
-    <div class="card"><h3>Рабочие веса — если знаешь</h3>
-      <div class="tiny" style="margin-bottom:6px">Вес, с которым делаешь ~8–10 повторов. Не знаешь — оставь пустым, приложение поможет подобрать на первой неделе.</div>
+    <div class="card"><h3>Срок программы</h3>
+      <div class="seg" id="wz-weeks">
+        <button data-w="8" onclick="wzSetWeeks(8)">8 недель</button>
+        <button data-w="12" class="on" onclick="wzSetWeeks(12)">12 недель</button>
+        <button data-w="16" onclick="wzSetWeeks(16)">16 недель</button></div>
+      <div class="tiny">8 — быстрый цикл без разгрузки · 12 — классика с разгрузкой на 7-й неделе · 16 — длинный, разгрузки на 7-й и 13-й. Фазы, чек-поинты и траектория веса подстроятся под срок.</div></div>
+    <div class="card"><h3>Якорные упражнения — по желанию</h3>
+      <div class="tiny" style="margin-bottom:6px">Это не тест и не стандарт — просто первые упражнения каждого тренировочного дня. Если помнишь вес, с которым делаешь ~8–10 повторов, впиши: приложение поставит стартовые ~70% от него. Не помнишь — оставь пустым: все веса подберутся по ощущениям на первой неделе (правило «верх диапазона = 3 повтора в запасе» будет прямо в тренировке).</div>
       <div class="row" style="gap:8px">
         <div class="grow"><div class="wlab">Жим лёжа</div><input type="number" id="wz-b" inputmode="numeric" placeholder="—"></div>
+        <div class="grow"><div class="wlab">Тяга блока</div><input type="number" id="wz-p" inputmode="numeric" placeholder="—"></div>
+      </div>
+      <div class="row" style="gap:8px">
         <div class="grow"><div class="wlab">Жим ногами</div><input type="number" id="wz-l" inputmode="numeric" placeholder="—"></div>
-        <div class="grow"><div class="wlab">Яг. мост</div><input type="number" id="wz-t" inputmode="numeric" placeholder="—"></div>
+        <div class="grow"><div class="wlab">Ягодичный мост</div><input type="number" id="wz-t" inputmode="numeric" placeholder="—"></div>
       </div></div>
     <button class="btn full" onclick="wizardCalc()">Рассчитать программу</button>
     <button class="btn ghost full" onclick="impData()" style="margin-top:6px">У меня есть резервная копия — восстановить</button>
-    <div class="tiny" style="margin:10px 2px">Программа: Push/Pull/Legs, 4 тренировки в неделю, 12 недель. Все данные остаются в браузере этого устройства. Приложение не заменяет врача: при хронических состояниях покажи план специалисту.</div>
+    <div class="tiny" style="margin:10px 2px">Программа: Push/Pull/Legs, 4 тренировки в неделю. Все данные остаются в браузере этого устройства. Приложение не заменяет врача: при хронических состояниях покажи план специалисту.</div>
   </div>`;
 }
 window.wizardCalc = function(){
@@ -1432,17 +1464,19 @@ window.wizardCalc = function(){
   if (!isFinite(h)||h<130||h>230) return toast('Проверь рост (130–230 см)');
   if (!isFinite(w)||w<40||w>300) return toast('Проверь вес (40–300 кг)');
   const num = id => { const v = parseFloat($(id).value); return isFinite(v)&&v>0 ? v : null; };
-  const starts = {bench:num('#wz-b'), leg:num('#wz-l'), thrust:num('#wz-t')};
-  const p = {name, sex:wzSex, age, height:h, startWeight:Math.round(w*10)/10, starts};
+  const starts = {bench:num('#wz-b'), pull:num('#wz-p'), leg:num('#wz-l'), thrust:num('#wz-t')};
+  const p = {name, sex:wzSex, age, height:h, startWeight:Math.round(w*10)/10, starts, weeks:wzWeeks};
   const c = calcPlan(p);
   const t = today(); const dow = (t.getDay()+6)%7;
   const monday = new Date(t.getTime() + ((7-dow)%7)*864e5);
+  const finish = new Date(monday.getTime() + (wzWeeks*7-1)*864e5);
   window._wzP = p; window._wzC = c; window._wzW1 = key(monday);
   openModal(`<h2>Твоя программа готова</h2>
     <div class="kv" style="margin-top:10px"><span>Поддержка (расход)</span><b>≈${c.maint} ккал</b></div>
     <div class="kv"><span>Цель на день</span><b>${c.kcal} ккал · белок ${c.prot} г</b></div>
-    <div class="kv"><span>Траектория 12 недель</span><b>${p.startWeight} → ~${c.targets[12]} кг</b></div>
-    <div class="kv"><span>Старт (неделя 1)</span><b>понедельник ${fmtD(monday)}</b></div>
+    <div class="kv"><span>Траектория ${wzWeeks} недель</span><b>${p.startWeight} → ~${c.targets[wzWeeks]} кг</b></div>
+    <div class="kv"><span>Старт → финиш</span><b>${fmtD(monday)} (Пн) → ${fmtD(finish)}</b></div>
+    <div class="kv"><span>Тренировок</span><b>${wzWeeks*4} · Push/Pull/Legs</b></div>
     <div class="kv"><span>Стартовые веса</span><b>${starts.bench?('жим '+(Math.round(starts.bench*0.7/2.5)*2.5)+' кг'):'подбор на 1-й неделе'}</b></div>
     <div class="tiny" style="margin-top:8px">Начинаем с ~70% рабочих весов — первые 2 недели лёгкие, это план, а не осторожничание. Калории можно будет менять корректировками.</div>
     <div class="row" style="gap:8px; margin-top:12px">
@@ -1453,10 +1487,11 @@ window.wizardGo = function(){
   const p = window._wzP, c = window._wzC;
   const stx = {};
   if (p.starts.bench) stx.bench = (Math.round(p.starts.bench*0.7/2.5)*2.5)+' кг';
+  if (p.starts.pull) stx.pull = (Math.round(p.starts.pull*0.7/5)*5)+' кг';
   if (p.starts.leg) stx.leg = (Math.round(p.starts.leg*0.6/10)*10)+' кг';
   if (p.starts.thrust) stx.thrust = (Math.round(p.starts.thrust*0.65/5)*5)+' кг';
   PROF = { name:p.name, sex:p.sex, age:p.age, height:p.height, startWeight:p.startWeight,
-    w1:window._wzW1, legacyWeek0:false, starts:p.starts,
+    w1:window._wzW1, legacyWeek0:false, weeks:p.weeks, starts:p.starts,
     startsText: Object.keys(stx).length?stx:null, targets:c.targets };
   DB.profile = PROF; DB.kcalTarget = c.kcal; DB.protTarget = c.prot;
   DB.weights[key(today())] = p.startWeight;

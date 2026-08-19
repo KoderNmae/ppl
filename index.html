@@ -129,6 +129,16 @@ tr:last-child td{border-bottom:none}
 .rpe button{flex:1; min-height:42px; border-radius:10px; border:1px solid var(--border);
   background:var(--card2); color:var(--text2); font:inherit; font-weight:700; cursor:pointer}
 .rpe button.on{background:var(--accent-dim); border-color:var(--accent); color:#fff}
+.swapbtn{background:var(--card2); border:1px solid var(--border); color:var(--text2);
+  border-radius:11px; min-width:46px; min-height:46px; font-size:19px; cursor:pointer; flex:none}
+.varrow{display:flex; flex-direction:column; gap:1px; width:100%; text-align:left;
+  background:var(--card2); border:1.5px solid var(--border); border-radius:12px;
+  color:var(--text); font:inherit; padding:11px 13px; margin:6px 0; min-height:52px; cursor:pointer}
+.varrow span{font-size:12px; color:var(--muted)}
+.varrow.on{border-color:var(--accent); background:rgba(57,135,229,.12)}
+input[type=date]{background:var(--card2); border:1px solid var(--border); color:var(--text);
+  font:inherit; font-size:17px; border-radius:10px; padding:10px 12px; min-height:var(--tap); width:100%;
+  color-scheme:dark}
 .hero{display:flex; gap:10px; margin:10px 0}
 .tile{flex:1; background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:12px}
 .tile .v{font-size:21px; font-weight:700; margin-top:2px; font-variant-numeric:tabular-nums}
@@ -203,6 +213,34 @@ const EXDB = {
   {n:'Разгибания ног', p0:[2,'12–15',12,15], p1:[3,'12–15',12,15], p2:[3,'12–15',12,15], rest:90, inc:5, start:'подбор', sub:'Гоблет-присед 3×10–12'},
   {n:'Икры стоя в тренажёре', p0:[2,'12–15',12,15], p1:[3,'12–15',12,15], p2:[3,'12–15',12,15], rest:75, inc:5, start:'подбор', sub:'Икры в жиме ногами'},
   {n:'Скручивания на верхнем блоке', p0:[2,'12–15',12,15], p1:[3,'12–15',12,15], p2:[3,'12–15',12,15], rest:75, inc:2.5, start:'подбор', sub:'Планка 3×40–60 сек'},
+ ]
+};
+/* аналоги на ту же группу мышц: m — группа, a — варианты (индекс 0 = оригинал из EXDB) */
+const ALTS = {
+ Push: [
+  {m:'Грудь', a:[{n:'Жим гантелей лёжа',inc:2},{n:'Жим в Смите лёжа',inc:2.5},{n:'Жим в тренажёре (грудь)',inc:5}]},
+  {m:'Верх груди', a:[{n:'Жим в Смите на наклонной',inc:2.5},{n:'Жим в тренажёре на наклонной',inc:5}]},
+  {m:'Плечи', a:[{n:'Жим штанги сидя',inc:2.5},{n:'Жим в тренажёре (плечи)',inc:5},{n:'Жим Арнольда',inc:2}]},
+  {m:'Средняя дельта', a:[{n:'Махи в кроссовере',inc:2.5},{n:'Разведения в тренажёре',inc:5}]},
+  {m:'Трицепс', a:[{n:'Французский жим с гантелью',inc:2},{n:'Разгибания из-за головы на блоке',inc:2.5}]},
+  {m:'Грудь + трицепс', a:[{n:'Отжимания от пола',inc:2.5},{n:'Жим лёжа узким хватом',inc:2.5}]},
+ ],
+ Pull: [
+  {m:'Широчайшие', a:[{n:'Подтягивания в гравитроне',inc:5},{n:'Тяга верхнего блока обратным хватом',inc:5}]},
+  {m:'Середина спины', a:[{n:'Тяга штанги в наклоне',inc:2.5},{n:'Рычажная тяга в тренажёре',inc:5},{n:'Тяга Т-грифа',inc:2.5}]},
+  {m:'Широчайшие (одностор.)', a:[{n:'Рычажная тяга одной рукой',inc:5},{n:'Тяга нижнего блока одной рукой',inc:2.5}]},
+  {m:'Задняя дельта', a:[{n:'Обратные разведения в тренажёре',inc:5},{n:'Обратные разведения с гантелями',inc:2}]},
+  {m:'Бицепс', a:[{n:'Сгибания с гантелями',inc:2},{n:'Сгибания на блоке',inc:2.5},{n:'Сгибания в тренажёре',inc:5}]},
+  {m:'Бицепс / брахиалис', a:[{n:'Канат на блоке (нейтральный хват)',inc:2.5},{n:'Сгибания обратным хватом',inc:2.5}]},
+ ],
+ Legs: [
+  {m:'Квадрицепс + ягодицы', a:[{n:'Гакк-машина',inc:5},{n:'Присед в Смите',inc:2.5},{n:'Гоблет-присед',inc:2}]},
+  {m:'Ягодицы', a:[{n:'Мост в Смите',inc:2.5},{n:'Мост в тренажёре',inc:5}]},
+  {m:'Задняя поверхность бедра', a:[{n:'Румынская тяга с гантелями',inc:2},{n:'Гиперэкстензия с весом',inc:2.5}]},
+  {m:'Бицепс бедра', a:[{n:'Сгибания сидя',inc:5},{n:'Сгибания стоя одной ногой',inc:5}]},
+  {m:'Квадрицепс', a:[{n:'Гоблет-присед',inc:2},{n:'Выпады с гантелями',inc:2}]},
+  {m:'Икры', a:[{n:'Икры в жиме ногами',inc:5},{n:'Икры сидя',inc:5}]},
+  {m:'Пресс', a:[{n:'Подъём ног в упоре',inc:2.5},{n:'Скручивания на полу с весом',inc:2.5}]},
  ]
 };
 const REST_BASE = 'Разминка: 5 мин кардио + суставная. Перед 1-м базовым: гриф×10 → 50%×6 → 75%×3.';
@@ -285,7 +323,8 @@ function loadDB(){
 }
 function defaultDB(){
   return { weights:{'2026-08-19':127.0}, steps:{}, waist:{}, food:{}, sessions:{},
-           kcalTarget:KCAL0, protTarget:PROT0, kcalLog:[], freeMeals:{}, lastExport:null, notes:{} };
+           kcalTarget:KCAL0, protTarget:PROT0, kcalLog:[], freeMeals:{}, lastExport:null, notes:{},
+           swaps:{}, skips:{}, dateOv:{} };
 }
 let DB = loadDB();
 function save(){
@@ -335,8 +374,18 @@ function render(){
   ({home:vHome, train:vTrain, weight:vWeight, food:vFood, more:vMore})[tab]();
 }
 /* ============ 5. ПОМОЩНИКИ ДАННЫХ ============ */
-function nextSession(){ return SESSIONS.find(s => !DB.sessions[s.id]?.done) || null; }
+function nextSession(){ return SESSIONS.find(s => !DB.sessions[s.id]?.done && !DB.skips[s.id]) || null; }
 function sessionState(id){ return DB.sessions[id] || null; }
+function sessDate(s){ return DB.dateOv[s.id] ? fromKey(DB.dateOv[s.id]) : s.date; }
+/* текущий вариант упражнения: 0 = оригинал, 1+ = аналог из ALTS */
+function variantOf(sid, ei){
+  const s = SESSIONS[sid];
+  const perSess = DB.sessions[sid] && DB.sessions[sid].swapEx ? DB.sessions[sid].swapEx[ei] : undefined;
+  const idx = perSess != null ? perSess : (DB.swaps[s.type+':'+ei] != null ? DB.swaps[s.type+':'+ei] : 0);
+  if (idx === 0){ const e = EXDB[s.type][ei]; return {idx:0, n:e.n, inc:e.inc}; }
+  const alt = ALTS[s.type][ei].a[idx-1];
+  return alt ? {idx, n:alt.n, inc:alt.inc} : {idx:0, n:EXDB[s.type][ei].n, inc:EXDB[s.type][ei].inc};
+}
 function weeklyAvg(map, w){       // среднее значения map по календарной неделе w
   let sum = 0, n = 0;
   for (const k in map){ const v = +map[k]; if (!isFinite(v)) continue;
@@ -359,27 +408,34 @@ function foodTotals(k){
   for (const it of foodDay(k).items){ t.p+=it.p*it.q; t.f+=it.f*it.q; t.c+=it.c*it.q; t.kcal+=it.kcal*it.q; }
   return t;
 }
-/* последняя история по упражнению: [{date, sets:[{w,r}], type}] */
-function exHistory(type, ei, limit){
+/* последняя история по упражнению И его варианту: [{date, sets:[{w,r}], deload}] */
+function exHistory(type, ei, limit, vIdx){
+  const want = vIdx == null ? 0 : vIdx;
   const out = [];
   for (let i = SESSIONS.length-1; i >= 0; i--){
     const s = SESSIONS[i]; if (s.type !== type) continue;
     const st = DB.sessions[s.id]; if (!st || !st.done) continue;
+    const used = (st.vars && st.vars[ei] != null) ? st.vars[ei] : 0;
+    if (used !== want) continue;
     const sets = (st.sets && st.sets[ei] || []).filter(x=>x && x.w!=null);
     if (sets.length) out.push({date:st.done, sets, deload:s.phase==='deload'});
     if (out.length >= (limit||3)) break;
   }
   return out;
 }
-/* подсказка веса: последний вес + правило двойной прогрессии */
+/* подсказка веса: последний вес этого варианта + правило двойной прогрессии */
 function exSuggest(sess, ex){
-  const hist = exHistory(sess.type, ex.ei, 2).filter(h=>!h.deload);
-  if (!hist.length) return {txt: ex.hint ? 'старт: '+ex.hint : 'подбор веса: верх диапазона = RPE 7', w:null};
+  const v = variantOf(sess.id, ex.ei);
+  const hist = exHistory(sess.type, ex.ei, 2, v.idx).filter(h=>!h.deload);
+  if (!hist.length){
+    if (v.idx !== 0) return {txt:'новый вариант — подбор: верх диапазона = RPE 7', w:null};
+    return {txt: ex.hint ? 'старт: '+ex.hint : 'подбор веса: верх диапазона = RPE 7', w:null};
+  }
   const last = hist[0];
   const w = Math.max(...last.sets.map(s=>s.w));
   const allTop = last.sets.every(s => s.r >= ex.hi);
   if (ex.deload) return {txt:'разгрузка: '+r1(w*0.7)+' кг (−30%)', w:r1(w*0.7)};
-  if (allTop) return {txt:'все подходы по '+ex.hi+' — добавляй: '+r1(w+ex.inc)+' кг', w:r1(w+ex.inc), up:true};
+  if (allTop) return {txt:'все подходы по '+ex.hi+' — добавляй: '+r1(w+v.inc)+' кг', w:r1(w+v.inc), up:true};
   return {txt:'прошлый раз: '+last.sets.map(s=>s.w+'×'+s.r).join(' · '), w};
 }
 /* ============ 6. ЭКРАН «СЕГОДНЯ» ============ */
@@ -409,13 +465,17 @@ function vHome(){
   // тренировка
   h += `<div class="card"><h3>Тренировка</h3>`;
   if (ns){
-    const overdue = ns.date < d, todayIs = key(ns.date) === k;
+    const nd = sessDate(ns);
+    const overdue = nd < d, todayIs = key(nd) === k;
     h += `<div class="row"><div class="grow">
         <span class="badge b-${ns.type.toLowerCase()}${ns.phase==='deload'?' b-deload':''}">${ns.type}${ns.phase==='deload'?' · разгрузка':''}</span>
         <div class="exmeta" style="margin-top:6px">${ns.exs.length} упражнений · неделя ${ns.w}
-        ${todayIs ? '· сегодня по плану' : overdue ? '· план был '+fmtD(ns.date)+' — просто делаешь следующую' : '· по плану '+fmtD(ns.date)}</div>
+        ${todayIs ? '· сегодня по плану' : overdue ? '· план был '+fmtD(nd)+' — просто делаешь следующую' : '· по плану '+fmtD(nd)}</div>
       </div>
-      <button class="btn" onclick="tab='train';trainSelected=${ns.id};render()">Начать</button></div>`;
+      <button class="btn" onclick="tab='train';trainSelected=${ns.id};render()">Начать</button></div>
+      <div class="row" style="gap:8px;margin-top:10px">
+        <button class="btn sec sm" style="flex:1" onclick="event.stopPropagation();dateDlg(${ns.id})">Перенести</button>
+        <button class="btn sec sm" style="flex:1" onclick="event.stopPropagation();skipDlg(${ns.id})">Пропустить</button></div>`;
   } else {
     h += `<div class="small">Все 51 тренировка выполнены. Программа завершена — пора собирать итоги и строить следующую.</div>`;
   }
@@ -477,19 +537,32 @@ function vTrain(){
   if (trainSelected === null){ return trainList(); }
   const s = SESSIONS[trainSelected];
   const st = DB.sessions[s.id] || (DB.sessions[s.id] = {sets:{}, rpe:{}, note:''});
+  st.vars = st.vars || {}; st.swapEx = st.swapEx || {};
+  const skipped = !!DB.skips[s.id];
   header(s.type + (s.phase==='deload' ? ' · разгрузка' : ''),
-    'неделя '+s.w+' · '+PHASE_NAME[s.phase]+' · план на '+fmtD(s.date));
+    'неделя '+s.w+' · '+PHASE_NAME[s.phase]+' · план на '+fmtD(sessDate(s)));
   let h = `<button class="btn ghost" onclick="trainSelected=null;render()">← Все тренировки</button>`;
+  if (skipped)
+    h += `<div class="insight bad"><b>Тренировка пропущена</b><p>Она выпала из очереди — следующая по ротации подтянулась на её место. Передумал?</p>
+      <button class="btn sm" onclick="unskip(${s.id})">Вернуть в план</button></div>`;
+  else if (!st.done)
+    h += `<div class="row" style="gap:8px;margin:2px 0 6px">
+      <button class="btn sec sm grow" style="flex:1" onclick="dateDlg(${s.id})">Перенести дату</button>
+      <button class="btn sec sm grow" style="flex:1" onclick="skipDlg(${s.id})">Пропустить</button></div>`;
   if (s.phase==='deload')
     h += `<div class="insight warn"><b>Разгрузочная неделя</b><p>−30% от рабочих весов, по 2 подхода, RPE ≤ 6. Это часть плана: суставы и нервная система скажут спасибо на неделе 8.</p></div>`;
   h += `<div class="card tiny">${REST_BASE}</div>`;
   s.exs.forEach((ex, xi) => {
     const done = (st.sets[ex.ei]||[]).filter(Boolean);
+    const v = variantOf(s.id, ex.ei);
     const sg = exSuggest(s, ex);
-    const hist = exHistory(s.type, ex.ei, 1);
+    const grp = ALTS[s.type][ex.ei] ? ALTS[s.type][ex.ei].m : '';
     h += `<div class="card ${done.length>=ex.sets?'exdone':''}">
-      <div class="exname">${xi+1}. ${esc(ex.n)}</div>
-      <div class="exmeta">${ex.sets}×${ex.reps} · отдых ${Math.floor(ex.rest/60)}:${pad(ex.rest%60)} · замена: ${esc(ex.sub)}</div>
+      <div class="row"><div class="grow">
+        <div class="exname">${xi+1}. ${esc(v.n)}</div>
+        <div class="exmeta">${grp?esc(grp)+' · ':''}${ex.sets}×${ex.reps} · отдых ${Math.floor(ex.rest/60)}:${pad(ex.rest%60)}</div>
+        ${v.idx!==0?`<div class="exhist">аналог вместо: ${esc(ex.n)}</div>`:''}
+      </div><button class="swapbtn" onclick="swapDlg(${s.id},${ex.ei})">⇄</button></div>
       ${sg.txt?`<div class="${sg.up?'exhint':'exhist'}">${esc(sg.txt)}</div>`:''}
       <div class="sets">` +
       Array.from({length: ex.sets}, (_,si) => {
@@ -513,6 +586,7 @@ function vTrain(){
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }
 function trainList(){
+  const skippedList = SESSIONS.filter(s=>DB.skips[s.id] && !DB.sessions[s.id]?.done);
   header('Тренировки', '51 тренировка · очередь важнее дат');
   const next = nextSession();
   let h = '';
@@ -524,16 +598,21 @@ function trainList(){
     h += last3.map(s=>sessRow(s,'✓ '+fmtD(fromKey(DB.sessions[s.id].done)))).join('');
   }
   h += `<div class="section-t">Дальше</div>`;
+  const left = SESSIONS.filter(x=>!DB.sessions[x.id]?.done && !DB.skips[x.id]).length;
   for (const s of SESSIONS){
-    if (DB.sessions[s.id]?.done) continue;
-    const mark = s===next ? 'следующая' : 'план '+fmtD(s.date);
+    if (DB.sessions[s.id]?.done || DB.skips[s.id]) continue;
+    const mark = s===next ? 'следующая' : 'план '+fmtD(sessDate(s));
     h += sessRow(s, mark, s===next);
-    if (++shown >= 8) { h += `<div class="tiny" style="text-align:center;margin:8px">… и ещё ${SESSIONS.filter(x=>!DB.sessions[x.id]?.done).length - shown} до 15 ноября</div>`; break; }
+    if (++shown >= 8) { h += `<div class="tiny" style="text-align:center;margin:8px">… и ещё ${left - shown}</div>`; break; }
+  }
+  if (skippedList.length){
+    h += `<div class="section-t">Пропущенные (${skippedList.length})</div>`;
+    h += skippedList.map(s=>sessRow(s, 'пропущена', false, true)).join('');
   }
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }
-function sessRow(s, mark, hot){
-  return `<div class="card" style="${hot?'border-color:var(--accent-dim)':''}" onclick="trainSelected=${s.id};render()">
+function sessRow(s, mark, hot, dim){
+  return `<div class="card" style="${hot?'border-color:var(--accent-dim);':''}${dim?'opacity:.55;':''}" onclick="trainSelected=${s.id};render()">
     <div class="row"><span class="badge b-${s.type.toLowerCase()}${s.phase==='deload'?' b-deload':''}">${s.type}${s.phase==='deload'?' · разгр.':''}</span>
     <div class="grow small">неделя ${s.w} · ${s.exs.length} упр.</div>
     <div class="tiny">${mark}</div></div></div>`;
@@ -541,17 +620,93 @@ function sessRow(s, mark, hot){
 window.setRPE = function(sid, ei, v){
   const st = DB.sessions[sid]; st.rpe[ei] = st.rpe[ei]===v ? null : v; save(); render();
 };
+/* --- замена упражнения на аналог --- */
+let swapSel = 0;
+window.swapDlg = function(sid, ei){
+  const s = SESSIONS[sid];
+  const cur = variantOf(sid, ei);
+  swapSel = cur.idx;
+  const slot = ALTS[s.type][ei];
+  const orig = EXDB[s.type][ei];
+  const opts = [{n:orig.n, inc:orig.inc}, ...slot.a];
+  openModal(`<h2>Замена · ${esc(slot.m)}</h2>
+    <div class="small" style="margin-bottom:8px">Аналоги на ту же группу мышц. История весов и подсказки по каждому варианту ведутся отдельно.</div>
+    <div id="swap-list">` +
+    opts.map((o,i)=>`<button class="varrow ${i===swapSel?'on':''}" data-i="${i}" onclick="pickVar(${i})">
+      <b>${esc(o.n)}</b><span>${i===0?'оригинал программы':'аналог'} · шаг +${o.inc} кг</span></button>`).join('') +
+    `</div>
+    <div class="row" style="gap:8px;margin-top:12px">
+      <button class="btn sec grow" style="flex:1" onclick="applySwap(${sid},${ei},false)">Только сегодня</button>
+      <button class="btn grow" style="flex:1" onclick="applySwap(${sid},${ei},true)">Насовсем</button>
+    </div>`);
+};
+window.pickVar = function(i){
+  swapSel = i;
+  document.querySelectorAll('#swap-list .varrow').forEach(b=>b.classList.toggle('on', +b.dataset.i===i));
+};
+window.applySwap = function(sid, ei, forever){
+  const s = SESSIONS[sid];
+  const st = DB.sessions[sid] || (DB.sessions[sid] = {sets:{}, rpe:{}, note:''});
+  st.swapEx = st.swapEx || {};
+  const gkey = s.type+':'+ei;
+  if (forever){
+    if (swapSel === 0) delete DB.swaps[gkey]; else DB.swaps[gkey] = swapSel;
+    delete st.swapEx[ei];
+    toast(swapSel===0 ? 'Вернул оригинал во всех тренировках' : 'Заменено во всех тренировках');
+  } else {
+    const globalIdx = DB.swaps[gkey] != null ? DB.swaps[gkey] : 0;
+    if (swapSel === globalIdx) delete st.swapEx[ei]; else st.swapEx[ei] = swapSel;
+    toast('Заменено только на эту тренировку');
+  }
+  save(); closeModal(); render();
+};
+/* --- перенос даты и пропуск --- */
+window.dateDlg = function(sid){
+  const s = SESSIONS[sid];
+  openModal(`<h2>Дата тренировки</h2>
+    <div class="small">${s.type} · неделя ${s.w}. Дата — ориентир: очередь всё равно идёт по порядку, просто планируй под свою жизнь.</div>
+    <input type="date" id="dt-in" value="${key(sessDate(s))}" style="margin:12px 0">
+    <div class="row" style="gap:8px">
+      ${DB.dateOv[sid]?`<button class="btn sec" onclick="saveDate(${sid},null)">Сбросить</button>`:''}
+      <button class="btn grow" style="flex:1" onclick="saveDate(${sid})">Сохранить</button>
+    </div>`);
+};
+window.saveDate = function(sid, reset){
+  if (reset === null){ delete DB.dateOv[sid]; save(); closeModal(); render(); return; }
+  const val = $('#dt-in').value;
+  if (!val) return toast('Выбери дату');
+  if (key(SESSIONS[sid].date) === val) delete DB.dateOv[sid]; else DB.dateOv[sid] = val;
+  save(); closeModal(); render(); toast('Дата обновлена');
+};
+window.skipDlg = function(sid){
+  const s = SESSIONS[sid];
+  openModal(`<h2>Пропустить ${s.type}?</h2>
+    <div class="small" style="margin:8px 0 14px">Тренировка выпадет из очереди, следующая по ротации займёт её место. Программа и фазы не сломаются. Вернуть можно в любой момент — она останется в списке с пометкой «пропущена».</div>
+    <div class="row" style="gap:8px">
+      <button class="btn sec grow" style="flex:1" onclick="closeModal()">Отмена</button>
+      <button class="btn danger grow" style="flex:1" onclick="doSkip(${sid})">Пропустить</button>
+    </div>`);
+};
+window.doSkip = function(sid){
+  DB.skips[sid] = 1; save(); closeModal();
+  if (trainSelected === sid) trainSelected = null;
+  render(); toast('Пропущена — очередь сдвинулась');
+};
+window.unskip = function(sid){
+  delete DB.skips[sid]; save(); render(); toast('Вернул в план');
+};
 window.logSet = function(sid, ei, si, rest, sugW){
   const s = SESSIONS[sid];
   const st = DB.sessions[sid];
   const prev = (st.sets[ei]||[])[si] || (st.sets[ei]||[])[si-1];
   const ex = s.exs.find(e=>e.ei===ei);
+  const v = variantOf(sid, ei);
   const w0 = prev ? prev.w : (sugW || 20);
   const r0 = prev ? prev.r : ex.hi;
-  openModal(`<h2>${esc(ex.n)}</h2><div class="small">Подход ${si+1} · цель ${ex.reps}</div>
-    <div class="stepper"><span class="lbl">Вес, кг</span><button onclick="stepNum('set-w',-${ex.inc})">−</button>
+  openModal(`<h2>${esc(v.n)}</h2><div class="small">Подход ${si+1} · цель ${ex.reps}</div>
+    <div class="stepper"><span class="lbl">Вес, кг</span><button onclick="stepNum('set-w',-${v.inc})">−</button>
       <input id="set-w" type="number" step="0.5" inputmode="decimal" value="${w0}">
-      <button onclick="stepNum('set-w',${ex.inc})">+</button></div>
+      <button onclick="stepNum('set-w',${v.inc})">+</button></div>
     <div class="stepper"><span class="lbl">Повторы</span><button onclick="stepNum('set-r',-1)">−</button>
       <input id="set-r" type="number" step="1" inputmode="numeric" value="${r0}">
       <button onclick="stepNum('set-r',1)">+</button></div>
@@ -570,6 +725,7 @@ window.saveSet = function(sid, ei, si, rest){
   const st = DB.sessions[sid];
   if (!st.sets[ei]) st.sets[ei] = [];
   st.sets[ei][si] = {w:r1(w), r};
+  (st.vars = st.vars || {})[ei] = variantOf(sid, ei).idx;
   save(); closeModal(); render();
   const s = SESSIONS[sid];
   const ex = s.exs.find(e=>e.ei===ei);
@@ -896,13 +1052,16 @@ function insights(){
   if (as7!=null && as7 < goal*0.8) push('info','Шаги проседают: '+Math.round(as7).toLocaleString('ru-RU')+' в день','Цель '+goal.toLocaleString('ru-RU')+'. Самый дешёвый способ добрать — 25–30 минут прогулки вечером или пешком часть дороги.');
   // 7. прогрессия ключевых упражнений
   [['Push',0,'Жим лёжа'],['Legs',0,'Жим ногами'],['Legs',1,'Ягодичный мост']].forEach(([tp,ei,nm])=>{
-    const hist = exHistory(tp, ei, 3).filter(h=>!h.deload);
+    const vIdx = DB.swaps[tp+':'+ei] != null ? DB.swaps[tp+':'+ei] : 0;
+    const vInc = vIdx===0 ? EXDB[tp][ei].inc : ALTS[tp][ei].a[vIdx-1].inc;
+    if (vIdx !== 0) nm = ALTS[tp][ei].a[vIdx-1].n;
+    const hist = exHistory(tp, ei, 3, vIdx).filter(h=>!h.deload);
     if (hist.length>=1){
       const ex = EXDB[tp][ei];
       const hi = (ex.p1||ex.p2)[3];
       const last = hist[0], lastW = Math.max(...last.sets.map(s=>s.w));
       if (last.sets.length>1 && last.sets.every(s=>s.r>=hi))
-        push('good',nm+': пора добавить вес','Все подходы на верхней границе. Следующая тренировка: '+r1(lastW+ex.inc)+' кг.');
+        push('good',nm+': пора добавить вес','Все подходы на верхней границе. Следующая тренировка: '+r1(lastW+vInc)+' кг.');
       else if (hist.length>=3){
         const ws = hist.map(h=>Math.max(...h.sets.map(s=>s.w)));
         if (ws[0]===ws[1] && ws[1]===ws[2])
@@ -1002,7 +1161,7 @@ function vMore(){
       <button class="btn ghost full" onclick="copyData()" style="margin-top:6px">Скопировать в буфер</button></div>`;
     h += `<div class="card"><h3>Опасная зона</h3>
       <button class="btn danger full" onclick="if(confirm('Точно стереть все записи? Экспорт сделал?')){DB=defaultDB();save();render();}">Стереть все данные</button></div>`;
-    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 1.0 · собрано для Егора · 19.08.2026.</div>`;
+    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 1.1 (замены упражнений, перенос и пропуск тренировок) · собрано для Егора · 19.08.2026.</div>`;
   }
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }

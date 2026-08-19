@@ -1814,7 +1814,7 @@ function recipesFor(mid){
   const eaten = mealEaten(foodDate, mid);
   const targetK = Math.max(250, tg.kcal - eaten.kcal);
   const out = [];
-  for (const r of RECIPES){
+  for (const r of allRecipes()){
     if (!(r.m.includes(key) || (key==='s' && r.m.includes('b')))) continue;
     if (!r.ing.every(s => s[2] || ingHave(s))) continue;
     const base = recipeCalc(r, 1);
@@ -1827,9 +1827,11 @@ function recipesFor(mid){
     if (focus==='lowcarb') score -= (t.c*4/Math.max(t.kcal,1))*2;
     if (focus==='lowfat') score -= (t.f*9/Math.max(t.kcal,1))*2;
     if (r.boost==='p' && focus==='protein') score += .6;
+    if (r.gen) score -= .25;
+    if (r.my) score += .7;
     out.push({r, q, t, score});
   }
-  return out.sort((a,b)=>b.score-a.score).slice(0, 10);
+  return out.sort((a,b)=>b.score-a.score);
 }
 window.pantryDlg = function(backMid){
   DB.pantry = DB.pantry || {};
@@ -1837,23 +1839,51 @@ window.pantryDlg = function(backMid){
   openModal(`<h2>Мои продукты</h2>
     <div class="small">Отметь, что есть дома — рецепты соберутся из этого. Список запоминается.</div>` +
     cats.map(c => `<div class="wlab" style="margin-top:12px">${ING_CAT_N[c]}</div><div class="mods">` +
-      ING.filter(x=>x[2]===c).map(x=>`<button class="chip ${pantryOn(x[0])?'done':''}" style="min-height:40px;font-size:13px;font-weight:600" onclick="pantryToggle('${x[0]}', this)">${x[1]}</button>`).join('') + '</div>').join('') +
+      ING.filter(x=>x[2]===c).map(x=>{const lw=(DB.pantryUse&&DB.pantryUse[x[0]]||0)>stockOf(x[0])*0.8&&pantryOn(x[0]);return `<button class="chip ${pantryOn(x[0])?'done':''}" style="min-height:40px;font-size:13px;font-weight:600${lw?';border-color:var(--warn)':''}" onclick="pantryToggle('${x[0]}', this)">${x[1]}${lw?' ⚠':''}</button>`;}).join('') + '</div>').join('') +
     `<button class="btn full" style="margin-top:14px" onclick="${backMid?`closeModal();recipesDlg('${backMid}')`:'closeModal();render()'}">Готово</button>`);
 };
 window.pantryToggle = function(id, el){
   DB.pantry = DB.pantry || {};
+  DB.pantryUse = DB.pantryUse || {};
   if (DB.pantry[id]) delete DB.pantry[id]; else DB.pantry[id] = 1;
+  DB.pantryUse[id] = 0;
   save(); el.classList.toggle('done');
 };
 window.recipesDlg = function(mid){
   DB.pantry = DB.pantry || {};
   if (!Object.keys(DB.pantry).length){ pantryDlg(mid); return; }
-  const list = recipesFor(mid);
   const mname = (MEAL_DEF.find(m=>m.id===mid)||{}).n || 'приём';
   const focus = dayFocus(foodDate);
   openModal(`<h2>Что приготовить: ${mname.toLowerCase()}</h2>
     <div class="tiny">${esc(focus.txt)}</div>
-    <button class="btn ghost" style="padding:0" onclick="pantryDlg('${mid}')">Мои продукты (${Object.keys(DB.pantry).length}) — изменить</button>` +
+    <div class="row" style="gap:4px;margin-top:6px">
+      <button class="btn ghost" style="padding:0;min-height:36px" onclick="pantryDlg('${mid}')">Продукты (${Object.keys(DB.pantry).length})</button>
+      <div class="grow"></div>
+      <button class="btn ghost" style="padding:0;min-height:36px" onclick="closeModal();myRecipeDlg('${mid}')">+ Свой рецепт</button></div>
+    <input type="text" id="rc-q" placeholder="Поиск по ${allRecipes().length} рецептам…" style="margin-top:6px" oninput="rcList('${mid}', this.value)">
+    <div id="rc-list"></div>
+    <button class="btn sec full" style="margin-top:8px" onclick="closeModal()">Закрыть</button>`);
+  rcList(mid, '');
+};
+window.rcList = function(mid, q){
+  q = (q||'').trim().toLowerCase();
+  const key = mid[0]==='s' ? 's' : mid;
+  let list, note = '';
+  if (!q){
+    list = recipesFor(mid).slice(0, 12).map(o => ({...o, miss: []}));
+    note = list.length ? `показаны лучшие ${list.length} — ищи по названию среди всех ${allRecipes().length}` : '';
+  } else {
+    const tg = mealTargets(foodDate)[mid] || {kcal:500};
+    list = allRecipes()
+      .filter(r => (r.m.includes(key) || (key==='s' && r.m.includes('b'))) && r.n.toLowerCase().includes(q))
+      .slice(0, 15)
+      .map(r => {
+        const base = recipeCalc(r, 1);
+        const qq = Math.round(Math.min(1.5, Math.max(0.5, Math.max(250, tg.kcal)/Math.max(base.kcal,1)))*4)/4;
+        return {r, q:qq, t:recipeCalc(r, qq), miss: r.ing.filter(s=>!s[2] && !ingHave(s)).map(s=>ING_BY[s[0]][1])};
+      });
+  }
+  $('#rc-list').innerHTML = (note?`<div class="tiny" style="margin:6px 2px">${note}</div>`:'') +
     (list.length ? list.map((o,ix) => {
       const ingTxt = o.r.ing.map(s => {
         if (s[2] && !ingHave(s)) return null;
@@ -1863,21 +1893,25 @@ window.recipesDlg = function(mid){
         return esc(ing[1])+' '+un;
       }).filter(Boolean).join(' · ');
       return `<div class="card" style="margin:10px 0">
-        <div class="row"><div class="grow"><b style="font-size:15px">${esc(o.r.n)}</b>
-          <div class="tiny" style="margin-top:2px">${o.r.t} мин · ${Math.round(o.t.kcal)} ккал · Б${Math.round(o.t.p)} Ж${Math.round(o.t.f)} У${Math.round(o.t.c)}${o.q!==1?' · порция ×'+o.q:''}</div></div></div>
+        <b style="font-size:15px">${o.r.my?'★ ':''}${esc(o.r.n)}</b>
+        <div class="tiny" style="margin-top:2px">${o.r.t} мин · ${Math.round(o.t.kcal)} ккал · Б${Math.round(o.t.p)} Ж${Math.round(o.t.f)} У${Math.round(o.t.c)}${o.q!==1?' · порция ×'+o.q:''}</div>
         <div class="tiny" style="margin-top:6px">${ingTxt}</div>
+        ${o.miss.length?`<div class="tiny c-warn" style="margin-top:4px">не хватает: ${o.miss.map(esc).join(', ')}</div>`:''}
         <div id="rc-steps-${ix}" style="display:none" class="small">${o.r.s.map((st,i)=>`<div class="tiny" style="margin-top:5px">${i+1}. ${esc(st)}</div>`).join('')}</div>
         <div class="row" style="gap:8px;margin-top:9px">
-          <button class="btn sec sm grow" onclick="const e=document.getElementById('rc-steps-${ix}');e.style.display=e.style.display==='none'?'':'none'">Как готовить</button>
+          <button class="btn sec sm grow" onclick="const e=document.getElementById('rc-steps-${ix}');e.style.display=e.style.display==='none'?'':'none'">Готовка</button>
+          <button class="btn sec sm grow" onclick="tweakDlg('${o.r.id}',${o.q},'${mid}')">Настроить</button></div>
+        <div class="row" style="gap:8px;margin-top:8px">
+          <button class="btn sec sm grow" onclick="shopAdd('${o.r.id}',${o.q})">В покупки</button>
           <button class="btn sm grow" onclick="eatRecipe('${o.r.id}',${o.q},'${mid}')">Съел это</button></div></div>`;
-    }).join('') : `<div class="card small">Из отмеченных продуктов ничего не собрать для этого приёма. Добавь базовые вещи: яйца, крупу, овощи, что-то белковое.</div>`) +
-    `<button class="btn sec full" style="margin-top:6px" onclick="closeModal()">Закрыть</button>`);
+    }).join('') : `<div class="card small">${q?'Ничего не нашлось по запросу.':'Из отмеченных продуктов ничего не собрать. Добавь базовые вещи: яйца, крупу, овощи, что-то белковое.'}</div>`);
 };
 window.eatRecipe = function(rid, q, mid){
-  const r = RECIPES.find(x=>x.id===rid); if (!r) return;
+  const r = findRecipe(rid); if (!r) return;
   const t = recipeCalc(r, q);
   if (!DB.food[foodDate]) DB.food[foodDate] = {items:[]};
   DB.food[foodDate].items.push({n:r.n, p:Math.round(t.p), f:Math.round(t.f), c:Math.round(t.c), kcal:Math.round(t.kcal), q:1, meal:mid, recipe:1});
+  noteUse(r.ing.map(s=>[ingResolve(s), s[1]]), q);
   save(); closeModal(); render(); toast(r.n+' — записано в '+((MEAL_DEF.find(m=>m.id===mid)||{}).n||'приём').toLowerCase());
 };
 /* ---- добавление модулей в приём ---- */
@@ -1889,6 +1923,271 @@ window.modulesDlg = function(mid){
     `<div class="row" style="gap:8px;margin-top:12px">
       <button class="btn sec grow" onclick="closeModal();foodCustom('${mid}')">Своё блюдо</button>
       <button class="btn sec grow" onclick="closeModal()">Готово</button></div>`);
+};
+
+/* ============ КУХНЯ 2.1: генератор рецептов, свои рецепты, покупки ============ */
+/* творительный падеж для названий */
+const INSTR = {
+ chicken:'курицей', chthigh:'куриными бёдрами', turkey:'индейкой', beef:'говядиной', pork:'свининой',
+ bacon:'беконом', ham:'ветчиной', cod:'белой рыбой', salmon:'лососем', tuna:'тунцом', shrimp:'креветками',
+ tvorog:'творогом', gyogurt:'йогуртом', cheese:'сыром', feta:'фетой', tofu:'тофу', egg:'яйцом',
+ milk:'молоком', beans:'фасолью', chickpea:'нутом', corn:'кукурузой', peas:'горошком',
+ tomato:'помидорами', cucumber:'огурцом', pepper:'перцем', onion:'луком', carrot:'морковью',
+ cabbage:'капустой', broccoli:'брокколи', zucchini:'кабачком', mushroom:'грибами', spinach:'шпинатом',
+ salad:'салатными листьями', frozenveg:'овощной смесью', banana:'бананом', apple:'яблоком',
+ berries:'ягодами', nuts:'орехами', avocado:'авокадо', potato:'картофелем', rice:'рисом',
+ buckwheat:'гречкой', oats:'овсянкой', pasta:'пастой', bread:'хлебом', lavash:'лавашом', protein:'протеином',
+};
+const GNAME = {rice:'Рис', buckwheat:'Гречка', pasta:'Паста', potato:'Картофель'};
+function genRecipes(){
+  const out = [];
+  let n = 0;
+  const add = (name, m, t, ing, s, boost) => out.push({id:'g'+(++n), n:name, m, t, ing, s, boost, gen:1});
+  /* 1) гарнир × белок × овощ — сковорода одним махом */
+  const grains = [['rice',65],['buckwheat',70],['pasta',70],['potato',300]];
+  const prots  = [['chicken',180],['turkey',180],['beef',150],['pork',150],['chthigh',170],['cod',250],['salmon',150],['shrimp',150],['tofu',200]];
+  const vegs   = [['broccoli',180],['frozenveg',180],['pepper',150],['zucchini',200],['mushroom',130],['cabbage',180]];
+  for (const [g,gg] of grains) for (const [p,pg] of prots) for (const [v,vg] of vegs){
+    const fish = (p==='cod'||p==='salmon'||p==='shrimp');
+    add(`${GNAME[g]} с ${INSTR[p]} и ${INSTR[v]}`, ['l','d'], g==='potato'?30:22,
+      [[g,gg],[p,pg],[v,vg],['oil',8],['onion',40,1],['soy',10,1]],
+      [ g==='potato' ? 'Картофель дольками обжарь/отвари 12–15 минут до мягкости.' : `${GNAME[g]} отвари по инструкции.`,
+        `${ING_BY[p][1]} нарежь и обжарь на масле ${fish?'4–6':'6–8'} минут${p==='tofu'?', раскрошив вилкой':''}.`,
+        `Добавь ${INSTR[v]} (и лук), жарь ещё 4–5 минут под крышкой.`,
+        'Соедини с гарниром, посоли, специи по вкусу.' ]);
+  }
+  /* 2) омлеты и яичницы с наполнителями */
+  const fills = ['tomato','mushroom','pepper','spinach','cheese','ham','bacon','beans','onion'];
+  const fillG = {tomato:110, mushroom:100, pepper:110, spinach:50, cheese:30, ham:60, bacon:35, beans:120, onion:50};
+  for (let i=0;i<fills.length;i++){
+    add(`Омлет с ${INSTR[fills[i]]}`, ['b'], 10,
+      [['egg',165],['milk',50],[fills[i],fillG[fills[i]]],['oil',6]],
+      ['Взбей яйца с молоком и солью.', `${ING_BY[fills[i]][1]} — на разогретую сковороду на 2–3 минуты.`, 'Залей яйцами, крышка, 5–6 минут на среднем огне.']);
+    for (let j=i+1;j<fills.length;j++){
+      add(`Яичница с ${INSTR[fills[i]]} и ${INSTR[fills[j]]}`, ['b','d'], 10,
+        [['egg',165],[fills[i],Math.round(fillG[fills[i]]*0.7)],[fills[j],Math.round(fillG[fills[j]]*0.7)],['oil',6]],
+        [`${ING_BY[fills[i]][1]} и ${ING_BY[fills[j]][1].toLowerCase()} обжарь 3–4 минуты.`, 'Разбей яйца сверху, крышка, до готовности белка.', 'Соль, перец, зелень.']);
+    }
+  }
+  /* 3) салаты: белок × база */
+  const sprots = [['chicken',150],['tuna',120],['egg',165],['feta',60],['chickpea',180],['beans',180],['shrimp',150],['ham',80]];
+  const bases = [
+    ['tomato','cucumber','salad'],
+    ['tomato','pepper','onion'],
+    ['cucumber','cabbage','carrot'],
+  ];
+  const baseG = {tomato:110, cucumber:100, salad:40, pepper:110, onion:30, cabbage:120, carrot:60};
+  for (const [p,pg] of sprots) for (let bi=0; bi<bases.length; bi++){
+    const b = bases[bi];
+    add(`Салат с ${INSTR[p]} (${b.map(x=>ING_BY[x][1].toLowerCase().split(' ')[0]).join(', ')})`, ['l','d','s'], p==='chicken'||p==='shrimp'?15:8,
+      [[p,pg], ...b.map(x=>[x,baseG[x]]), ['oil',10]],
+      [ p==='chicken'?'Курицу обжарь полосками со специями, дай остыть пару минут.':(p==='shrimp'?'Креветки — 3 минуты на сковороде с чесноком.':(p==='egg'?'Яйца отвари вкрутую (8–9 минут), остуди.':'Белковую основу подготовь: открой/нарежь.')),
+        'Овощи нарежь, смешай в миске.', 'Заправь маслом, посоли, сверху белок.' ], (p==='tuna'||p==='chicken')?'p':undefined);
+  }
+  /* 4) каши */
+  const kashas = [['oats',60,7],['buckwheat',60,15],['rice',60,20]];
+  const tops = [['banana',120],['apple',180],['berries',100],['nuts',20]];
+  for (const [k,kg,kt] of kashas) for (const [tp,tg] of tops){
+    add(`${GNAME[k]||'Овсянка'} на молоке с ${INSTR[tp]}`, ['b'], kt,
+      [[k,kg],['milk',200],[tp,tg],['honey',10,1],['butter',5,1]],
+      [`${(GNAME[k]||'Овсянку')} свари на молоке (или 1:1 с водой).`, `Сверху — ${ING_BY[tp][1].toLowerCase()}, мёд по желанию.`]);
+  }
+  /* 5) супы */
+  const soupP = [['chicken',150],['chthigh',150],['beef',150],['cod',200],['beans',200]];
+  for (const [p,pg] of soupP){
+    add(`Суп с ${INSTR[p]} и овощами`, ['l'], 35,
+      [[p,pg],['potato',200],['carrot',75],['onion',60],['frozenveg',100,1,['peas','cabbage']]],
+      [ p==='beans'?'Овощи в 1,2 л кипятка на 12 минут.':`${ING_BY[p][1]} в 1,2–1,5 л воды — 15 минут после закипания.`,
+        'Картофель, морковь, лук — ещё 12 минут.', p==='beans'?'Фасоль и овощную смесь — 5 минут, соль, специи.':'Овощная смесь — 5 минут, соль, лавровый лист.' ]);
+    add(`Суп-пюре с ${INSTR[p]}`, ['l','d'], 35,
+      [[p,pg],['potato',250],['carrot',75],['onion',60],['milk',100,1],['butter',5,1]],
+      ['Всё отвари до мягкости 20–25 минут.', 'Пробей блендером, добавь молоко.', 'Прогрей 2 минуты, соль-перец.']);
+  }
+  /* 6) тосты и врапы */
+  const wrapF = [['chicken',120],['tuna',100],['ham',70],['egg',110],['tvorog',120],['salmon',100]];
+  for (const [f,fg] of wrapF){
+    add(`Врап с ${INSTR[f]}`, ['l','s','d'], 10,
+      [['lavash',70],[f,fg],['salad',30,1],['tomato',55,1],['gyogurt',40,1,['smetana']]],
+      ['Начинку подготовь (обжарь/нарежь).', 'На лаваш — соус, овощи, начинку; сверни.', 'Прогрей на сухой сковороде по минуте с каждой стороны.']);
+    add(`Тосты с ${INSTR[f]}`, ['b','s'], 8,
+      [['bread',70],[f,fg],['cucumber',50,1,['tomato']],['cheese',15,1]],
+      ['Хлеб подсуши.', 'Выложи начинку и овощи, сыр по желанию.']);
+  }
+  /* 7) рагу и тушёное */
+  const stewP = [['beef',150],['pork',150],['chicken',170],['turkey',170]];
+  const stewV = [['zucchini',200,'frozenveg'],['cabbage',250,'pepper'],['potato',250,'carrot']];
+  for (const [p,pg] of stewP) for (const [v,vg,v2] of stewV){
+    add(`Рагу: ${ING_BY[p][1].toLowerCase()} с ${INSTR[v]}`, ['l','d'], 35,
+      [[p,pg],[v,vg],[v2,80,1],['onion',60],['tompaste',25,1,['tomato']],['oil',8]],
+      ['Мясо кубиками обжарь до корочки 5–6 минут.', 'Лук и овощи — ещё 5 минут.', 'Томат/паста и полстакана воды, крышка, 20 минут на слабом.']);
+  }
+  /* 8) творожные и смузи */
+  for (const [tp,tg] of tops){
+    add(`Творог с ${INSTR[tp]}`, ['b','s'], 3, [['tvorog',250],[tp,tg],['honey',10,1]],
+      ['Творог в миску, сверху топпинг и мёд.'], 'p');
+  }
+  const smB = [['banana',120],['berries',100],['apple',150]];
+  for (const [f,fg] of smB){
+    add(`Смузи с ${INSTR[f]}`, ['s','b'], 4,
+      [['kefir',250,0,['milk','gyogurt']],[f,fg],['protein',20,1],['oats',15,1]],
+      ['Всё в блендер на 30 секунд.', 'Протеин — если это белковый перекус.']);
+  }
+  return out;
+}
+const GEN_RECIPES = genRecipes();
+function allRecipes(){ return RECIPES.concat(GEN_RECIPES, DB.myRecipes || []); }
+function findRecipe(id){ return allRecipes().find(r => r.id === id); }
+/* ---- расход продуктов ---- */
+const STOCK_CAT = {prot:600, carb:800, veg:500, fruit:500, dairy:900, fat:300, misc:300};
+const STOCK_OVR = {egg:550, milk:900, bread:350, lavash:280, bacon:200, tuna:240, beans:400, protein:600};
+function stockOf(id){ return STOCK_OVR[id] || STOCK_CAT[ING_BY[id][2]] || 400; }
+function noteUse(ing, q){
+  DB.pantryUse = DB.pantryUse || {};
+  for (const s of ing){
+    if (s[2] && !ingHave(s)) continue;
+    const id = ingResolve(s);
+    DB.pantryUse[id] = (DB.pantryUse[id] || 0) + s[1]*q;
+  }
+}
+function lowPantry(){
+  DB.pantryUse = DB.pantryUse || {};
+  return Object.keys(DB.pantry || {}).filter(id => (DB.pantryUse[id] || 0) > stockOf(id) * 0.8);
+}
+/* ---- покупки ---- */
+window.shopAdd = function(rid, q){
+  DB.shopPlan = DB.shopPlan || [];
+  DB.shopPlan.push({rid, q: q || 1});
+  save(); toast('В список покупок'); render();
+};
+window.shopDel = function(ix){ DB.shopPlan.splice(ix,1); save(); shopDlg(); };
+window.shopBought = function(id, el){
+  DB.pantry = DB.pantry || {}; DB.pantry[id] = 1;
+  DB.pantryUse = DB.pantryUse || {}; DB.pantryUse[id] = 0;
+  el.closest('.kv').style.opacity = .45; el.disabled = true; el.textContent = 'куплено';
+  save();
+};
+window.shopDlg = function(){
+  DB.shopPlan = DB.shopPlan || [];
+  const agg = {};
+  for (const it of DB.shopPlan){
+    const r = findRecipe(it.rid); if (!r) continue;
+    for (const s of r.ing){
+      if (s[2] && !ingHave(s)) continue;
+      const id = ingResolve(s);
+      agg[id] = (agg[id] || 0) + s[1]*it.q;
+    }
+  }
+  const rows = Object.keys(agg).sort((a,b)=>ING_BY[a][2].localeCompare(ING_BY[b][2]));
+  openModal(`<h2>Список покупок</h2>
+    <div class="small">Собран из запланированных рецептов. «Есть дома» — уже отмечено в кладовке: докупай по надобности.</div>
+    ${DB.shopPlan.length ? `<div class="card" style="margin-top:10px"><h3>Рецепты в плане</h3>` +
+      DB.shopPlan.map((it,ix)=>{ const r=findRecipe(it.rid); return r?`<div class="kv"><span>${esc(r.n)}${it.q!==1?' ×'+it.q:''}</span><button class="x" onclick="shopDel(${ix})">✕</button></div>`:''; }).join('') + `</div>` : ''}
+    ${rows.length ? `<div class="card"><h3>Купить</h3>` + rows.map(id => {
+        const ing = ING_BY[id];
+        const g = Math.round(agg[id]);
+        const un = ing[7] ? Math.max(1, Math.ceil(g/ing[7]))+' шт' : g+' г';
+        const have = pantryOn(id);
+        return `<div class="kv"><span>${esc(ing[1])} — ${un}${have?' <span class="tiny c-mut">(есть дома)</span>':''}</span>
+          <button class="btn sec sm" onclick="shopBought('${id}', this)">куплено</button></div>`;
+      }).join('') + `</div>` : `<div class="card small">План пуст. Добавляй рецепты кнопкой «В покупки» в подборе.</div>`}
+    <div class="row" style="gap:8px;margin-top:10px">
+      <button class="btn danger grow sm" onclick="if(confirm('Очистить план покупок?')){DB.shopPlan=[];save();shopDlg();}">Очистить</button>
+      <button class="btn sec grow sm" onclick="closeModal()">Закрыть</button></div>`);
+};
+/* ---- правка граммовок ---- */
+window.tweakDlg = function(rid, q, mid){
+  const r = findRecipe(rid); if (!r) return;
+  window._tw = {rid, mid, rows: r.ing.map(s => ({id: ingResolve(s), g: Math.round(s[1]*q), on: !(s[2] && !ingHave(s)), opt: !!s[2]}))};
+  openModal(`<h2>${esc(r.n)}</h2><div class="small">Подгони граммовки под себя — КБЖУ пересчитается.</div>
+    <div id="tw-rows">` + window._tw.rows.map((row,i) => `
+      <div class="row" style="gap:8px;margin-top:8px">
+        <button class="chip ${row.on?'done':''}" style="min-width:40px;min-height:40px" onclick="twToggle(${i},this)">✓</button>
+        <div class="grow small">${esc(ING_BY[row.id][1])}${ING_BY[row.id][7]?'<div class="tiny">1 шт ≈ '+ING_BY[row.id][7]+' г</div>':''}</div>
+        <input type="number" inputmode="numeric" value="${row.g}" style="width:86px;min-height:42px" oninput="twG(${i}, this.value)"> <span class="tiny">г</span>
+      </div>`).join('') + `</div>
+    <div class="kv" style="margin-top:12px"><span>Итого</span><b id="tw-tot"></b></div>
+    <div class="row" style="gap:8px;margin-top:12px">
+      <button class="btn sec grow" onclick="twSaveMy()">Сохранить как мой</button>
+      <button class="btn grow" onclick="twEat()">Съел это</button></div>`);
+  twTot();
+};
+function twCalc(){
+  const t = {kcal:0,p:0,f:0,c:0};
+  for (const row of window._tw.rows){
+    if (!row.on) continue;
+    const ing = ING_BY[row.id], g = row.g/100;
+    t.kcal += ing[3]*g; t.p += ing[4]*g; t.f += ing[5]*g; t.c += ing[6]*g;
+  }
+  return t;
+}
+function twTot(){
+  const t = twCalc();
+  $('#tw-tot').textContent = Math.round(t.kcal)+' ккал · Б'+Math.round(t.p)+' Ж'+Math.round(t.f)+' У'+Math.round(t.c);
+}
+window.twToggle = function(i, el){ window._tw.rows[i].on = !window._tw.rows[i].on; el.classList.toggle('done'); twTot(); };
+window.twG = function(i, v){ window._tw.rows[i].g = Math.max(0, parseFloat(v)||0); twTot(); };
+window.twEat = function(){
+  const r = findRecipe(window._tw.rid); const t = twCalc();
+  if (!DB.food[foodDate]) DB.food[foodDate] = {items:[]};
+  DB.food[foodDate].items.push({n:r.n, p:Math.round(t.p), f:Math.round(t.f), c:Math.round(t.c), kcal:Math.round(t.kcal), q:1, meal:window._tw.mid, recipe:1});
+  noteUse(window._tw.rows.filter(x=>x.on).map(x=>[x.id, x.g]), 1);
+  save(); closeModal(); render(); toast(r.n+' — записано');
+};
+window.twSaveMy = function(){
+  const r = findRecipe(window._tw.rid);
+  DB.myRecipes = DB.myRecipes || [];
+  DB.myRecipes.push({id:'u'+(DB.myRecipes.length+1)+'_'+key(today()), n:r.n+' (мой)', m:r.m, t:r.t,
+    ing: window._tw.rows.filter(x=>x.on).map(x=>[x.id, x.g]), s:r.s, my:1});
+  save(); toast('Сохранено в «Мои рецепты»'); closeModal(); render();
+};
+/* ---- конструктор своего рецепта ---- */
+window.myRecipeDlg = function(mid){
+  window._mr = {ing:[], meals:{b:mid==='b', l:mid==='l', d:mid==='d', s:(mid||'')[0]==='s'}};
+  openModal(`<h2>Свой рецепт</h2>
+    <div class="wlab">Название</div><input type="text" id="mr-n" placeholder="Например: Паста как я люблю">
+    <div class="wlab">Подходит для</div>
+    <div class="seg" id="mr-meals">
+      <button data-m="b" class="${window._mr.meals.b?'on':''}" onclick="this.classList.toggle('on')">Завтрак</button>
+      <button data-m="l" class="${window._mr.meals.l?'on':''}" onclick="this.classList.toggle('on')">Обед</button>
+      <button data-m="d" class="${window._mr.meals.d?'on':''}" onclick="this.classList.toggle('on')">Ужин</button>
+      <button data-m="s" class="${window._mr.meals.s?'on':''}" onclick="this.classList.toggle('on')">Перекус</button></div>
+    <div class="wlab">Ингредиенты</div>
+    <div class="row" style="gap:8px">
+      <select id="mr-ing" style="flex:2">${ING.map(x=>`<option value="${x[0]}">${esc(x[1])}</option>`).join('')}</select>
+      <input type="number" id="mr-g" placeholder="г" inputmode="numeric" style="width:80px">
+      <button class="btn sec sm" onclick="mrAdd()">+</button></div>
+    <div id="mr-list" class="tiny" style="margin-top:8px"></div>
+    <div class="kv"><span>Итого</span><b id="mr-tot">0 ккал</b></div>
+    <div class="wlab">Шаги (по строке на шаг, можно пропустить)</div>
+    <textarea id="mr-s" rows="3" style="width:100%;background:rgba(0,0,0,.28);border:1px solid var(--border2);color:var(--text);border-radius:12px;font:inherit;padding:10px"></textarea>
+    <button class="btn full" style="margin-top:12px" onclick="mrSave('${mid||''}')">Сохранить рецепт</button>`);
+};
+window.mrAdd = function(){
+  const id = $('#mr-ing').value, g = parseFloat($('#mr-g').value);
+  if (!isFinite(g) || g<=0) return toast('Укажи граммы');
+  window._mr.ing.push([id, Math.round(g)]);
+  $('#mr-g').value = '';
+  mrDraw();
+};
+window.mrDel = function(i){ window._mr.ing.splice(i,1); mrDraw(); };
+function mrDraw(){
+  $('#mr-list').innerHTML = window._mr.ing.map((s,i)=>`<div class="kv"><span>${esc(ING_BY[s[0]][1])} — ${s[1]} г</span><button class="x" style="min-height:32px" onclick="mrDel(${i})">✕</button></div>`).join('') || 'пока пусто';
+  const t = {kcal:0,p:0};
+  for (const s of window._mr.ing){ const ing=ING_BY[s[0]]; t.kcal+=ing[3]*s[1]/100; t.p+=ing[4]*s[1]/100; }
+  $('#mr-tot').textContent = Math.round(t.kcal)+' ккал · Б'+Math.round(t.p);
+}
+window.mrSave = function(mid){
+  const name = ($('#mr-n').value||'').trim();
+  if (!name) return toast('Дай рецепту имя');
+  if (!window._mr.ing.length) return toast('Добавь ингредиенты');
+  const meals = [...document.querySelectorAll('#mr-meals button.on')].map(b=>b.dataset.m);
+  if (!meals.length) return toast('Выбери приёмы');
+  const steps = ($('#mr-s').value||'').split('\\n').map(x=>x.trim()).filter(Boolean);
+  DB.myRecipes = DB.myRecipes || [];
+  DB.myRecipes.push({id:'u'+(DB.myRecipes.length+1)+'_'+key(today()), n:name, m:meals, t:15,
+    ing:window._mr.ing, s:steps.length?steps:['Приготовь как обычно — рецепт твой.'], my:1});
+  save(); closeModal(); toast('Рецепт сохранён');
+  if (mid) recipesDlg(mid); else render();
 };
 
 /* ============ 10. ЭКРАН «ЕДА» ============ */
@@ -1913,8 +2212,11 @@ function vFood(){
   const focus = dayFocus(k);
   h += `<div class="insight ${focus.mode==='balance'||focus.mode==='done'?'good':'warn'}" style="margin-top:4px"><p style="margin:0">${esc(focus.txt)}</p></div>`;
   h += `<div class="row" style="gap:8px;margin:10px 0 2px">
-    <button class="btn sec grow sm" onclick="pantryDlg()">Мои продукты${DB.pantry&&Object.keys(DB.pantry).length?' ('+Object.keys(DB.pantry).length+')':''}</button>
+    <button class="btn sec grow sm" onclick="pantryDlg()">Продукты${DB.pantry&&Object.keys(DB.pantry).length?' ('+Object.keys(DB.pantry).length+')':''}</button>
+    <button class="btn sec grow sm" onclick="shopDlg()">Покупки${DB.shopPlan&&DB.shopPlan.length?' ('+DB.shopPlan.length+')':''}</button>
     <button class="btn sec grow sm" onclick="mealPlanDlg()">Мой план</button></div>`;
+  const low = lowPantry();
+  if (low.length) h += `<div class="insight warn" style="margin-top:6px"><p style="margin:0">Судя по готовке, заканчиваются: <b>${low.map(id=>esc(ING_BY[id][1])).join(', ')}</b>. Проверь — и либо докупи (кнопка «Покупки»), либо сними отметку в продуктах.</p></div>`;
   // секции приёмов
   const act = activeMeals(k);
   for (let i = 0; i < MEAL_DEF.length; i++){
@@ -2203,7 +2505,7 @@ function vMore(){
       <div class="kv"><span>${PROF.place==='home' ? 'Дом · '+(['db','band','bar'].filter(k=>PROF.equip&&PROF.equip[k]).map(k=>({db:'гантели',band:'резинка',bar:'турник'})[k]).join(', ')||'вес тела') : 'Зал'} · ${PROF.split==='fb'?'Фулбади':'PPL'} · Старт ${PROF.startWeight} кг → ~${Math.round(TARGETS[WEEKS()])} кг к ${fmtD(PROG_END)} (${WEEKS()} нед.)</span></div>
       <button class="btn sec full" style="margin-top:10px" onclick="adjustDlg()">Травмы и активность</button>
       <button class="btn sec full" style="margin-top:8px" onclick="if(confirm('Пересоздать программу заново через анкету? Вес, еда и шаги сохранятся, а журнал тренировок и замены очистятся.')){DB.profile=null;DB.sessions={};DB.swaps={};DB.skips={};DB.dateOv={};save();location.reload();}">Пересоздать программу (анкета)</button></div>`;
-    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 2.0 (кухня: приёмы пищи, рецепты из продуктов, подсказки дня) · собрано для Егора и друзей · 19.08.2026. Фото упражнений: free-exercise-db, Public Domain.</div>`;
+    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 2.1 (сотни рецептов, свои рецепты, покупки, расход продуктов) · собрано для Егора и друзей · 19.08.2026. Фото упражнений: free-exercise-db, Public Domain.</div>`;
   }
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }

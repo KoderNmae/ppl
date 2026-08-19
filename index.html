@@ -1012,11 +1012,14 @@ function vHome(){
   h += `</div>`;
   // питание
   const kt = DB.kcalTarget, pt = DB.protTarget;
-  h += `<div class="card" onclick="tab='food';render()"><h3>Питание сегодня</h3>
+  const nm = nextMealInfo(k), fc = dayFocus(k);
+  h += `<div class="card" onclick="foodDate=key(today());tab='food';render()"><h3>Питание сегодня</h3>
     <div class="kv"><span>Калории</span><span><b>${Math.round(ft.kcal)}</b> / ${kt}</span></div>
     <div class="bar"><i class="${ft.kcal>kt*1.04?'over':''}" style="width:${Math.min(100,ft.kcal/kt*100)}%"></i></div>
     <div class="kv" style="margin-top:8px"><span>Белок</span><span><b>${Math.round(ft.p)}</b> / ${pt} г</span></div>
-    <div class="bar"><i class="${ft.p>=pt*0.95?'good':''}" style="width:${Math.min(100,ft.p/pt*100)}%"></i></div></div>`;
+    <div class="bar"><i class="${ft.p>=pt*0.95?'good':''}" style="width:${Math.min(100,ft.p/pt*100)}%"></i></div>
+    ${nm?`<div class="small" style="margin-top:10px"><b>Следующий приём:</b> ${esc(nm.txt)}</div>`:''}
+    <div class="tiny" style="margin-top:6px">${esc(fc.txt)}</div></div>`;
   // шаги
   const goal = STEP_GOAL(Math.min(w,WEEKS()));
   h += `<div class="card"><h3>Шаги</h3><div class="row">
@@ -1556,13 +1559,346 @@ function setupChartTip(){
   svg.addEventListener('pointerdown', on);
   svg.addEventListener('pointerleave', ()=>{ cross.setAttribute('opacity','0'); tip.textContent=''; });
 }
+/* ============ КУХНЯ: продукты, рецепты, приёмы ============ */
+/* Ингредиенты: [id, название, категория, ккал/100г, Б, Ж, У, вес 1 шт (г) или 0] */
+const ING = [
+ ['egg','Яйца','prot',157,12.7,11.5,0.7,55],
+ ['chicken','Куриная грудка','prot',113,23.6,1.9,0.4,0],
+ ['chthigh','Куриные бёдра','prot',185,16.8,12.8,0,0],
+ ['turkey','Индейка (филе)','prot',84,19.2,0.7,0,0],
+ ['beef','Говядина / фарш','prot',254,17,20,0,0],
+ ['pork','Свинина','prot',259,16,22,0,0],
+ ['bacon','Бекон','prot',458,11.6,45,0.1,0],
+ ['ham','Ветчина','prot',145,14,9,1.5,0],
+ ['cod','Белая рыба (треска и т.п.)','prot',78,17.7,0.7,0,0],
+ ['salmon','Лосось / скумбрия','prot',142,19.8,6.3,0,0],
+ ['tuna','Тунец консервированный','prot',96,22,1,0,0],
+ ['shrimp','Креветки','prot',87,18,1,0,0],
+ ['tvorog','Творог 5%','prot',121,17,5,1.8,0],
+ ['gyogurt','Греческий йогурт','prot',66,10,2,3.5,0],
+ ['cheese','Сыр','fat',356,24,28,0.5,0],
+ ['feta','Фета / брынза','fat',264,14,21,4,0],
+ ['tofu','Тофу','prot',76,8,4.8,1.9,0],
+ ['protein','Протеин (порошок)','prot',390,75,5,10,30],
+ ['milk','Молоко','dairy',60,3,3.2,4.7,0],
+ ['kefir','Кефир','dairy',53,3,2.5,4,0],
+ ['smetana','Сметана 15%','fat',158,2.6,15,3,0],
+ ['rice','Рис (сухой)','carb',344,6.7,0.7,78.9,0],
+ ['buckwheat','Гречка (сухая)','carb',313,12.6,3.3,62.1,0],
+ ['oats','Овсянка (сухая)','carb',366,11.9,7.2,69.3,0],
+ ['pasta','Макароны (сухие)','carb',350,10.4,1.1,71.5,0],
+ ['potato','Картофель','carb',76,2,0.4,16.3,0],
+ ['bread','Хлеб цельнозерновой','carb',213,5.9,1,45,35],
+ ['lavash','Лаваш / тортилья','carb',270,8,1,55,70],
+ ['beans','Фасоль белая (конс.)','carb',90,6,0.5,16,0],
+ ['chickpea','Нут / чечевица (конс.)','carb',120,7,2,17,0],
+ ['corn','Кукуруза (конс.)','carb',80,2.5,1,15,0],
+ ['peas','Горошек зелёный','carb',73,5,0.2,13,0],
+ ['tomato','Помидоры','veg',20,0.9,0.2,3.9,110],
+ ['cucumber','Огурцы','veg',14,0.8,0.1,2.5,100],
+ ['pepper','Перец болгарский','veg',27,1.3,0.1,5.3,150],
+ ['onion','Лук','veg',41,1.4,0.2,8.2,80],
+ ['garlic','Чеснок','veg',143,6.5,0.5,30,5],
+ ['carrot','Морковь','veg',34,1.3,0.1,6.9,75],
+ ['cabbage','Капуста','veg',27,1.8,0.1,4.7,0],
+ ['broccoli','Брокколи / цв. капуста','veg',30,3,0.4,4,0],
+ ['zucchini','Кабачок','veg',24,0.6,0.3,4.6,0],
+ ['mushroom','Грибы','veg',27,4.3,1,0.1,0],
+ ['spinach','Шпинат / зелень','veg',22,2.9,0.3,2,0],
+ ['salad','Салатные листья','veg',15,1.4,0.2,2,0],
+ ['frozenveg','Овощная смесь (заморозка)','veg',45,2.5,0.5,8,0],
+ ['banana','Банан','fruit',96,1.5,0.2,21,120],
+ ['apple','Яблоко','fruit',47,0.4,0.4,9.8,180],
+ ['berries','Ягоды (свеж/заморозка)','fruit',44,1,0.4,9,0],
+ ['oil','Масло растительное','fat',899,0,99.9,0,0],
+ ['butter','Масло сливочное','fat',748,0.5,82.5,0.8,0],
+ ['nuts','Орехи','fat',600,15,55,15,0],
+ ['avocado','Авокадо','fat',160,2,15,9,140],
+ ['honey','Мёд / варенье','carb',320,0.3,0,80,0],
+ ['soy','Соевый соус','misc',53,6,0,8,0],
+ ['tompaste','Томатная паста / соус','veg',80,3.6,0.5,15,0],
+];
+const ING_BY = Object.fromEntries(ING.map(x=>[x[0],x]));
+const ING_CAT_N = {prot:'Белковое', carb:'Крупы и гарниры', veg:'Овощи', fruit:'Фрукты и ягоды', dairy:'Молочное', fat:'Жиры и сыр', misc:'Прочее'};
+/* Рецепты: {id, n, m:[приёмы b/l/d/s], t:мин, ing:[[id, грамм, opt?, alt[]]...], s:[шаги], boost} */
+const RECIPES = [
+ {id:'omlet', n:'Омлет с помидорами', m:['b'], t:10,
+  ing:[['egg',165],['milk',50],['tomato',110],['oil',5],['cheese',20,1],['spinach',30,1]],
+  s:['Взбей яйца с молоком, щепотка соли.','На сковороду с маслом — помидоры на 2 минуты.','Залей яйцами, накрой крышкой, 5–6 минут на среднем.','Сыр/зелень — за минуту до готовности.']},
+ {id:'engbreak', n:'Английский завтрак (яйца, бекон, фасоль)', m:['b'], t:15,
+  ing:[['egg',110],['bacon',40],['beans',150],['tomato',110],['bread',35,1]],
+  s:['Бекон на сухую сковороду до хруста, убери.','На том же жире — яичница и половинки помидора.','Фасоль разогрей в сотейнике 3–4 минуты.','Собери на тарелке; хлеб — по желанию.']},
+ {id:'shakshuka', n:'Шакшука с фасолью', m:['b','l'], t:20,
+  ing:[['egg',165],['tomato',220],['onion',40],['pepper',75,1],['beans',120,1],['oil',7],['garlic',5,1]],
+  s:['Лук (и перец) на масле 3–4 минуты.','Помидоры + специи, туши 5 минут; добавь фасоль.','Сделай лунки, разбей яйца, крышка, 6–8 минут.','Досоли, зелень сверху.']},
+ {id:'oatmeal', n:'Овсянка на молоке с бананом', m:['b'], t:7,
+  ing:[['oats',60],['milk',200],['banana',120],['nuts',10,1],['honey',10,1]],
+  s:['Овсянку в кипящее молоко, 4–5 минут, помешивай.','Банан кружками, орехи/мёд сверху.']},
+ {id:'protoat', n:'Протеиновая овсянка', m:['b'], t:8, boost:'p',
+  ing:[['oats',60],['milk',150],['protein',30],['berries',80,1],['banana',60,1]],
+  s:['Свари овсянку на молоке с водой 1:1.','Сними с огня, вмешай протеин (не кипяти!).','Ягоды или банан сверху.']},
+ {id:'syrniki', n:'Сырники на сковороде', m:['b'], t:20,
+  ing:[['tvorog',300],['egg',55],['oats',30],['oil',7],['smetana',30,1],['honey',10,1]],
+  s:['Творог + яйцо + молотая овсянка, замеси.','Слепи 6 шайб, обваляй в овсянке.','Жарь по 3–4 минуты на сторону под крышкой.','Подача со сметаной/мёдом.']},
+ {id:'tvorog-bowl', n:'Творожная миска с фруктами', m:['b','s'], t:3, boost:'p',
+  ing:[['tvorog',250],['banana',60,1,['apple','berries']],['nuts',15,1],['honey',10,1]],
+  s:['Творог в миску, фрукты/ягоды и орехи сверху.','Мёд, если нужна сладость.']},
+ {id:'eggtoast', n:'Тосты с яйцом и авокадо', m:['b'], t:10,
+  ing:[['bread',70],['egg',110],['avocado',70,1],['tomato',55,1]],
+  s:['Хлеб подсуши на сковороде или в тостере.','Яйца — глазунья или пашот.','Авокадо вилкой на тост, сверху яйцо и помидор.']},
+ {id:'grechka-chicken', n:'Гречка с курицей и овощами', m:['l','d'], t:25,
+  ing:[['buckwheat',70],['chicken',180,0,['turkey','chthigh']],['onion',40],['carrot',40,1],['oil',7],['tompaste',20,1]],
+  s:['Гречку отвари (1:2, 15 минут).','Курицу кубиками обжарь с луком и морковью 8–10 минут.','Смешай с гречкой, ложка томатной пасты, 2 минуты вместе.']},
+ {id:'rice-chicken', n:'Рис с курицей стир-фрай', m:['l','d'], t:20,
+  ing:[['rice',65],['chicken',180,0,['turkey','shrimp']],['frozenveg',150,0,['pepper','broccoli','peas']],['soy',15],['oil',7],['garlic',5,1]],
+  s:['Рис отвари заранее или пока жаришь.','Курицу полосками на сильном огне 5–6 минут.','Овощи + соевый, ещё 4–5 минут.','Смешай с рисом.']},
+ {id:'pasta-chicken', n:'Паста с курицей и томатами', m:['l','d'], t:20,
+  ing:[['pasta',70],['chicken',150,0,['turkey']],['tomato',110,0,['tompaste']],['onion',40,1],['oil',7],['cheese',15,1]],
+  s:['Макароны в кипяток по инструкции.','Курицу с луком обжарь, добавь помидоры, туши 5 минут.','Смешай с пастой, сыр сверху.']},
+ {id:'chili', n:'Чили кон карне (фарш с фасолью)', m:['l','d'], t:30, boost:'p',
+  ing:[['beef',150,0,['pork','turkey']],['beans',200],['tomato',150,0,['tompaste']],['onion',60],['pepper',75,1],['oil',7],['garlic',5,1]],
+  s:['Лук и чеснок на масле, затем фарш до румяности.','Помидоры/паста + специи (паприка, чили), 5 минут.','Фасоль, огонь ниже, туши 10–15 минут.','Отлично хранится — готовь двойную порцию.']},
+ {id:'beans-eggs', n:'Тушёная фасоль с яйцом и беконом', m:['b','l','d'], t:15,
+  ing:[['beans',200],['egg',110],['bacon',30,1],['tomato',110,0,['tompaste']],['onion',40,1],['oil',5]],
+  s:['Бекон/лук обжарь, добавь помидоры — 3 минуты.','Фасоль, туши 5 минут.','Яйца сверху, крышка, до схватывания белка.']},
+ {id:'plov-lite', n:'Плов лайт с курицей', m:['l','d'], t:35,
+  ing:[['rice',70],['chthigh',150,0,['chicken','beef']],['carrot',75],['onion',60],['oil',10],['garlic',10,1]],
+  s:['Мясо обжарь, добавь лук и морковь соломкой.','Рис сверху, залей водой на палец выше.','Крышка, слабый огонь, 20 минут не мешая.']},
+ {id:'fish-potato', n:'Рыба с картофелем в сковороде', m:['l','d'], t:25, boost:'p',
+  ing:[['cod',250,0,['salmon']],['potato',300],['onion',40,1],['oil',10],['smetana',30,1]],
+  s:['Картофель дольками — 12–15 минут под крышкой.','Сдвинь, добавь рыбу кусками, лук.','8–10 минут; сметана в конце по желанию.']},
+ {id:'salmon-rice', n:'Лосось с рисом и брокколи', m:['l','d'], t:20,
+  ing:[['salmon',150],['rice',65],['broccoli',200,0,['frozenveg']],['soy',10,1],['oil',5]],
+  s:['Рис отвари; брокколи — 5 минут в кипяток или пар.','Лосось на сковороде по 4 минуты со стороны.','Собери, полей соевым.']},
+ {id:'tuna-salad', n:'Салат с тунцом и фасолью', m:['l','d','s'], t:7, boost:'p',
+  ing:[['tuna',120],['beans',150],['cucumber',100,1],['tomato',110,1],['onion',30,1],['oil',10],['salad',30,1]],
+  s:['Всё нарезать, смешать с тунцом и фасолью.','Масло, соль, перец — готово.']},
+ {id:'chick-salad', n:'Тёплый салат с курицей', m:['l','d'], t:15,
+  ing:[['chicken',150],['salad',50,0,['cabbage','spinach']],['tomato',110,1],['cucumber',100,1],['oil',10],['cheese',20,1]],
+  s:['Курицу полосками обжарь со специями.','На листья — овощи, сверху тёплая курица и сыр.','Масло или йогуртовая заправка.']},
+ {id:'wrap', n:'Врап с курицей и овощами', m:['l','s','d'], t:12,
+  ing:[['lavash',70],['chicken',120,0,['ham','tuna']],['salad',30,1],['tomato',55,1],['gyogurt',40,1,['smetana']],['cheese',15,1]],
+  s:['Курицу обжарь или используй готовую/ветчину.','На лаваш — йогуртовый соус, овощи, начинку.','Сверни, прогрей на сухой сковороде по минуте.']},
+ {id:'buddha', n:'Боул: крупа + белок + овощи', m:['l','d'], t:20,
+  ing:[['buckwheat',60,0,['rice','chickpea']],['egg',110,0,['chicken','tofu','tuna']],['cucumber',100,1],['tomato',110,1],['avocado',70,1],['oil',7],['soy',10,1]],
+  s:['Крупа — основа миски.','Белок: яйца/курица/тофу — что есть.','Овощи секторами, заправка сверху.']},
+ {id:'soup-chicken', n:'Куриный суп с овощами', m:['l'], t:35,
+  ing:[['chicken',150,0,['chthigh']],['potato',200],['carrot',75],['onion',60],['frozenveg',100,1,['peas','cabbage']]],
+  s:['Курицу в 1,5 л воды — 15 минут после закипания.','Картофель, морковь, лук — ещё 12 минут.','Овощи/горошек — 5 минут, соль-перец.']},
+ {id:'kotlety', n:'Котлеты из фарша + гарнир', m:['l','d'], t:30,
+  ing:[['beef',200,0,['turkey','pork','chicken']],['egg',55],['onion',40],['buckwheat',60,0,['rice','potato']],['oil',10]],
+  s:['Фарш + яйцо + тёртый лук, соль-перец.','Котлеты жарь по 4–5 минут на сторону под крышкой.','Гарнир отвари параллельно.']},
+ {id:'stew-veg', n:'Овощное рагу с мясом', m:['l','d'], t:35,
+  ing:[['pork',150,0,['beef','chicken']],['zucchini',200,0,['frozenveg']],['potato',200,1],['tomato',110,0,['tompaste']],['onion',60],['oil',10]],
+  s:['Мясо кубиками обжарь до корочки.','Лук, затем все овощи, помидоры.','Крышка, слабый огонь, 20 минут.']},
+ {id:'grenki-cheese', n:'Горячие бутерброды с яйцом и сыром', m:['b','s'], t:10,
+  ing:[['bread',70],['egg',110],['cheese',30],['ham',40,1],['tomato',55,1]],
+  s:['Яйца взбей, вымочи хлеб.','На сковороду, сверху ветчина/сыр/помидор.','Крышка на 3–4 минуты, до расплавленного сыра.']},
+ {id:'lecho-eggs', n:'Яичница с овощами и грибами', m:['b','d'], t:12,
+  ing:[['egg',165],['mushroom',100,1],['pepper',75,1,['tomato','zucchini']],['onion',40,1],['oil',7]],
+  s:['Овощи и грибы обжарь 5–6 минут.','Яйца сверху, крышка, до готовности.']},
+ {id:'grech-milk', n:'Гречка с молоком', m:['b','s'], t:15,
+  ing:[['buckwheat',60],['milk',250],['honey',10,1],['butter',5,1]],
+  s:['Гречку отвари.','Залей горячим молоком, мёд по вкусу.']},
+ {id:'yog-bowl', n:'Йогуртовая миска с ягодами и орехами', m:['b','s'], t:3,
+  ing:[['gyogurt',250,0,['kefir']],['berries',100,0,['banana','apple']],['nuts',20],['oats',20,1],['honey',10,1]],
+  s:['Йогурт в миску, всё остальное сверху.','Овсянку можно сухой — будет хрустеть.']},
+ {id:'kefir-smoothie', n:'Смузи: кефир + банан + ягоды', m:['s','b'], t:4,
+  ing:[['kefir',250,0,['milk','gyogurt']],['banana',120],['berries',80,1],['protein',20,1],['oats',15,1]],
+  s:['Всё в блендер на 30 секунд.','Протеин — если нужен белковый перекус.']},
+ {id:'tofu-fry', n:'Тофу-скрэмбл с овощами', m:['b','d'], t:12,
+  ing:[['tofu',200],['tomato',110,1],['spinach',50,1,['pepper']],['onion',40,1],['oil',7],['soy',10]],
+  s:['Тофу раскроши вилкой, обжарь с луком.','Овощи + соевый, 5 минут.','Куркума даст «яичный» цвет.']},
+ {id:'shrimp-pasta', n:'Паста с креветками', m:['d','l'], t:15,
+  ing:[['pasta',70],['shrimp',150],['garlic',10],['oil',10],['tomato',110,1,['tompaste']],['spinach',30,1]],
+  s:['Паста — по инструкции.','Чеснок на масле 30 секунд, креветки 3–4 минуты.','Помидоры/шпинат, смешай с пастой.']},
+ {id:'cottage-omlet', n:'Белковый омлет с творогом', m:['b'], t:10, boost:'p',
+  ing:[['egg',110],['tvorog',100],['spinach',30,1,['tomato']],['oil',5]],
+  s:['Яйца взбей с творогом до однородности.','На сковороду, крышка, 5–6 минут на слабом.']},
+ {id:'chickpea-salad', n:'Салат с нутом и фетой', m:['l','s','d'], t:8,
+  ing:[['chickpea',180],['feta',50,1,['cheese']],['cucumber',100],['tomato',110],['onion',30,1],['oil',10]],
+  s:['Нут промой, овощи нарежь.','Смешай, фета сверху, масло и лимон.']},
+ {id:'baked-pot-tuna', n:'Картофель с тунцом и йогуртом', m:['l','d'], t:25,
+  ing:[['potato',350],['tuna',120],['gyogurt',60,0,['smetana']],['onion',20,1],['cucumber',50,1]],
+  s:['Картофель отвари/запеки до мягкости.','Тунец + йогурт + лук — начинка.','Раскрой картофель, начинка сверху.']},
+ {id:'befstroganov', n:'Бефстроганов лайт', m:['l','d'], t:25,
+  ing:[['beef',180],['onion',60],['smetana',60],['mushroom',100,1],['buckwheat',60,0,['rice','pasta']],['oil',7]],
+  s:['Мясо соломкой на сильном огне 4–5 минут.','Лук/грибы, затем сметана и полстакана воды.','Туши 10 минут; гарнир отдельно.']},
+ {id:'ryba-kotlety', n:'Рыбные котлеты', m:['l','d'], t:30, boost:'p',
+  ing:[['cod',300],['egg',55],['onion',40],['oats',25],['oil',10]],
+  s:['Рыбу в блендер/мясорубку с луком.','Яйцо + овсянка, 10 минут постоять.','Котлеты по 4–5 минут на сторону.']},
+ {id:'lazy-vareniki', n:'Ленивые вареники из творога', m:['b'], t:15,
+  ing:[['tvorog',250],['egg',55],['oats',35,0,['pasta']],['smetana',30,1],['honey',10,1]],
+  s:['Творог + яйцо + мука/овсянка — тесто.','Колбаску нарежь шайбами.','В кипяток на 3 минуты после всплытия.']},
+ {id:'avo-tuna-toast', n:'Тост с тунцом и авокадо', m:['s','b','l'], t:7, boost:'p',
+  ing:[['bread',70],['tuna',100],['avocado',70],['onion',20,1],['cucumber',50,1]],
+  s:['Тунец + авокадо вилкой, лук мелко.','На подсушенный хлеб, огурец сверху.']},
+];
+/* ---- приёмы дня ---- */
+const MEAL_DEF = [
+ {id:'b',  n:'Завтрак', w:[6,10.5],   share:1.0},
+ {id:'s1', n:'Перекус', w:[10.5,12.5],share:0.4, opt:1},
+ {id:'l',  n:'Обед',    w:[12.5,15.5],share:1.15},
+ {id:'s2', n:'Перекус', w:[15.5,18],  share:0.4, opt:1},
+ {id:'d',  n:'Ужин',    w:[18,21.5],  share:1.0},
+ {id:'s3', n:'Поздний перекус', w:[21.5,23.5], share:0.35, opt:1},
+];
+function activeMeals(k){
+  const day = DB.food[k] || {};
+  return MEAL_DEF.filter(m => !m.opt || (day.snacks && day.snacks[m.id]) || (day.items||[]).some(x=>x.meal===m.id));
+}
+function mealTargets(k){
+  const act = activeMeals(k);
+  const S = act.reduce((a,m)=>a+m.share, 0);
+  const out = {};
+  act.forEach(m => out[m.id] = {kcal: Math.round(DB.kcalTarget*m.share/S/10)*10, prot: Math.round(DB.protTarget*m.share/S/5)*5});
+  return out;
+}
+function mealItems(k, mid){
+  return (DB.food[k]?.items||[]).map((x,i)=>({x,i})).filter(o=>o.x.meal===mid);
+}
+function mealEaten(k, mid){
+  return mealItems(k,mid).reduce((a,o)=>({kcal:a.kcal+o.x.kcal*o.x.q, p:a.p+o.x.p*o.x.q}), {kcal:0,p:0});
+}
+window.addSnack = function(mid){
+  if (!DB.food[foodDate]) DB.food[foodDate] = {items:[]};
+  DB.food[foodDate].snacks = DB.food[foodDate].snacks || {};
+  DB.food[foodDate].snacks[mid] = 1;
+  save(); render();
+};
+/* ---- фокус дня: чего не хватает ---- */
+function dayFocus(k){
+  const t = foodTotals(k);
+  const needP = DB.protTarget - t.p, needK = DB.kcalTarget - t.kcal;
+  const fr = fatRange();
+  if (needK <= 100) return {mode:'done', txt:'Калории дня набраны — дальше только вода/овощи, если голод.'};
+  if (needP > 25 && needP*4/Math.max(needK,1) > 0.38)
+    return {mode:'protein', txt:'Фокус — белок: осталось '+Math.round(needP)+' г. Выбирай курицу, творог, рыбу, яйца, тунца.'};
+  if (t.f > fr[1])
+    return {mode:'lowfat', txt:'Жиры уже набраны ('+Math.round(t.f)+' г) — дальше постное: белая рыба, творог, овощи, крупы.'};
+  if (t.c > (DB.kcalTarget - DB.protTarget*4 - fr[0]*9)/4)
+    return {mode:'lowcarb', txt:'Углеводы дня почти выбраны — следующий приём: белок + овощи, без гарнира.'};
+  return {mode:'balance', txt:'Идёшь ровно: белок + гарнир + овощи в каждый приём.'};
+}
+function nextMealInfo(k){
+  const now = new Date(); const hr = now.getHours() + now.getMinutes()/60;
+  const tg = mealTargets(k);
+  for (const m of activeMeals(k)){
+    if (hr > m.w[1]) continue;
+    const e = mealEaten(k, m.id);
+    if (e.kcal >= (tg[m.id]?.kcal||0)*0.6) continue;
+    const left = Math.max(0, Math.round(((tg[m.id]?.kcal||0) - e.kcal)/10)*10);
+    const when = hr < m.w[0] ? 'с '+String(Math.floor(m.w[0])).padStart(2,'0')+':'+(m.w[0]%1?'30':'00') : 'сейчас';
+    return {m, txt: m.n+' — '+when+' · ~'+left+' ккал, белка ~'+Math.max(0, (tg[m.id]?.prot||0)-Math.round(e.p))+' г'};
+  }
+  return null;
+}
+/* ---- кладовка и рецепты ---- */
+function pantryOn(id){ return !!(DB.pantry && DB.pantry[id]); }
+function ingHave(spec){ return pantryOn(spec[0]) || (spec[3]||[]).some(pantryOn); }
+function ingResolve(spec){ if (pantryOn(spec[0])) return spec[0]; return (spec[3]||[]).find(pantryOn) || spec[0]; }
+function recipeCalc(r, q){
+  const t = {kcal:0,p:0,f:0,c:0};
+  for (const s of r.ing){
+    if (s[2] && !ingHave(s)) continue;              // опциональный и нет — пропуск
+    const ing = ING_BY[ingResolve(s)];
+    const g = s[1]*q/100;
+    t.kcal += ing[3]*g; t.p += ing[4]*g; t.f += ing[5]*g; t.c += ing[6]*g;
+  }
+  return t;
+}
+function recipesFor(mid){
+  const key = mid[0]==='s' ? 's' : mid;
+  const focus = dayFocus(foodDate).mode;
+  const tg = mealTargets(foodDate)[mid] || {kcal:500};
+  const eaten = mealEaten(foodDate, mid);
+  const targetK = Math.max(250, tg.kcal - eaten.kcal);
+  const out = [];
+  for (const r of RECIPES){
+    if (!(r.m.includes(key) || (key==='s' && r.m.includes('b')))) continue;
+    if (!r.ing.every(s => s[2] || ingHave(s))) continue;
+    const base = recipeCalc(r, 1);
+    let q = Math.round(Math.min(1.5, Math.max(0.5, targetK/Math.max(base.kcal,1)))*4)/4;
+    const t = recipeCalc(r, q);
+    const optAll = r.ing.filter(s=>s[2]).length;
+    const optHave = r.ing.filter(s=>s[2] && ingHave(s)).length;
+    let score = 1 + (optAll ? optHave/optAll : 0.5);
+    if (focus==='protein') score += (t.p*4/Math.max(t.kcal,1))*3;
+    if (focus==='lowcarb') score -= (t.c*4/Math.max(t.kcal,1))*2;
+    if (focus==='lowfat') score -= (t.f*9/Math.max(t.kcal,1))*2;
+    if (r.boost==='p' && focus==='protein') score += .6;
+    out.push({r, q, t, score});
+  }
+  return out.sort((a,b)=>b.score-a.score).slice(0, 10);
+}
+window.pantryDlg = function(backMid){
+  DB.pantry = DB.pantry || {};
+  const cats = ['prot','dairy','carb','veg','fruit','fat','misc'];
+  openModal(`<h2>Мои продукты</h2>
+    <div class="small">Отметь, что есть дома — рецепты соберутся из этого. Список запоминается.</div>` +
+    cats.map(c => `<div class="wlab" style="margin-top:12px">${ING_CAT_N[c]}</div><div class="mods">` +
+      ING.filter(x=>x[2]===c).map(x=>`<button class="chip ${pantryOn(x[0])?'done':''}" style="min-height:40px;font-size:13px;font-weight:600" onclick="pantryToggle('${x[0]}', this)">${x[1]}</button>`).join('') + '</div>').join('') +
+    `<button class="btn full" style="margin-top:14px" onclick="${backMid?`closeModal();recipesDlg('${backMid}')`:'closeModal();render()'}">Готово</button>`);
+};
+window.pantryToggle = function(id, el){
+  DB.pantry = DB.pantry || {};
+  if (DB.pantry[id]) delete DB.pantry[id]; else DB.pantry[id] = 1;
+  save(); el.classList.toggle('done');
+};
+window.recipesDlg = function(mid){
+  DB.pantry = DB.pantry || {};
+  if (!Object.keys(DB.pantry).length){ pantryDlg(mid); return; }
+  const list = recipesFor(mid);
+  const mname = (MEAL_DEF.find(m=>m.id===mid)||{}).n || 'приём';
+  const focus = dayFocus(foodDate);
+  openModal(`<h2>Что приготовить: ${mname.toLowerCase()}</h2>
+    <div class="tiny">${esc(focus.txt)}</div>
+    <button class="btn ghost" style="padding:0" onclick="pantryDlg('${mid}')">Мои продукты (${Object.keys(DB.pantry).length}) — изменить</button>` +
+    (list.length ? list.map((o,ix) => {
+      const ingTxt = o.r.ing.map(s => {
+        if (s[2] && !ingHave(s)) return null;
+        const ing = ING_BY[ingResolve(s)];
+        const g = Math.round(s[1]*o.q);
+        const un = ing[7] ? Math.max(1, Math.round(g/ing[7]))+' шт' : g+' г';
+        return esc(ing[1])+' '+un;
+      }).filter(Boolean).join(' · ');
+      return `<div class="card" style="margin:10px 0">
+        <div class="row"><div class="grow"><b style="font-size:15px">${esc(o.r.n)}</b>
+          <div class="tiny" style="margin-top:2px">${o.r.t} мин · ${Math.round(o.t.kcal)} ккал · Б${Math.round(o.t.p)} Ж${Math.round(o.t.f)} У${Math.round(o.t.c)}${o.q!==1?' · порция ×'+o.q:''}</div></div></div>
+        <div class="tiny" style="margin-top:6px">${ingTxt}</div>
+        <div id="rc-steps-${ix}" style="display:none" class="small">${o.r.s.map((st,i)=>`<div class="tiny" style="margin-top:5px">${i+1}. ${esc(st)}</div>`).join('')}</div>
+        <div class="row" style="gap:8px;margin-top:9px">
+          <button class="btn sec sm grow" onclick="const e=document.getElementById('rc-steps-${ix}');e.style.display=e.style.display==='none'?'':'none'">Как готовить</button>
+          <button class="btn sm grow" onclick="eatRecipe('${o.r.id}',${o.q},'${mid}')">Съел это</button></div></div>`;
+    }).join('') : `<div class="card small">Из отмеченных продуктов ничего не собрать для этого приёма. Добавь базовые вещи: яйца, крупу, овощи, что-то белковое.</div>`) +
+    `<button class="btn sec full" style="margin-top:6px" onclick="closeModal()">Закрыть</button>`);
+};
+window.eatRecipe = function(rid, q, mid){
+  const r = RECIPES.find(x=>x.id===rid); if (!r) return;
+  const t = recipeCalc(r, q);
+  if (!DB.food[foodDate]) DB.food[foodDate] = {items:[]};
+  DB.food[foodDate].items.push({n:r.n, p:Math.round(t.p), f:Math.round(t.f), c:Math.round(t.c), kcal:Math.round(t.kcal), q:1, meal:mid, recipe:1});
+  save(); closeModal(); render(); toast(r.n+' — записано в '+((MEAL_DEF.find(m=>m.id===mid)||{}).n||'приём').toLowerCase());
+};
+/* ---- добавление модулей в приём ---- */
+window.modulesDlg = function(mid){
+  const mname = (MEAL_DEF.find(m=>m.id===mid)||{}).n || '';
+  openModal(`<h2>Добавить: ${mname.toLowerCase()}</h2>` +
+    Object.keys(FOOD).map(cat => `<div class="wlab" style="margin-top:10px">${cat}</div><div class="mods">` +
+      FOOD[cat].map((m,i)=>`<button class="mod" onclick="foodAdd('${cat}',${i},'${mid}')"><b>${m[0]}</b><span>${m[1]?m[1]+' · ':''}${m[5]} ккал · Б${m[2]}</span></button>`).join('') + '</div>').join('') +
+    `<div class="row" style="gap:8px;margin-top:12px">
+      <button class="btn sec grow" onclick="closeModal();foodCustom('${mid}')">Своё блюдо</button>
+      <button class="btn sec grow" onclick="closeModal()">Готово</button></div>`);
+};
+
 /* ============ 10. ЭКРАН «ЕДА» ============ */
 function vFood(){
   const k = foodDate, d = fromKey(k);
-  header('Питание', 'конструктор дня · 4 приёма × 35–50 г белка');
+  header('Питание', 'приёмы дня · рецепты из твоих продуктов');
   const t = foodTotals(k);
   const kt = DB.kcalTarget, pt = DB.protTarget;
   const isFree = !!DB.freeMeals[k];
+  const tg = mealTargets(k);
   let h = `<div class="card"><div class="row">
     <button class="btn sec sm" onclick="foodShift(-1)">←</button>
     <div class="grow" style="text-align:center"><b>${key(today())===k?'Сегодня':fmtLong(d)}</b>
@@ -1574,25 +1910,51 @@ function vFood(){
     <div class="bar"><i class="${t.p>=pt*0.95?'good':''}" style="width:${Math.min(100,t.p/pt*100)}%"></i></div>
     <div class="kv" style="margin-top:7px"><span class="tiny">Жиры ${Math.round(t.f)} г (${fatRange()[0]}–${fatRange()[1]}) · Углеводы ${Math.round(t.c)} г</span></div>
   </div>`;
-  h += `<button class="btn sec full" style="margin:2px 0 4px" onclick="mealPlanDlg()">Мой план питания</button>`;
-  const items = foodDay(k).items;
-  if (items.length){
-    h += `<div class="card loglist"><h3>Съедено</h3>` + items.map((it,i) =>
-      `<div class="row"><div class="grow"><b style="font-size:14px">${esc(it.n)}</b>
-        <div class="tiny">${it.q!==1?('×'+it.q+' · '):''}${Math.round(it.kcal*it.q)} ккал · Б ${Math.round(it.p*it.q)}</div></div>
-        <button class="x" onclick="foodQty(${i},-0.5)">−</button>
-        <button class="x" onclick="foodQty(${i},0.5)">+</button>
-        <button class="x" onclick="foodDel(${i})">✕</button></div>`).join('') + `</div>`;
+  const focus = dayFocus(k);
+  h += `<div class="insight ${focus.mode==='balance'||focus.mode==='done'?'good':'warn'}" style="margin-top:4px"><p style="margin:0">${esc(focus.txt)}</p></div>`;
+  h += `<div class="row" style="gap:8px;margin:10px 0 2px">
+    <button class="btn sec grow sm" onclick="pantryDlg()">Мои продукты${DB.pantry&&Object.keys(DB.pantry).length?' ('+Object.keys(DB.pantry).length+')':''}</button>
+    <button class="btn sec grow sm" onclick="mealPlanDlg()">Мой план</button></div>`;
+  // секции приёмов
+  const act = activeMeals(k);
+  for (let i = 0; i < MEAL_DEF.length; i++){
+    const m = MEAL_DEF[i];
+    const on = act.includes(m);
+    if (!on){
+      if (m.opt && i>0 && act.includes(MEAL_DEF[i-1]) )
+        h += `<button class="btn ghost full" style="min-height:36px;margin:0" onclick="addSnack('${m.id}')">+ перекус</button>`;
+      continue;
+    }
+    const e = mealEaten(k, m.id);
+    const items = mealItems(k, m.id);
+    const wtxt = String(Math.floor(m.w[0])).padStart(2,'0')+':'+(m.w[0]%1?'30':'00')+'–'+String(Math.floor(m.w[1])).padStart(2,'0')+':'+(m.w[1]%1?'30':'00');
+    h += `<div class="card"><div class="row">
+      <div class="grow"><h3 style="margin:0">${m.n} <span style="letter-spacing:0;text-transform:none;font-weight:600">· ${wtxt}</span></h3></div>
+      <div class="tiny">${Math.round(e.kcal)} / ${tg[m.id].kcal} ккал · Б ${Math.round(e.p)} / ${tg[m.id].prot}</div></div>`;
+    if (items.length){
+      h += `<div class="loglist" style="margin-top:6px">` + items.map(o =>
+        `<div class="row"><div class="grow"><b style="font-size:14px">${esc(o.x.n)}</b>
+          <div class="tiny">${o.x.q!==1?('×'+o.x.q+' · '):''}${Math.round(o.x.kcal*o.x.q)} ккал · Б ${Math.round(o.x.p*o.x.q)}</div></div>
+          <button class="x" onclick="foodQty(${o.i},-0.5)">−</button>
+          <button class="x" onclick="foodQty(${o.i},0.5)">+</button>
+          <button class="x" onclick="foodDel(${o.i})">✕</button></div>`).join('') + `</div>`;
+    }
+    h += `<div class="row" style="gap:8px;margin-top:10px">
+      <button class="btn grow sm" onclick="recipesDlg('${m.id}')">Что приготовить</button>
+      <button class="btn sec grow sm" onclick="modulesDlg('${m.id}')">Добавить</button></div></div>`;
   }
-  for (const cat in FOOD){
-    h += `<div class="section-t">${cat}</div><div class="mods">` +
-      FOOD[cat].map((m,i)=>`<button class="mod" onclick="foodAdd('${cat}',${i})"><b>${m[0]}</b><span>${m[1]?m[1]+' · ':''}${m[5]} ккал · Б${m[2]}</span></button>`).join('') +
-      `</div>`;
+  // записи без приёма (старый формат)
+  const legacy = (DB.food[k]?.items||[]).map((x,i)=>({x,i})).filter(o=>!o.x.meal);
+  if (legacy.length){
+    h += `<div class="card loglist"><h3>Без привязки к приёму</h3>` + legacy.map(o =>
+      `<div class="row"><div class="grow"><b style="font-size:14px">${esc(o.x.n)}</b>
+        <div class="tiny">${o.x.q!==1?('×'+o.x.q+' · '):''}${Math.round(o.x.kcal*o.x.q)} ккал · Б ${Math.round(o.x.p*o.x.q)}</div></div>
+        <button class="x" onclick="foodQty(${o.i},-0.5)">−</button>
+        <button class="x" onclick="foodQty(${o.i},0.5)">+</button>
+        <button class="x" onclick="foodDel(${o.i})">✕</button></div>`).join('') + `</div>`;
   }
-  h += `<div style="margin-top:14px" class="row">
-    <button class="btn sec grow" onclick="foodCustom()">Своё блюдо</button>
-    <button class="btn sec grow ${isFree?'':''}" onclick="toggleFree()">${isFree?'Убрать свободный':'Свободный приём'}</button></div>
-  <div class="tiny" style="margin:10px 2px">Свободный приём — 1 раз в неделю, один приём без подсчёта до комфортной сытости. Отметь его здесь, чтобы аналитика не ругалась на день.</div>`;
+  h += `<button class="btn sec full" style="margin-top:8px" onclick="toggleFree()">${isFree?'Убрать свободный приём':'Отметить свободный приём'}</button>
+  <div class="tiny" style="margin:10px 2px">Свободный приём — 1 раз в неделю, один приём без подсчёта. «Что приготовить» собирает рецепты из продуктов, которые ты отметил, и советует под остаток дня.</div>`;
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }
 window.foodShift = function(dir){
@@ -1600,10 +1962,10 @@ window.foodShift = function(dir){
   if (d > today()) return;
   foodDate = key(d); render();
 };
-window.foodAdd = function(cat, i){
+window.foodAdd = function(cat, i, meal){
   const m = FOOD[cat][i];
   if (!DB.food[foodDate]) DB.food[foodDate] = {items:[]};
-  DB.food[foodDate].items.push({n:m[0]+(m[1]?' ('+m[1]+')':''), p:m[2], f:m[3], c:m[4], kcal:m[5], q:1});
+  DB.food[foodDate].items.push({n:m[0]+(m[1]?' ('+m[1]+')':''), p:m[2], f:m[3], c:m[4], kcal:m[5], q:1, meal:meal||null});
   save(); render(); toast(m[0]+' +'+m[5]+' ккал');
 };
 window.foodQty = function(i, d){
@@ -1617,7 +1979,8 @@ window.toggleFree = function(){
   if (DB.freeMeals[foodDate]) delete DB.freeMeals[foodDate]; else DB.freeMeals[foodDate] = 1;
   save(); render();
 };
-window.foodCustom = function(){
+window.foodCustom = function(mid){
+  window._cfMeal = mid || null;
   openModal(`<h2>Своё блюдо</h2>
     <input type="text" id="cf-n" placeholder="Название" style="margin:8px 0">
     <div class="row" style="gap:8px;margin:8px 0">
@@ -1633,7 +1996,7 @@ window.saveCustom = function(){
   const kc = parseFloat($('#cf-k').value), p = parseFloat($('#cf-p').value)||0;
   if (!isFinite(kc) || kc<0 || kc>4000) return toast('Укажи калории');
   if (!DB.food[foodDate]) DB.food[foodDate] = {items:[]};
-  DB.food[foodDate].items.push({n, p, f:parseFloat($('#cf-f').value)||0, c:parseFloat($('#cf-c').value)||0, kcal:kc, q:1});
+  DB.food[foodDate].items.push({n, p, f:parseFloat($('#cf-f').value)||0, c:parseFloat($('#cf-c').value)||0, kcal:kc, q:1, meal:window._cfMeal||null});
   save(); closeModal(); render();
 };
 /* ============ 11. АНАЛИТИКА / РЕКОМЕНДАЦИИ ============ */
@@ -1838,8 +2201,9 @@ function vMore(){
     h += `<div class="card"><h3>Профиль</h3>
       <div class="kv"><span>${esc(PROF.name)} · ${PROF.sex==='m'?'муж':'жен'} · ${PROF.age} лет · ${PROF.height} см</span></div>
       <div class="kv"><span>${PROF.place==='home' ? 'Дом · '+(['db','band','bar'].filter(k=>PROF.equip&&PROF.equip[k]).map(k=>({db:'гантели',band:'резинка',bar:'турник'})[k]).join(', ')||'вес тела') : 'Зал'} · ${PROF.split==='fb'?'Фулбади':'PPL'} · Старт ${PROF.startWeight} кг → ~${Math.round(TARGETS[WEEKS()])} кг к ${fmtD(PROG_END)} (${WEEKS()} нед.)</span></div>
-      <button class="btn sec full" style="margin-top:10px" onclick="if(confirm('Пересоздать программу заново через анкету? Вес, еда и шаги сохранятся, а журнал тренировок и замены очистятся.')){DB.profile=null;DB.sessions={};DB.swaps={};DB.skips={};DB.dateOv={};save();location.reload();}">Пересоздать программу (анкета)</button></div>`;
-    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 1.9 (свои дни, пол и травмы в программах, план питания) · собрано для Егора и друзей · 19.08.2026. Фото упражнений: free-exercise-db, Public Domain.</div>`;
+      <button class="btn sec full" style="margin-top:10px" onclick="adjustDlg()">Травмы и активность</button>
+      <button class="btn sec full" style="margin-top:8px" onclick="if(confirm('Пересоздать программу заново через анкету? Вес, еда и шаги сохранятся, а журнал тренировок и замены очистятся.')){DB.profile=null;DB.sessions={};DB.swaps={};DB.skips={};DB.dateOv={};save();location.reload();}">Пересоздать программу (анкета)</button></div>`;
+    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 2.0 (кухня: приёмы пищи, рецепты из продуктов, подсказки дня) · собрано для Егора и друзей · 19.08.2026. Фото упражнений: free-exercise-db, Public Domain.</div>`;
   }
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }
@@ -1890,6 +2254,46 @@ if ('serviceWorker' in navigator && location.protocol==='https:'){
   navigator.serviceWorker.register('./sw.js').catch(()=>{});
 }
 
+
+/* ---- донастройка профиля без пересоздания ---- */
+window.adjustDlg = function(){
+  const inj = PROF.inj || {};
+  openModal(`<h2>Травмы и активность</h2>
+    <div class="small">Применится сразу: программа заменит рискованные упражнения, а калории и шаги пересчитаются под активность. Журнал не пострадает.</div>
+    <div class="wlab" style="margin-top:12px">Ограничения</div>
+    <div class="seg" id="adj-inj">
+      <button data-i="knee" class="${inj.knee?'on':''}" onclick="this.classList.toggle('on')">Колени</button>
+      <button data-i="back" class="${inj.back?'on':''}" onclick="this.classList.toggle('on')">Поясница</button>
+      <button data-i="shoulder" class="${inj.shoulder?'on':''}" onclick="this.classList.toggle('on')">Плечи</button></div>
+    <div class="wlab">Активность вне тренировок</div>
+    <div class="seg" id="adj-act">
+      <button data-a="low" class="${(PROF.activity||'mid')==='low'?'on':''}" onclick="adjAct(this)">Сидячая</button>
+      <button data-a="mid" class="${(PROF.activity||'mid')==='mid'?'on':''}" onclick="adjAct(this)">Умеренная</button>
+      <button data-a="high" class="${(PROF.activity||'mid')==='high'?'on':''}" onclick="adjAct(this)">Активная</button></div>
+    <button class="btn full" style="margin-top:12px" onclick="adjustSave()">Сохранить</button>`);
+};
+window.adjAct = function(el){
+  document.querySelectorAll('#adj-act button').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on');
+};
+window.adjustSave = function(){
+  const inj = {};
+  document.querySelectorAll('#adj-inj button').forEach(b => inj[b.dataset.i] = b.classList.contains('on'));
+  const act = document.querySelector('#adj-act button.on')?.dataset.a || 'mid';
+  const actChanged = act !== (PROF.activity||'mid');
+  PROF.inj = inj; PROF.activity = act;
+  if (actChanged){
+    const w = lastWeight() ? lastWeight().v : PROF.startWeight;
+    const c = calcPlan({...PROF, startWeight:w});
+    const delta = c.kcal - DB.kcalTarget;
+    if (delta !== 0){
+      DB.kcalTarget = c.kcal;
+      (DB.kcalLog = DB.kcalLog||[]).push({d:key(today()), delta, reason:'смена активности'});
+    }
+  }
+  DB.profile = PROF; save(); buildProgram();
+  closeModal(); render(); toast('Профиль обновлён' + (actChanged ? ' · цель: '+DB.kcalTarget+' ккал' : ''));
+};
 /* ---- план питания v1: расклад по приёмам + автопример дня ---- */
 const MEAL_SPLIT = [['Завтрак',0.25],['Обед',0.30],['Перекус',0.20],['Ужин',0.25]];
 function fatRange(){ return PROF.sex==='f' ? [55,75] : [70,90]; }
@@ -1951,9 +2355,10 @@ window.mealPlanDlg = function(){
 window.applyDayPlan = function(){
   const plan = genDayPlan();
   if (!DB.food[foodDate]) DB.food[foodDate] = {items:[]};
+  const mmap = {'Завтрак':'b','Обед':'l','Перекус':'s2','Ужин':'d'};
   for (const m of plan.meals) for (const x of m.items){
     const md = FOOD[x.cat][x.i];
-    DB.food[foodDate].items.push({n:md[0]+(md[1]?' ('+md[1]+')':''), p:md[2], f:md[3], c:md[4], kcal:md[5], q:x.q});
+    DB.food[foodDate].items.push({n:md[0]+(md[1]?' ('+md[1]+')':''), p:md[2], f:md[3], c:md[4], kcal:md[5], q:x.q, meal:mmap[m.name]||null});
   }
   save(); closeModal(); render(); toast('Пример дня записан — правь под себя');
 };

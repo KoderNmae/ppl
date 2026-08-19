@@ -318,7 +318,10 @@ function buildProgram(){
   TARGETS = PROF.targets;
   CHECKPOINTS = checkpointsFor(PROF).map(c => ({...c, date: key(new Date(W1.getTime() + (c.week*7-1)*864e5))}));
   const stx = PROF.startsText || {};
-  if (PROF.place === 'home'){
+  if (PROF.split === 'fb'){
+    const fb = PROF.place === 'home' ? buildHomeFB(PROF.equip || {}, stx) : buildFbGym(stx);
+    EXDB = fb.ex; ALTS = fb.alts;
+  } else if (PROF.place === 'home'){
     const hb = buildHomeDB(PROF.equip || {}, stx);
     EXDB = hb.ex; ALTS = hb.alts;
   } else {
@@ -588,6 +591,80 @@ function buildHomeDB(eq, stx){
   }
   return {ex, alts};
 }
+const TYPES = () => Object.keys(EXDB);
+const badgeCls = t => ({Push:'b-push',Pull:'b-pull',Legs:'b-legs',A:'b-push',B:'b-pull'})[t] || 'b-rest';
+const typeLabel = t => ({A:'Фулбади A',B:'Фулбади B'})[t] || t;
+/* ---- фулбади для зала: две чередующиеся тренировки ---- */
+function buildFbGym(stx){
+  stx = stx || {};
+  const ex = {
+   A: [
+    {n:'Жим штанги лёжа', p0:[2,'8–10',8,10], p1:[4,'5–8',5,8], p2:[4,'5–8 · топ-сет',5,8], rest:170, inc:2.5, start:stx.bench||'подбор', sub:'Жим в Смите'},
+    {n:'Тяга горизонтального блока', p0:[2,'10–12',10,12], p1:[3,'8–12',8,12], p2:[3,'8–12',8,12], rest:120, inc:5, start:'подбор', sub:'Тяга штанги в наклоне (с нед. 8)'},
+    {n:'Жим ногами', p0:[2,'10–12',10,12], p1:[3,'8–12',8,12], p2:[3,'8–12 · топ-сет',8,12], rest:150, inc:10, start:stx.leg||'подбор', sub:'Гакк-машина'},
+    {n:'Жим гантелей сидя', p0:[2,'10–12',10,12], p1:[3,'8–12',8,12], p2:[3,'8–12',8,12], rest:120, inc:2, start:'подбор', sub:'Жим в тренажёре'},
+    {n:'Сгибания ног лёжа', p0:[2,'12–15',12,15], p1:[3,'10–15',10,15], p2:[3,'10–15',10,15], rest:90, inc:5, start:'подбор', sub:'Сгибания сидя'},
+    {n:'Разгибания на блоке (канат)', p1:[2,'10–15',10,15], p2:[2,'10–15',10,15], rest:75, inc:5, start:'подбор', sub:'Французский жим с гантелью'},
+    {n:'Скручивания на верхнем блоке', p0:[2,'12–15',12,15], p1:[3,'12–15',12,15], p2:[3,'12–15',12,15], rest:60, inc:2.5, start:'подбор', sub:'Планка 3×40–60 сек'},
+   ],
+   B: [
+    {n:'Тяга верхнего блока к груди', p0:[2,'10–12',10,12], p1:[4,'8–12',8,12], p2:[4,'8–12 · топ-сет',8,12], rest:150, inc:5, start:stx.pull||'подбор', sub:'Подтягивания в гравитроне'},
+    {n:'Жим гантелей на наклонной 30°', p0:[2,'10–12',10,12], p1:[3,'8–12',8,12], p2:[3,'8–12',8,12], rest:120, inc:2, start:'подбор', sub:'Жим в тренажёре на наклонной'},
+    {n:'Ягодичный мост со штангой', p0:[2,'10',9,11], p1:[3,'8–12',8,12], p2:[3,'8–12',8,12], rest:140, inc:5, start:stx.thrust||'подбор', sub:'Мост в тренажёре / Смите'},
+    {n:'Румынская тяга со штангой', p1:[3,'8–10',8,10], p2:[3,'8–10',8,10], rest:140, inc:2.5, start:'40 кг', sub:'Румынская тяга с гантелями'},
+    {n:'Разведения гантелей в стороны', p0:[2,'12–15',12,15], p1:[3,'12–15',12,15], p2:[4,'12–15',12,15], rest:75, inc:2, start:'подбор', sub:'Махи в кроссовере'},
+    {n:'Сгибания на бицепс (штанга/EZ)', p1:[2,'8–12',8,12], p2:[2,'8–12',8,12], rest:75, inc:2.5, start:'подбор', sub:'Сгибания с гантелями'},
+    {n:'Икры стоя в тренажёре', p0:[2,'12–15',12,15], p1:[3,'12–15',12,15], p2:[3,'12–15',12,15], rest:60, inc:5, start:'подбор', sub:'Икры в жиме ногами'},
+   ],
+  };
+  const alts = {
+   A: [
+    {m:'Грудь', a:[{n:'Жим гантелей лёжа',inc:2},{n:'Жим в Смите лёжа',inc:2.5},{n:'Жим в тренажёре (грудь)',inc:5}]},
+    {m:'Середина спины', a:[{n:'Тяга штанги в наклоне',inc:2.5},{n:'Рычажная тяга в тренажёре',inc:5},{n:'Тяга Т-грифа',inc:2.5}]},
+    {m:'Квадрицепс + ягодицы', a:[{n:'Гакк-машина',inc:5},{n:'Присед в Смите',inc:2.5},{n:'Гоблет-присед',inc:2}]},
+    {m:'Плечи', a:[{n:'Жим штанги сидя',inc:2.5},{n:'Жим в тренажёре (плечи)',inc:5},{n:'Жим Арнольда',inc:2}]},
+    {m:'Задняя поверхность', a:[{n:'Сгибания сидя',inc:5}]},
+    {m:'Трицепс', a:[{n:'Французский жим с гантелью',inc:2},{n:'Разгибания из-за головы на блоке',inc:2.5}]},
+    {m:'Пресс', a:[{n:'Скручивания на полу с весом',inc:2.5},{n:'Подъём ног в упоре',inc:2.5}]},
+   ],
+   B: [
+    {m:'Широчайшие', a:[{n:'Подтягивания в гравитроне',inc:5},{n:'Тяга верхнего блока обратным хватом',inc:5}]},
+    {m:'Верх груди', a:[{n:'Жим в Смите на наклонной',inc:2.5},{n:'Жим в тренажёре на наклонной',inc:5}]},
+    {m:'Ягодицы', a:[{n:'Мост в Смите',inc:2.5},{n:'Мост в тренажёре',inc:5}]},
+    {m:'Задняя поверхность', a:[{n:'Румынская тяга с гантелями',inc:2},{n:'Гиперэкстензия с весом',inc:2.5}]},
+    {m:'Средняя дельта', a:[{n:'Махи в кроссовере',inc:2.5},{n:'Разведения в тренажёре',inc:5}]},
+    {m:'Бицепс', a:[{n:'Сгибания с гантелями',inc:2},{n:'Канат на блоке (нейтральный хват)',inc:2.5}]},
+    {m:'Икры', a:[{n:'Икры в жиме ногами',inc:5},{n:'Икры сидя',inc:5}]},
+   ],
+  };
+  return {ex, alts};
+}
+/* ---- фулбади для дома: собирается из домашних слотов ---- */
+const FB_HOME_PLAN = {
+  A: [['Push',0],['Pull',0],['Legs',0],['Push',1],['Legs',2],['Legs',6]],
+  B: [['Pull',0],['Push',2],['Legs',1],['Legs',3],['Pull',3],['Legs',5]],
+};
+function buildHomeFB(eq, stx){
+  const ex = {}, alts = {};
+  for (const day in FB_HOME_PLAN){
+    ex[day] = []; alts[day] = [];
+    const used = new Set();
+    for (const [t, si] of FB_HOME_PLAN[day]){
+      const slot = HOME_SLOTS[t][si];
+      if (!slot) continue;
+      const ok = slot.v.filter(v => (!v.need || eq[v.need]) && !used.has(v.n));
+      if (!ok.length) continue;
+      const c = ok[0]; used.add(c.n);
+      const entry = {n:c.n, rest:c.rest, inc:c.inc||0, bw:c.bw?1:0,
+        start: c.bw ? 'вес тела' : ((c.st && stx && stx[c.st]) ? stx[c.st] : 'подбор'),
+        sub: ok[1] ? ok[1].n : '—'};
+      for (const ph of ['p0','p1','p2']) if (c[ph]) entry[ph] = c[ph];
+      ex[day].push(entry);
+      alts[day].push({m:slot.m, a: ok.slice(1).map(v=>({n:v.n, inc:v.inc||0, bw:v.bw?1:0}))});
+    }
+  }
+  return {ex, alts};
+}
 function phaseOf(w){
   if (w<=2) return 'p0';
   if (deloadWeeks().includes(w)) return 'deload';
@@ -602,12 +679,14 @@ function buildSessions(){
               {w:0, d:new Date(2026,7,20), t:'Pull'},
               {w:0, d:new Date(2026,7,22), t:'Legs'});
   }
-  const rot = ['Push','Pull','Legs'];
+  const fb = PROF.split === 'fb';
+  const rot = fb ? ['A','B'] : ['Push','Pull','Legs'];
+  const dows = fb ? [0,2,4] : [0,1,3,5];
   let i = 0;
   for (let w = 0; w < WEEKS(); w++)
-    for (const dow of [0,1,3,5]) {
+    for (const dow of dows) {
       const d = new Date(W1); d.setDate(d.getDate() + w*7 + dow);
-      list.push({w:w+1, d, t:rot[i++ % 3]});
+      list.push({w:w+1, d, t:rot[i++ % rot.length]});
     }
   return list.map((s, idx) => {
     const ph = phaseOf(s.w);
@@ -834,7 +913,7 @@ function vHome(){
     const nd = sessDate(ns);
     const overdue = nd < d, todayIs = key(nd) === k;
     h += `<div class="row"><div class="grow">
-        <span class="badge b-${ns.type.toLowerCase()}${ns.phase==='deload'?' b-deload':''}">${ns.type}${ns.phase==='deload'?' · разгрузка':''}</span>
+        <span class="badge ${badgeCls(ns.type)}${ns.phase==='deload'?' b-deload':''}">${typeLabel(ns.type)}${ns.phase==='deload'?' · разгрузка':''}</span>
         <div class="exmeta" style="margin-top:6px">${ns.exs.length} упражнений · неделя ${ns.w}
         ${todayIs ? '· сегодня по плану' : overdue ? '· план был '+fmtD(nd)+' — просто делаешь следующую' : '· по плану '+fmtD(nd)}</div>
       </div>
@@ -905,7 +984,7 @@ function vTrain(){
   const st = DB.sessions[s.id] || (DB.sessions[s.id] = {sets:{}, rpe:{}, note:''});
   st.vars = st.vars || {}; st.swapEx = st.swapEx || {};
   const skipped = !!DB.skips[s.id];
-  header(s.type + (s.phase==='deload' ? ' · разгрузка' : ''),
+  header(typeLabel(s.type) + (s.phase==='deload' ? ' · разгрузка' : ''),
     'неделя '+s.w+' · '+PHASE_NAME[s.phase]+' · план на '+fmtD(sessDate(s)));
   let h = `<button class="btn ghost" onclick="trainSelected=null;render()">← Все тренировки</button>`;
   if (skipped)
@@ -981,7 +1060,7 @@ function trainList(){
 }
 function sessRow(s, mark, hot, dim){
   return `<div class="card" style="${hot?'border-color:var(--accent-dim);':''}${dim?'opacity:.55;':''}" onclick="trainSelected=${s.id};render()">
-    <div class="row"><span class="badge b-${s.type.toLowerCase()}${s.phase==='deload'?' b-deload':''}">${s.type}${s.phase==='deload'?' · разгр.':''}</span>
+    <div class="row"><span class="badge ${badgeCls(s.type)}${s.phase==='deload'?' b-deload':''}">${typeLabel(s.type)}${s.phase==='deload'?' · разгр.':''}</span>
     <div class="grow small">неделя ${s.w} · ${s.exs.length} упр.</div>
     <div class="tiny">${mark}</div></div></div>`;
 }
@@ -1139,7 +1218,7 @@ window.finishSession = function(sid){
   const s = SESSIONS[sid];
   const tonnage = Object.values(st.sets).flat().filter(Boolean).reduce((a,x)=>a+(x.w||0)*x.r,0);
   trainSelected = null; render();
-  toast(s.type+' готово: '+total+' подходов'+(tonnage>0?', тоннаж '+Math.round(tonnage).toLocaleString('ru-RU')+' кг':''));
+  toast(typeLabel(s.type)+' готово: '+total+' подходов'+(tonnage>0?', тоннаж '+Math.round(tonnage).toLocaleString('ru-RU')+' кг':''));
 };
 /* ============ 8. ТАЙМЕР ОТДЫХА ============ */
 let timerEnd = null, timerTick = null, timerTotal = 0;
@@ -1221,9 +1300,9 @@ function vWeight(){
   // чек-поинты
   const anc = anchorsOf();
   h += `<div class="section-t">Якоря силы</div><div class="card">` +
-    ['Push','Pull','Legs'].map(t => {
+    TYPES().map(t => {
       const ai = anchorInfo(t, anc[t]);
-      return `<div class="kv" style="margin-top:6px"><span><span class="badge b-${t.toLowerCase()}" style="margin-right:7px">${t}</span>${esc(ai.name)}</span><b class="${ai.delta>0?'c-good':''}">${ai.txt}</b></div>`;
+      return `<div class="kv" style="margin-top:6px"><span><span class="badge ${badgeCls(t)}" style="margin-right:7px">${typeLabel(t)}</span>${esc(ai.name)}</span><b class="${ai.delta>0?'c-good':''}">${ai.txt}</b></div>`;
     }).join('') +
     `<div class="tiny" style="margin-top:10px">${PROF.anchors&&PROF.anchors.mode==='manual'?'Выбраны вручную':'Определяются автоматически по твоим записям'}. Ориентир к финишу: +8–15% к стартовому уровню (для веса тела — +30–50% повторов или сложнее вариант).</div>
     <button class="btn sec sm" style="margin-top:10px" onclick="anchorDlg()">Настроить якоря</button></div>`;
@@ -1241,7 +1320,7 @@ function vWeight(){
 /* ---- якоря силы: авто (по данным) или вручную ---- */
 function anchorsOf(){
   const res = {};
-  for (const t of ['Push','Pull','Legs']){
+  for (const t of TYPES()){
     const man = PROF.anchors;
     if (man && man.mode==='manual' && man[t]!=null && EXDB[t][man[t]]){ res[t] = man[t]; continue; }
     let best = 0, bestN = 1;
@@ -1280,18 +1359,18 @@ window.anchorDlg = function(){
     <div class="seg" style="margin-top:12px">
       <button class="${!manual?'on':''}" onclick="setAnchorsMode('auto')">Авто</button>
       <button class="${manual?'on':''}" onclick="setAnchorsMode('manual')">Вручную</button></div>
-    ${['Push','Pull','Legs'].map(t=>`<div class="wlab">${t}</div>
+    ${TYPES().map(t=>`<div class="wlab">${typeLabel(t)}</div>
       <select id="anc-${t}" ${!manual?'disabled':''}>${EXDB[t].map((e,i)=>`<option value="${i}" ${anc[t]===i?'selected':''}>${esc(e.n)}</option>`).join('')}</select>`).join('')}
     <button class="btn full" style="margin-top:14px" onclick="saveAnchors()">Сохранить</button>`);
 };
 window.setAnchorsMode = function(m){
   const cur = anchorsOf();
-  PROF.anchors = m==='manual' ? {mode:'manual', Push:cur.Push, Pull:cur.Pull, Legs:cur.Legs} : {mode:'auto'};
+  PROF.anchors = m==='manual' ? Object.assign({mode:'manual'}, cur) : {mode:'auto'};
   DB.profile = PROF; save(); anchorDlg();
 };
 window.saveAnchors = function(){
   if (PROF.anchors && PROF.anchors.mode==='manual'){
-    for (const t of ['Push','Pull','Legs']) PROF.anchors[t] = +$('#anc-'+t).value;
+    for (const t of TYPES()) PROF.anchors[t] = +$('#anc-'+t).value;
     DB.profile = PROF; save();
   }
   closeModal(); render(); toast('Якоря обновлены');
@@ -1533,7 +1612,7 @@ function insights(){
   // 7. прогрессия якорных упражнений
   {
     const anc = anchorsOf();
-    ['Push','Pull','Legs'].forEach(tp => {
+    TYPES().forEach(tp => {
       const ei = anc[tp];
       const vIdx = DB.swaps[tp+':'+ei] != null ? DB.swaps[tp+':'+ei] : 0;
       const base = EXDB[tp][ei];
@@ -1621,13 +1700,21 @@ function vMore(){
       if (from <= N) phRows += `<tr><td>Нед. ${from}–${N}</td><td>Новая территория · RPE 8–9, топ-сеты</td></tr>`;
     }
     h += `<div class="card"><h3>Фазы (${N} недель)</h3><table class="plan-table">${phRows}</table></div>`;
-    const cyc = i => { const arr=[]; for (let x=i+1; x<=N; x+=3) arr.push(x); return arr.join(', '); };
-    h += `<div class="card"><h3>Ротация (Пн · Вт · Чт · Сб)</h3><table>
-      <tr><th>Неделя</th><th>Пн</th><th>Вт</th><th>Чт</th><th>Сб</th></tr>
-      <tr><td>${cyc(0)}</td><td>Push</td><td>Pull</td><td>Legs</td><td>Push</td></tr>
-      <tr><td>${cyc(1)}</td><td>Pull</td><td>Legs</td><td>Push</td><td>Pull</td></tr>
-      <tr><td>${cyc(2)}</td><td>Legs</td><td>Push</td><td>Pull</td><td>Legs</td></tr></table>
-      <div class="week-note">Пропустил день — не удваивай: просто делаешь следующую из очереди.</div></div>`;
+    if (PROF.split === 'fb'){
+      h += `<div class="card"><h3>Ротация (Пн · Ср · Пт)</h3><table>
+        <tr><th>Неделя</th><th>Пн</th><th>Ср</th><th>Пт</th></tr>
+        <tr><td>нечётные</td><td>A</td><td>B</td><td>A</td></tr>
+        <tr><td>чётные</td><td>B</td><td>A</td><td>B</td></tr></table>
+        <div class="week-note">Две тренировки на всё тело чередуются. Пропустил день — не удваивай: просто делаешь следующую из очереди.</div></div>`;
+    } else {
+      const cyc = i => { const arr=[]; for (let x=i+1; x<=N; x+=3) arr.push(x); return arr.join(', '); };
+      h += `<div class="card"><h3>Ротация (Пн · Вт · Чт · Сб)</h3><table>
+        <tr><th>Неделя</th><th>Пн</th><th>Вт</th><th>Чт</th><th>Сб</th></tr>
+        <tr><td>${cyc(0)}</td><td>Push</td><td>Pull</td><td>Legs</td><td>Push</td></tr>
+        <tr><td>${cyc(1)}</td><td>Pull</td><td>Legs</td><td>Push</td><td>Pull</td></tr>
+        <tr><td>${cyc(2)}</td><td>Legs</td><td>Push</td><td>Pull</td><td>Legs</td></tr></table>
+        <div class="week-note">Пропустил день — не удваивай: просто делаешь следующую из очереди.</div></div>`;
+    }
     h += `
     <div class="card"><h3>Прогрессия</h3><div class="small">
       Все рабочие подходы дошли до верха диапазона → добавляй: штанга +2,5 · гантели +2 · тренажёры +5 · жим ногами +10 кг.
@@ -1664,9 +1751,9 @@ function vMore(){
       <button class="btn danger full" onclick="if(confirm('Точно стереть все записи? Экспорт сделал?')){DB=defaultDB();save();location.reload();}">Стереть все данные</button></div>`;
     h += `<div class="card"><h3>Профиль</h3>
       <div class="kv"><span>${esc(PROF.name)} · ${PROF.sex==='m'?'муж':'жен'} · ${PROF.age} лет · ${PROF.height} см</span></div>
-      <div class="kv"><span>${PROF.place==='home' ? 'Дом · '+(['db','band','bar'].filter(k=>PROF.equip&&PROF.equip[k]).map(k=>({db:'гантели',band:'резинка',bar:'турник'})[k]).join(', ')||'вес тела') : 'Зал'} · Старт ${PROF.startWeight} кг → ~${Math.round(TARGETS[WEEKS()])} кг к ${fmtD(PROG_END)} (${WEEKS()} нед.)</span></div>
+      <div class="kv"><span>${PROF.place==='home' ? 'Дом · '+(['db','band','bar'].filter(k=>PROF.equip&&PROF.equip[k]).map(k=>({db:'гантели',band:'резинка',bar:'турник'})[k]).join(', ')||'вес тела') : 'Зал'} · ${PROF.split==='fb'?'Фулбади':'PPL'} · Старт ${PROF.startWeight} кг → ~${Math.round(TARGETS[WEEKS()])} кг к ${fmtD(PROG_END)} (${WEEKS()} нед.)</span></div>
       <button class="btn sec full" style="margin-top:10px" onclick="if(confirm('Пересоздать программу заново через анкету? Вес, еда и шаги сохранятся, а журнал тренировок и замены очистятся.')){DB.profile=null;DB.sessions={};DB.swaps={};DB.skips={};DB.dateOv={};save();location.reload();}">Пересоздать программу (анкета)</button></div>`;
-    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 1.7 (дом/зал, гибкие якоря) · собрано для Егора и друзей · 19.08.2026. Фото упражнений: free-exercise-db, Public Domain.</div>`;
+    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 1.8 (сплиты PPL и фулбади) · собрано для Егора и друзей · 19.08.2026. Фото упражнений: free-exercise-db, Public Domain.</div>`;
   }
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }
@@ -1717,7 +1804,11 @@ if ('serviceWorker' in navigator && location.protocol==='https:'){
   navigator.serviceWorker.register('./sw.js').catch(()=>{});
 }
 /* ============ 14. АНКЕТА ПЕРВОГО ЗАПУСКА ============ */
-let wzSex = 'm', wzWeeks = 12, wzPlace = 'gym', wzEq = {db:false, band:false, bar:false};
+let wzSex = 'm', wzWeeks = 12, wzPlace = 'gym', wzEq = {db:false, band:false, bar:false}, wzSplit = 'ppl';
+window.wzSetSplit = function(s){
+  wzSplit = s;
+  document.querySelectorAll('#wz-split button').forEach(b=>b.classList.toggle('on', b.dataset.s===s));
+};
 window.wzSetPlace = function(p){
   wzPlace = p;
   document.querySelectorAll('#wz-place button').forEach(b=>b.classList.toggle('on', b.dataset.p===p));
@@ -1749,6 +1840,11 @@ function wizard(){
         <div class="grow"><div class="wlab">Рост, см</div><input type="number" id="wz-h" inputmode="numeric" placeholder="180"></div>
         <div class="grow"><div class="wlab">Вес, кг</div><input type="number" id="wz-w" step="0.1" inputmode="decimal" placeholder="90"></div>
       </div></div>
+    <div class="card"><h3>Сплит</h3>
+      <div class="seg" id="wz-split">
+        <button data-s="ppl" class="on" onclick="wzSetSplit('ppl')">PPL · 4 дня</button>
+        <button data-s="fb" onclick="wzSetSplit('fb')">Фулбади · 3 дня</button></div>
+      <div class="tiny">PPL — Push/Pull/Legs, Пн-Вт-Чт-Сб, больше объёма на группу. Фулбади — всё тело за тренировку, Пн-Ср-Пт, две чередующиеся программы A/B: проще вписать в неделю, каждая мышца работает чаще.</div></div>
     <div class="card"><h3>Где тренируешься</h3>
       <div class="seg" id="wz-place">
         <button data-p="gym" class="on" onclick="wzSetPlace('gym')">В зале</button>
@@ -1785,7 +1881,7 @@ function wizard(){
       </div></div>
     <button class="btn full" onclick="wizardCalc()">Рассчитать программу</button>
     <button class="btn ghost full" onclick="impData()" style="margin-top:6px">У меня есть резервная копия — восстановить</button>
-    <div class="tiny" style="margin:10px 2px">Программа: Push/Pull/Legs, 4 тренировки в неделю. Все данные остаются в браузере этого устройства. Приложение не заменяет врача: при хронических состояниях покажи план специалисту.</div>
+    <div class="tiny" style="margin:10px 2px">Сплит и место выбираются выше; фазы, питание и аналитика одинаковы для всех вариантов. Все данные остаются в браузере этого устройства. Приложение не заменяет врача: при хронических состояниях покажи план специалисту.</div>
   </div>`;
 }
 window.wizardCalc = function(){
@@ -1799,7 +1895,7 @@ window.wizardCalc = function(){
     ? {hbench:num('#wz-hb'), hrow:num('#wz-hr')}
     : {bench:num('#wz-b'), pull:num('#wz-p'), leg:num('#wz-l'), thrust:num('#wz-t')};
   const p = {name, sex:wzSex, age, height:h, startWeight:Math.round(w*10)/10, starts, weeks:wzWeeks,
-    place:wzPlace, equip:{...wzEq}};
+    place:wzPlace, equip:{...wzEq}, split:wzSplit};
   const c = calcPlan(p);
   const t = today(); const dow = (t.getDay()+6)%7;
   const monday = new Date(t.getTime() + ((7-dow)%7)*864e5);
@@ -1811,7 +1907,7 @@ window.wizardCalc = function(){
     <div class="kv"><span>Траектория ${wzWeeks} недель</span><b>${p.startWeight} → ~${c.targets[wzWeeks]} кг</b></div>
     <div class="kv"><span>Старт → финиш</span><b>${fmtD(monday)} (Пн) → ${fmtD(finish)}</b></div>
     <div class="kv"><span>Формат</span><b>${wzPlace==='home' ? 'Дом · '+(['db','band','bar'].filter(k=>wzEq[k]).map(k=>({db:'гантели',band:'резинка',bar:'турник'})[k]).join(', ')||'вес тела') : 'Зал'} · PPL</b></div>
-    <div class="kv"><span>Тренировок</span><b>${wzWeeks*4} · Push/Pull/Legs</b></div>
+    <div class="kv"><span>Тренировок</span><b>${wzWeeks*(wzSplit==='fb'?3:4)} · ${wzSplit==='fb'?'Фулбади A/B':'Push/Pull/Legs'}</b></div>
     <div class="kv"><span>Стартовые веса</span><b>${starts.bench?('жим '+(Math.round(starts.bench*0.7/2.5)*2.5)+' кг'):(starts.hbench?('жим гантелей '+(Math.round(starts.hbench*0.7/2)*2)+' кг'):'подбор на 1-й неделе')}</b></div>
     <div class="tiny" style="margin-top:8px">Начинаем с ~70% рабочих весов — первые 2 недели лёгкие, это план, а не осторожничание. Калории можно будет менять корректировками.</div>
     <div class="row" style="gap:8px; margin-top:12px">
@@ -1829,7 +1925,7 @@ window.wizardGo = function(){
   if (p.starts.hrow) stx.hrow = (Math.round(p.starts.hrow*0.7/2)*2)+' кг';
   PROF = { name:p.name, sex:p.sex, age:p.age, height:p.height, startWeight:p.startWeight,
     w1:window._wzW1, legacyWeek0:false, weeks:p.weeks, starts:p.starts,
-    place:p.place, equip:p.equip,
+    place:p.place, equip:p.equip, split:p.split,
     startsText: Object.keys(stx).length?stx:null, targets:c.targets };
   DB.profile = PROF; DB.kcalTarget = c.kcal; DB.protTarget = c.prot;
   DB.weights[key(today())] = p.startWeight;

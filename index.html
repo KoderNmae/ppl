@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="PPL">
-<title>PPL · Егор</title>
+<title>PPL трекер</title>
 <style>
 :root{
   --bg:#131312; --surface:#1c1c1b; --card:#232322; --card2:#2a2a28; --border:#34342f;
@@ -165,6 +165,7 @@ svg.chart{width:100%; display:block; touch-action:pan-y}
 .section-t{font-size:15px; font-weight:700; margin:18px 2px 4px}
 .plan-table td:first-child{color:var(--text2)}
 a{color:var(--accent)}
+.wlab{font-size:12.5px; color:var(--text2); margin:10px 2px 5px}
 .storage-warn{background:rgba(237,161,0,.12); border:1px solid rgba(237,161,0,.4); color:#f2b53d;
   border-radius:12px; padding:10px 12px; font-size:13px; margin:10px 0; display:none}
 .fade-list > *{animation:fin .18s ease}
@@ -191,16 +192,60 @@ a{color:var(--accent)}
 <script>
 "use strict";
 /* ============ 1. ПРОГРАММА (данные) ============ */
-const W1 = new Date(2026,7,24);            // понедельник недели 1
-const PROG_END = new Date(2026,10,15);     // вс недели 12
-const KCAL0 = 2500, PROT0 = 180;
-const TARGETS = {0:127.0,1:125.1,2:124.1,3:123.1,4:122.2,5:121.3,6:120.5,7:119.9,8:119.0,9:118.2,10:117.5,11:116.7,12:116.0};
+/* Профиль: у Егора — исходная программа (миграция), у новых — анкета первого запуска */
+const EGOR = {
+  name:'Егор', sex:'m', age:31, height:180, startWeight:127,
+  w1:'2026-08-24', legacyWeek0:true,
+  startsText:{bench:'50 кг', leg:'120 кг', thrust:'90–100 кг'},
+  targets:{0:127.0,1:125.1,2:124.1,3:123.1,4:122.2,5:121.3,6:120.5,7:119.9,8:119.0,9:118.2,10:117.5,11:116.7,12:116.0},
+  checkpoints:[
+    {week:4,  wmin:121.7, wmax:123.2, txt:'жим 60–65×8 · ногами 160–170 · мост 120–130'},
+    {week:8,  wmin:118.4, wmax:120.2, txt:'жим 70×6–8 · ногами 200×8 · мост 150×8'},
+    {week:12, wmin:115.5, wmax:118.0, txt:'жим 75–80×5–8 · ногами 230–250 · мост 170–180'},
+  ],
+};
+let PROF = null;
+let W1 = null, PROG_END = null, TARGETS = null, CHECKPOINTS = null, SESSIONS = null;
 const STEP_GOAL = w => w<=2 ? 7000 : (w<=7 ? 8500 : 10000);
-const CHECKPOINTS = [
-  {week:4,  date:'2026-09-20', wmin:121.7, wmax:123.2, txt:'жим 60–65×8 · ногами 160–170 · мост 120–130'},
-  {week:8,  date:'2026-10-18', wmin:118.4, wmax:120.2, txt:'жим 70×6–8 · ногами 200×8 · мост 150×8'},
-  {week:12, date:'2026-11-15', wmin:115.5, wmax:118.0, txt:'жим 75–80×5–8 · ногами 230–250 · мост 170–180'},
-];
+/* Расчёт плана по анкете: Миффлин—Сан-Жеор + правила программы */
+function calcPlan(p){
+  const bmr = 10*p.startWeight + 6.25*p.height - 5*p.age + (p.sex==='m'?5:-161);
+  const bmi = p.startWeight/Math.pow(p.height/100,2);
+  const defPct = bmi>=30?0.22 : bmi>=25?0.18 : 0.15;
+  const kcal = Math.max(p.sex==='m'?1800:1500, Math.round(bmr*1.45*(1-defPct)/50)*50);
+  const prot = Math.min(200, Math.max(110, Math.round(p.startWeight*1.4/5)*5));
+  const rate = bmi>=30?0.0075 : bmi>=25?0.0055 : 0.004;
+  const targets = {0: Math.round(p.startWeight*10)/10};
+  for (let w=1; w<=12; w++){
+    const prev = targets[w-1];
+    targets[w] = Math.round((prev - prev*rate*(w===1?2:1))*10)/10;
+  }
+  return {kcal, prot, targets, maint: Math.round(bmr*1.45/50)*50};
+}
+function checkpointsFor(p){
+  if (p.checkpoints) return p.checkpoints;
+  const b = p.starts && p.starts.bench;
+  const st = w => b
+    ? 'жим ≈'+(Math.round(b*(w===4?1:w===8?1.04:1.1)/2.5)*2.5)+' кг · остальные веса растут в том же темпе'
+    : 'рабочие веса заметно выше стартовых';
+  return [4,8,12].map(w => ({
+    week:w,
+    wmin: Math.round((p.targets[w]-0.6)*10)/10,
+    wmax: Math.round((p.targets[w]+(w===12?2:1.2))*10)/10,
+    txt: st(w),
+  }));
+}
+function buildProgram(){
+  W1 = fromKey(PROF.w1);
+  PROG_END = new Date(W1.getTime() + 83*864e5);
+  TARGETS = PROF.targets;
+  CHECKPOINTS = checkpointsFor(PROF).map(c => ({...c, date: key(new Date(W1.getTime() + (c.week*7-1)*864e5))}));
+  const stx = PROF.startsText || {};
+  EXDB.Push[0].start = stx.bench || 'подбор';
+  EXDB.Legs[0].start = stx.leg || 'подбор';
+  EXDB.Legs[1].start = stx.thrust || 'подбор';
+  SESSIONS = buildSessions();
+}
 // упражнения: p0/p1/p2 = [подходы, "повторы", низ, верх диапазона]
 const EXDB = {
  Push:[
@@ -347,13 +392,14 @@ function techFor(name){
 }
 function phaseOf(w){ return w<=2?'p0' : w<=6?'p1' : w===7?'deload' : 'p2'; }
 const PHASE_NAME = {p0:'Возвращение', p1:'Разгон', deload:'Разгрузка', p2:'Новая территория'};
-// 51 тренировка: очередь по порядку (пропустил — делаешь следующую, даты — ориентир)
-const SESSIONS = (() => {
-  const list = [
-    {w:0, d:new Date(2026,7,18), t:'Push'},
-    {w:0, d:new Date(2026,7,20), t:'Pull'},
-    {w:0, d:new Date(2026,7,22), t:'Legs'},
-  ];
+// тренировки: очередь по порядку (пропустил — делаешь следующую, даты — ориентир)
+function buildSessions(){
+  const list = [];
+  if (PROF.legacyWeek0){
+    list.push({w:0, d:new Date(2026,7,18), t:'Push'},
+              {w:0, d:new Date(2026,7,20), t:'Pull'},
+              {w:0, d:new Date(2026,7,22), t:'Legs'});
+  }
   const rot = ['Push','Pull','Legs'];
   let i = 0;
   for (let w = 0; w < 12; w++)
@@ -372,7 +418,7 @@ const SESSIONS = (() => {
     });
     return {id:idx, w:s.w, date:s.d, type:s.t, phase:ph, exs};
   });
-})();
+}
 /* питание: модули [название, порция, Б, Ж, У, ккал] */
 const FOOD = {
  'Белок':[
@@ -406,9 +452,10 @@ function weekOf(d){                       // календарная неделя
 }
 function planWeight(d){                   // плановая траектория на день
   const w = weekOf(d); if (w > 12) return TARGETS[12];
+  if (w === 0 && !PROF.legacyWeek0) return TARGETS[0];
   const ws = w===0 ? new Date(2026,7,19) : new Date(W1.getTime()+ (w-1)*7*864e5);
   const we = w===0 ? new Date(2026,7,23) : new Date(ws.getTime()+6*864e5);
-  const t0 = w===0 ? 127.0 : TARGETS[w-1], t1 = TARGETS[w];
+  const t0 = w===0 ? PROF.startWeight : TARGETS[w-1], t1 = TARGETS[w];
   const f = (Math.min(Math.max(d-ws,0), we-ws)/864e5 + 1)/((we-ws)/864e5 + 1);
   return t0 + (t1-t0)*f;
 }
@@ -423,8 +470,8 @@ function loadDB(){
   catch(e){ return defaultDB(); }
 }
 function defaultDB(){
-  return { weights:{'2026-08-19':127.0}, steps:{}, waist:{}, food:{}, sessions:{},
-           kcalTarget:KCAL0, protTarget:PROT0, kcalLog:[], freeMeals:{}, lastExport:null, notes:{},
+  return { profile:null, weights:{}, steps:{}, waist:{}, food:{}, sessions:{},
+           kcalTarget:2500, protTarget:180, kcalLog:[], freeMeals:{}, lastExport:null, notes:{},
            swaps:{}, skips:{}, dateOv:{} };
 }
 let DB = loadDB();
@@ -543,7 +590,10 @@ function exSuggest(sess, ex){
 function vHome(){
   const d = today(), k = key(d), w = weekOf(d);
   const ph = w<=12 ? PHASE_NAME[phaseOf(w)] : 'программа завершена';
-  header('PPL · Егор', fmtLong(d)+' · неделя '+(w>12?'12+':w)+' · '+ph);
+  const sub = (d < W1 && !PROF.legacyWeek0)
+    ? fmtLong(d)+' · старт программы '+fmtD(W1)+' (Пн)'
+    : fmtLong(d)+' · неделя '+(w>12?'12+':w)+' · '+ph;
+  header('PPL · '+PROF.name, sub);
   const ns = nextSession();
   const wToday = DB.weights[k];
   const stToday = DB.steps[k];
@@ -914,11 +964,11 @@ function vWeight(){
   const a7 = avg7(DB.weights, d);
   let h = `<div class="hero">
     <div class="tile"><div class="l">Текущий</div><div class="v">${lw?lw.v.toFixed(1):'—'}</div>
-      <div class="d ${lw&&127-lw.v>0?'c-good':'c-mut'}">${lw?('−'+(127-lw.v).toFixed(1)+' от старта'):''}</div></div>
+      <div class="d ${lw&&PROF.startWeight-lw.v>0?'c-good':'c-mut'}">${lw?('−'+(PROF.startWeight-lw.v).toFixed(1)+' от старта'):''}</div></div>
     <div class="tile"><div class="l">Среднее 7 дн</div><div class="v">${a7?a7.toFixed(1):'—'}</div>
       <div class="d c-mut">ориентир ${planWeight(d).toFixed(1)}</div></div>
-    <div class="tile"><div class="l">Цель · 15.11</div><div class="v">116–118</div>
-      <div class="d c-mut">${lw?('осталось '+Math.max(0,(lw.v-117)).toFixed(1)):''}</div></div>
+    <div class="tile"><div class="l">Цель · ${fmtD(PROG_END)}</div><div class="v">${Math.round(TARGETS[12])}–${Math.round(TARGETS[12]+2)}</div>
+      <div class="d c-mut">${lw?('осталось '+Math.max(0,(lw.v-(TARGETS[12]+1))).toFixed(1)):''}</div></div>
   </div>`;
   h += `<div class="card"><div class="seg">
       <button class="${chartMode==='4w'?'on':''}" onclick="chartMode='4w';render()">4 недели</button>
@@ -981,7 +1031,7 @@ window.saveWaist = function(w){
 /* SVG-график */
 let chartCtx = null;
 function weightChart(){
-  const d0full = new Date(2026,7,19);
+  const d0full = PROF.legacyWeek0 ? new Date(2026,7,19) : new Date(Math.min(W1, today()));
   const dEnd = new Date(Math.max(PROG_END, today()));
   let d0 = d0full;
   if (chartMode==='4w'){ d0 = new Date(today().getTime()-27*864e5); if (d0<d0full) d0 = d0full; }
@@ -1155,12 +1205,13 @@ function insights(){
   }
   // 3. рубеж −6–7 кг
   if (lw){
-    const lost = 127 - lw.v;
-    const stage = Math.floor(lost/6.5);
+    const lost = PROF.startWeight - lw.v;
+    const mile = Math.max(3.5, Math.round(PROF.startWeight*0.051*10)/10);
+    const stage = Math.floor(lost/mile);
     const applied = (DB.kcalLog||[]).filter(x=>x.reason&&x.reason.startsWith('рубеж')).length;
     if (stage > applied && stage>0)
       push('info','Рубеж: сброшено уже '+lost.toFixed(1)+' кг','Тело стало легче и тратит меньше. По программе — минус 100 ккал от текущей нормы.',
-        {label:'Применить −100 ккал', fn:'adjustKcal(-100, "рубеж '+stage*6.5+' кг")'});
+        {label:'Применить −100 ккал', fn:'adjustKcal(-100, "рубеж '+r1(stage*mile)+' кг")'});
   }
   // 4. отклонение от траектории
   const a7 = avg7(DB.weights, d);
@@ -1266,7 +1317,7 @@ function vMore(){
       После силовой — ходьба в горку 10–15 мин (уклон 8–10). Шаги: 7 000 (нед. 0–2) → 8 500 (3–7) → 10 000 (8–12), среднее за неделю.
       Бег — не раньше 110–115 кг: колени дороже.</div></div>
     <div class="card"><h3>Питание — правила недели</h3><div class="small">
-      2500 ккал (или текущая цель после корректировок) и 170–190 г белка — каждый день.
+      Калории и белок рассчитаны под тебя (текущая цель — в «Ещё → Данные») — держи их каждый день.
       Свободный приём 1×/нед. Сорвался → следующий приём по плану, без голодовок и «с понедельника»: +1–2 кг наутро — это вода.
       Добавки: креатин 5 г/день, протеин по удобству, кофеин до тренировки. Остальное — мимо.</div></div>
     <div class="card tiny">Я не врач: при гипертонии и болях в суставах покажи план врачу. Острая боль в суставе — стоп упражнению, «жжение» в мышце — норма. Полная версия программы — в документе Word из нашего чата.</div>`;
@@ -1290,8 +1341,12 @@ function vMore(){
       <input type="file" id="imp-file" accept=".json" style="display:none">
       <button class="btn ghost full" onclick="copyData()" style="margin-top:6px">Скопировать в буфер</button></div>`;
     h += `<div class="card"><h3>Опасная зона</h3>
-      <button class="btn danger full" onclick="if(confirm('Точно стереть все записи? Экспорт сделал?')){DB=defaultDB();save();render();}">Стереть все данные</button></div>`;
-    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 1.3 (фото-демонстрации техники) · собрано для Егора · 19.08.2026. Фото упражнений: free-exercise-db, Public Domain.</div>`;
+      <button class="btn danger full" onclick="if(confirm('Точно стереть все записи? Экспорт сделал?')){DB=defaultDB();save();location.reload();}">Стереть все данные</button></div>`;
+    h += `<div class="card"><h3>Профиль</h3>
+      <div class="kv"><span>${esc(PROF.name)} · ${PROF.sex==='m'?'муж':'жен'} · ${PROF.age} лет · ${PROF.height} см</span></div>
+      <div class="kv"><span>Старт ${PROF.startWeight} кг → цель ~${Math.round(TARGETS[12])} кг к ${fmtD(PROG_END)}</span></div>
+      <button class="btn sec full" style="margin-top:10px" onclick="if(confirm('Пересоздать программу заново через анкету? Вес, еда и шаги сохранятся, а журнал тренировок и замены очистятся.')){DB.profile=null;DB.sessions={};DB.swaps={};DB.skips={};DB.dateOv={};save();location.reload();}">Пересоздать программу (анкета)</button></div>`;
+    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 1.4 (профили: программа рассчитывается под каждого) · собрано для Егора и друзей · 19.08.2026. Фото упражнений: free-exercise-db, Public Domain.</div>`;
   }
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }
@@ -1313,7 +1368,7 @@ window.impData = function(){
       try{
         const obj = JSON.parse(rd.result);
         if (!obj.weights || !obj.sessions) throw 0;
-        DB = Object.assign(defaultDB(), obj); save(); render(); toast('Данные восстановлены');
+        DB = Object.assign(defaultDB(), obj); save(); toast('Данные восстановлены'); setTimeout(()=>location.reload(), 600);
       }catch(e){ toast('Файл не похож на резервную копию'); }
     };
     rd.readAsText(file);
@@ -1329,7 +1384,7 @@ const ICON192 = 'iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAIAAADdvvtQAAAEJElEQVR42u3dMU8
 const ICON512 = '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';
 try{
   const man = {
-    name:'PPL · Егор', short_name:'PPL', start_url:'.', scope:'.', display:'standalone',
+    name:'PPL трекер', short_name:'PPL', start_url:'.', scope:'.', display:'standalone',
     background_color:'#131312', theme_color:'#131312',
     icons:[{src:'data:image/png;base64,'+ICON192, sizes:'192x192', type:'image/png'},
            {src:'data:image/png;base64,'+ICON512, sizes:'512x512', type:'image/png'}]
@@ -1341,7 +1396,82 @@ try{
 if ('serviceWorker' in navigator && location.protocol==='https:'){
   navigator.serviceWorker.register('./sw.js').catch(()=>{});
 }
-render();
+/* ============ 14. АНКЕТА ПЕРВОГО ЗАПУСКА ============ */
+let wzSex = 'm';
+window.wzSetSex = function(s){ wzSex = s; document.querySelectorAll('#wz-sex button').forEach(b=>b.classList.toggle('on', b.dataset.s===s)); };
+function wizard(){
+  header('PPL трекер', 'настройка программы под тебя · ~1 минута');
+  $('#tabs').innerHTML = '';
+  $('#view').innerHTML = `<div class="fade-list">
+    <div class="card"><h3>Кто тренируется</h3>
+      <div class="wlab">Имя</div><input type="text" id="wz-name" placeholder="Как к тебе обращаться">
+      <div class="wlab">Пол</div><div class="seg" id="wz-sex">
+        <button data-s="m" class="on" onclick="wzSetSex('m')">Мужской</button>
+        <button data-s="f" onclick="wzSetSex('f')">Женский</button></div>
+      <div class="row" style="gap:8px">
+        <div class="grow"><div class="wlab">Возраст</div><input type="number" id="wz-age" inputmode="numeric" placeholder="30"></div>
+        <div class="grow"><div class="wlab">Рост, см</div><input type="number" id="wz-h" inputmode="numeric" placeholder="180"></div>
+        <div class="grow"><div class="wlab">Вес, кг</div><input type="number" id="wz-w" step="0.1" inputmode="decimal" placeholder="90"></div>
+      </div></div>
+    <div class="card"><h3>Рабочие веса — если знаешь</h3>
+      <div class="tiny" style="margin-bottom:6px">Вес, с которым делаешь ~8–10 повторов. Не знаешь — оставь пустым, приложение поможет подобрать на первой неделе.</div>
+      <div class="row" style="gap:8px">
+        <div class="grow"><div class="wlab">Жим лёжа</div><input type="number" id="wz-b" inputmode="numeric" placeholder="—"></div>
+        <div class="grow"><div class="wlab">Жим ногами</div><input type="number" id="wz-l" inputmode="numeric" placeholder="—"></div>
+        <div class="grow"><div class="wlab">Яг. мост</div><input type="number" id="wz-t" inputmode="numeric" placeholder="—"></div>
+      </div></div>
+    <button class="btn full" onclick="wizardCalc()">Рассчитать программу</button>
+    <button class="btn ghost full" onclick="impData()" style="margin-top:6px">У меня есть резервная копия — восстановить</button>
+    <div class="tiny" style="margin:10px 2px">Программа: Push/Pull/Legs, 4 тренировки в неделю, 12 недель. Все данные остаются в браузере этого устройства. Приложение не заменяет врача: при хронических состояниях покажи план специалисту.</div>
+  </div>`;
+}
+window.wizardCalc = function(){
+  const name = ($('#wz-name').value||'').trim() || 'Атлет';
+  const age = parseInt($('#wz-age').value), h = parseInt($('#wz-h').value), w = parseFloat($('#wz-w').value);
+  if (!isFinite(age)||age<14||age>90) return toast('Проверь возраст (14–90)');
+  if (!isFinite(h)||h<130||h>230) return toast('Проверь рост (130–230 см)');
+  if (!isFinite(w)||w<40||w>300) return toast('Проверь вес (40–300 кг)');
+  const num = id => { const v = parseFloat($(id).value); return isFinite(v)&&v>0 ? v : null; };
+  const starts = {bench:num('#wz-b'), leg:num('#wz-l'), thrust:num('#wz-t')};
+  const p = {name, sex:wzSex, age, height:h, startWeight:Math.round(w*10)/10, starts};
+  const c = calcPlan(p);
+  const t = today(); const dow = (t.getDay()+6)%7;
+  const monday = new Date(t.getTime() + ((7-dow)%7)*864e5);
+  window._wzP = p; window._wzC = c; window._wzW1 = key(monday);
+  openModal(`<h2>Твоя программа готова</h2>
+    <div class="kv" style="margin-top:10px"><span>Поддержка (расход)</span><b>≈${c.maint} ккал</b></div>
+    <div class="kv"><span>Цель на день</span><b>${c.kcal} ккал · белок ${c.prot} г</b></div>
+    <div class="kv"><span>Траектория 12 недель</span><b>${p.startWeight} → ~${c.targets[12]} кг</b></div>
+    <div class="kv"><span>Старт (неделя 1)</span><b>понедельник ${fmtD(monday)}</b></div>
+    <div class="kv"><span>Стартовые веса</span><b>${starts.bench?('жим '+(Math.round(starts.bench*0.7/2.5)*2.5)+' кг'):'подбор на 1-й неделе'}</b></div>
+    <div class="tiny" style="margin-top:8px">Начинаем с ~70% рабочих весов — первые 2 недели лёгкие, это план, а не осторожничание. Калории можно будет менять корректировками.</div>
+    <div class="row" style="gap:8px; margin-top:12px">
+      <button class="btn sec grow" onclick="closeModal()">Изменить</button>
+      <button class="btn grow" onclick="wizardGo()">Начать</button></div>`);
+};
+window.wizardGo = function(){
+  const p = window._wzP, c = window._wzC;
+  const stx = {};
+  if (p.starts.bench) stx.bench = (Math.round(p.starts.bench*0.7/2.5)*2.5)+' кг';
+  if (p.starts.leg) stx.leg = (Math.round(p.starts.leg*0.6/10)*10)+' кг';
+  if (p.starts.thrust) stx.thrust = (Math.round(p.starts.thrust*0.65/5)*5)+' кг';
+  PROF = { name:p.name, sex:p.sex, age:p.age, height:p.height, startWeight:p.startWeight,
+    w1:window._wzW1, legacyWeek0:false, starts:p.starts,
+    startsText: Object.keys(stx).length?stx:null, targets:c.targets };
+  DB.profile = PROF; DB.kcalTarget = c.kcal; DB.protTarget = c.prot;
+  DB.weights[key(today())] = p.startWeight;
+  save(); closeModal(); buildProgram(); tab='home'; render();
+  toast('Программа готова. Старт — '+fmtD(W1)+', а вес уже записан.');
+};
+/* ============ 15. ЗАГРУЗКА ============ */
+(function boot(){
+  if (!DB.profile){
+    const hasData = (Object.keys(DB.weights||{}).length + Object.keys(DB.sessions||{}).length + Object.keys(DB.food||{}).length) > 0;
+    if (hasData){ DB.profile = EGOR; save(); }   // миграция существующего пользователя
+  }
+  if (DB.profile){ PROF = DB.profile; buildProgram(); render(); }
+  else wizard();
+})();
 /*@JS@*/
 </script>
 </body>

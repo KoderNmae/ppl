@@ -2259,7 +2259,7 @@ window.eatRecipe = function(rid, q, mid){
 window.modulesDlg = function(mid){
   const mname = (MEAL_DEF.find(m=>m.id===mid)||{}).n || '';
   openModal(`<h2>Добавить: ${mname.toLowerCase()}</h2>
-    <input type="text" id="ps-q" placeholder="Найти продукт: яйцо, гречка, творог…" style="margin-top:8px" oninput="psList('${mid}', this.value)">
+    <input type="text" id="ps-q" placeholder="Найти: яйцо, гречка, любой товар из магазина…" style="margin-top:8px" oninput="psList('${mid}', this.value)">
     <div id="ps-list"></div>
     <div class="row" style="gap:8px;margin:8px 0 2px">
       <button class="btn sec grow sm" onclick="barcodeDlg('${mid}')">Штрихкод</button>
@@ -2272,9 +2272,15 @@ window.modulesDlg = function(mid){
 function prodPool(){
   return [...(DB.myProds||[]).map(m=>({...m, my:1})), ...ING_ALL.map(r=>({id:r[0], n:r[1], cat:r[2], kcal:r[3], p:r[4], f:r[5], c:r[6], unitG:r[7]||0}))];
 }
+function prodThumb(x, sz){
+  return x.img
+    ? `<img src="${x.img}" style="width:${sz}px;height:${sz}px;object-fit:cover;border-radius:9px;flex:none;background:var(--card2)" loading="lazy" onerror="this.outerHTML='<span style=&quot;font-size:22px;flex:none&quot;>'+prodEmo(prodBy('${x.id}')||{})+'</span>'">`
+    : `<span style="font-size:22px;flex:none">${prodEmo(x)}</span>`;
+}
 window.psList = function(mid, q){
   const el = $('#ps-list'); if (!el) return;
   q = (q||'').trim();
+  window._psMid = mid;
   const pool = prodPool();
   let rows, note = '';
   if (!q){
@@ -2285,10 +2291,61 @@ window.psList = function(mid, q){
   }
   el.innerHTML = (note?`<div class="tiny" style="margin:6px 2px">${note}</div>`:'') + rows.map(x =>
     `<button class="varrow" style="margin:6px 0;flex-direction:row;align-items:center;gap:10px" onclick="psPick('${x.id}','${mid}')">
-      <span style="font-size:22px;flex:none">${prodEmo(x)}</span>
+      ${prodThumb(x, 34)}
       <span class="grow" style="text-align:left"><b style="font-size:14px">${x.my?'★ ':''}${esc(x.n)}</b>
       <span style="display:block">${x.kcal} ккал · Б${x.p} на 100 г${x.unitG?' · шт ≈ '+x.unitG+' г':''}</span></span></button>`).join('')
-    + (q && !rows.length ? `<div class="small" style="padding:6px 2px">Не нашлось. Попробуй короче («греч», «яйц») — или добавь по штрихкоду / как своё блюдо.</div>` : '');
+    + (q && !rows.length ? `<div class="small" style="padding:6px 2px">В своей базе не нашлось — сейчас поищу в интернете…</div>` : '')
+    + `<div id="ps-net"></div>`;
+  clearTimeout(window._psNetTmr);
+  if (q.length >= 3) window._psNetTmr = setTimeout(() => psNet(q), 450);
+};
+/* онлайн-поиск по названию: Open Food Facts */
+const _offSearch = {};
+window.psNet = async function(q){
+  const box = $('#ps-net'); if (!box) return;
+  const tok = (window._psNetTok = (window._psNetTok||0) + 1);
+  const render = list => {
+    if (tok !== window._psNetTok) return;
+    const b = $('#ps-net'); if (!b) return;
+    window._psNetQ = q;
+    b.innerHTML = list.length
+      ? `<div class="tiny" style="margin:10px 2px 2px">Из интернета · Open Food Facts</div>` + list.map((x,i) =>
+        `<button class="varrow" style="margin:6px 0;flex-direction:row;align-items:center;gap:10px" onclick="psNetPick(${i})">
+          ${x.img?`<img src="${x.img}" style="width:34px;height:34px;object-fit:cover;border-radius:9px;flex:none;background:var(--card2)" loading="lazy" onerror="this.style.display='none'">`:`<span style="font-size:22px;flex:none">🛒</span>`}
+          <span class="grow" style="text-align:left"><b style="font-size:14px">${esc(x.n)}</b>
+          <span style="display:block">${x.kcal} ккал · Б${x.p} на 100 г${x.unitG?' · порция '+x.unitG+' г':''}</span></span></button>`).join('')
+      : `<div class="tiny" style="margin:10px 2px">В интернете по «${esc(q)}» не нашлось — попробуй иначе или добавь по штрихкоду.</div>`;
+  };
+  if (_offSearch[q]){ render(_offSearch[q]); return; }
+  box.innerHTML = '<div class="tiny" style="margin:10px 2px">ищу в интернете…</div>';
+  try {
+    const r = await fetch('https://world.openfoodfacts.org/cgi/search.pl?search_terms='+encodeURIComponent(q)+'&search_simple=1&action=process&json=1&page_size=8&sort_by=unique_scans_n&fields=code,product_name,product_name_ru,brands,nutriments,serving_quantity,image_front_small_url');
+    if (tok !== window._psNetTok) return;
+    const j = await r.json();
+    const list = (j.products||[]).map(pr => {
+      const nu = pr.nutriments || {};
+      const servG = parseFloat(pr.serving_quantity) || 0;
+      const n4 = bcNutr(nu, servG);
+      const name = pr.product_name_ru || pr.product_name || '';
+      if (!name || !pr.code) return null;
+      if (!n4.kcal && !n4.p && !n4.f && !n4.c) return null;
+      return {id:'off'+pr.code, n: name + (pr.brands ? ' · '+pr.brands.split(',')[0].trim() : ''), cat:'ready',
+        kcal:n4.kcal, p:n4.p, f:n4.f, c:n4.c, unitG: Math.round(servG)||0, img: pr.image_front_small_url||''};
+    }).filter(Boolean).slice(0,6);
+    _offSearch[q] = list;
+    render(list);
+  } catch(e){
+    if (tok !== window._psNetTok) return;
+    const b = $('#ps-net');
+    if (b) b.innerHTML = '<div class="tiny" style="margin:10px 2px">Интернет-поиск сейчас недоступен — работаю по своей базе.</div>';
+  }
+};
+window.psNetPick = function(i){
+  const x = (_offSearch[window._psNetQ]||[])[i]; if (!x) return;
+  DB.myProds = DB.myProds || [];
+  if (!DB.myProds.some(m => m.id === x.id)) DB.myProds.push({id:x.id, n:x.n, cat:x.cat, kcal:x.kcal, p:x.p, f:x.f, c:x.c, unitG:x.unitG, img:x.img});
+  save();
+  psPick(x.id, window._psMid || null);
 };
 window.psPick = function(id, mid){
   const x = prodBy(id); if (!x) return;
@@ -2297,7 +2354,7 @@ window.psPick = function(id, mid){
   const chips = x.unitG
     ? [[x.unitG,'1 шт'],[x.unitG*2,'2 шт'],[x.unitG*3,'3 шт'],[100,'100 г'],[150,'150 г']]
     : [[50,'50 г'],[100,'100 г'],[150,'150 г'],[200,'200 г'],[300,'300 г']];
-  openModal(`<h2>${prodEmo(x)} ${esc(x.n)}</h2>
+  openModal(`<h2 style="display:flex;align-items:center;gap:10px">${x.img?`<img src="${x.img}" style="width:42px;height:42px;object-fit:cover;border-radius:11px;flex:none;background:var(--card2)" onerror="this.style.display='none'">`:`<span>${prodEmo(x)}</span>`}<span>${esc(x.n)}</span></h2>
     <div class="tiny">${x.kcal} ккал · Б${x.p} · Ж${x.f} · У${x.c} — на 100 г</div>
     <div class="stepper" style="margin-top:12px"><span class="lbl">Грамм</span>
       <button onclick="stepNum('ps-g',-10);psCalc()">−</button>
@@ -2362,8 +2419,10 @@ window.bcLookup = async function(code){
   // уже сканировал раньше — берём из своих, без сети
   const cached = (DB.myProds||[]).find(m => m.id === 'off'+code);
   if (cached){ window._bcFound = cached;
-    out.innerHTML = `<div class="card" style="margin-top:10px"><b>★ ${esc(cached.n)}</b>
-      <div class="tiny" style="margin-top:2px">${cached.kcal} ккал · Б${cached.p} · Ж${cached.f} · У${cached.c} — на 100 г · уже в моих продуктах</div>
+    out.innerHTML = `<div class="card" style="margin-top:10px"><div class="row" style="gap:10px">
+      ${cached.img?`<img src="${cached.img}" style="width:52px;height:52px;object-fit:cover;border-radius:12px;flex:none;background:var(--card2)" onerror="this.style.display='none'">`:''}
+      <div class="grow"><b>★ ${esc(cached.n)}</b>
+      <div class="tiny" style="margin-top:2px">${cached.kcal} ккал · Б${cached.p} · Ж${cached.f} · У${cached.c} — на 100 г · уже в моих продуктах</div></div></div>
       <button class="btn full sm" style="margin-top:10px" onclick="bcSave()">Взвесить и в дневник</button></div>`;
     return; }
   const tok = (window._bcTok = (window._bcTok||0) + 1);   // защита от гонки двух запросов
@@ -2371,7 +2430,7 @@ window.bcLookup = async function(code){
   let r = null, lastErr = null;
   for (let att = 0; att < 3; att++){
     try {
-      r = await fetch('https://world.openfoodfacts.org/api/v2/product/'+code+'.json?fields=product_name,product_name_ru,brands,nutriments,serving_quantity,quantity');
+      r = await fetch('https://world.openfoodfacts.org/api/v2/product/'+code+'.json?fields=product_name,product_name_ru,brands,nutriments,serving_quantity,quantity,image_front_small_url');
       lastErr = null;
       if (r.ok || r.status === 404) break;                 // 429/5xx — подождать и повторить
     } catch(e){ lastErr = e; }
@@ -2395,9 +2454,11 @@ window.bcLookup = async function(code){
     bcFail('Товар найден («'+esc(name)+'»), но КБЖУ в базе не заполнены.'); return;
   }
   window._bcFound = {id:'off'+code, n: name + (pr.brands ? ' · '+pr.brands.split(',')[0].trim() : ''), cat:'ready',
-    kcal:n4.kcal, p:n4.p, f:n4.f, c:n4.c, unitG: Math.round(servG)||0};
-  out.innerHTML = `<div class="card" style="margin-top:10px"><b>${esc(window._bcFound.n)}</b>
-    <div class="tiny" style="margin-top:2px">${n4.kcal} ккал · Б${n4.p} · Ж${n4.f} · У${n4.c} — на 100 г${servG?' · порция '+Math.round(servG)+' г':''}</div>
+    kcal:n4.kcal, p:n4.p, f:n4.f, c:n4.c, unitG: Math.round(servG)||0, img: pr.image_front_small_url||''};
+  out.innerHTML = `<div class="card" style="margin-top:10px"><div class="row" style="gap:10px">
+    ${window._bcFound.img?`<img src="${window._bcFound.img}" style="width:52px;height:52px;object-fit:cover;border-radius:12px;flex:none;background:var(--card2)" onerror="this.style.display='none'">`:''}
+    <div class="grow"><b>${esc(window._bcFound.n)}</b>
+    <div class="tiny" style="margin-top:2px">${n4.kcal} ккал · Б${n4.p} · Ж${n4.f} · У${n4.c} — на 100 г${servG?' · порция '+Math.round(servG)+' г':''}</div></div></div>
     <button class="btn full sm" style="margin-top:10px" onclick="bcSave()">Сохранить и взвесить</button></div>`;
 };
 window.bcSave = function(){
@@ -3206,7 +3267,7 @@ function vMore(){
       <div class="kv"><span>${PROF.place==='home' ? 'Дом · '+(['db','band','bar'].filter(k=>PROF.equip&&PROF.equip[k]).map(k=>({db:'гантели',band:'резинка',bar:'турник'})[k]).join(', ')||'вес тела') : 'Зал'} · ${PROF.split==='fb'?'Фулбади':'PPL'} · Старт ${PROF.startWeight} кг → ~${Math.round(TARGETS[WEEKS()])} кг к ${fmtD(PROG_END)} (${WEEKS()} нед.)</span></div>
       <button class="btn sec full" style="margin-top:10px" onclick="adjustDlg()">Травмы и активность</button>
       <button class="btn sec full" style="margin-top:8px" onclick="if(confirm('Пересоздать программу заново через анкету? Вес, еда и шаги сохранятся, а журнал тренировок и замены очистятся.')){DB.profile=null;DB.sessions={};DB.swaps={};DB.skips={};DB.dateOv={};save();location.reload();}">Пересоздать программу (анкета)</button></div>`;
-    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 2.5.1 (штрихкод стал надёжным: повтор при перегрузке базы, КБЖУ из порции, кэш своих товаров) · собрано для Егора и друзей · 19.08.2026. Фото упражнений: free-exercise-db, Public Domain.</div>`;
+    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 2.6 (онлайн-поиск любых магазинных продуктов по названию, с фото — Open Food Facts) · собрано для Егора и друзей · 19.08.2026. Фото упражнений: free-exercise-db, Public Domain.</div>`;
   }
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }

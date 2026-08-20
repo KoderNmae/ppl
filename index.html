@@ -2340,31 +2340,65 @@ window.barcodeDlg = function(mid){
       <button class="btn sec" onclick="bcStop();modulesDlg('${mid||''}')">← Назад</button>
       <button class="btn grow" style="flex:1" onclick="bcLookup()">Найти</button></div>`);
 };
+/* КБЖУ из OFF: сначала на 100 г, иначе пересчёт из порции */
+function bcNutr(nu, servG){
+  const per100 = k => nu[k+'_100g'];
+  const perServ = k => (servG > 0 && nu[k+'_serving'] != null) ? nu[k+'_serving']*100/servG : null;
+  const pick = k => { const v = per100(k); return (v != null && v !== '') ? +v : perServ(k); };
+  let kcal = pick('energy-kcal');
+  if (kcal == null){ const kj = pick('energy'); kcal = kj != null ? kj/4.184 : null; }
+  return {kcal: kcal != null ? Math.round(kcal) : 0,
+          p: r1(pick('proteins')||0), f: r1(pick('fat')||0), c: r1(pick('carbohydrates')||0)};
+}
+function bcFail(msg){
+  const out = $('#bc-out'); if (!out) return;
+  out.innerHTML = `<div class="insight warn" style="margin-top:8px"><p style="margin:0">${msg}</p></div>
+    <button class="btn sec full sm" style="margin-top:8px" onclick="closeModal();foodCustom(window._bcMeal||null)">Внести вручную (КБЖУ с упаковки)</button>`;
+}
 window.bcLookup = async function(code){
   code = String(code || ($('#bc-in') ? $('#bc-in').value : '')).replace(/\D/g,'');
   if (!code || code.length < 8) return toast('Введи 8–13 цифр штрихкода');
-  const out = $('#bc-out');
+  const out = $('#bc-out'); if (!out) return;
+  // уже сканировал раньше — берём из своих, без сети
+  const cached = (DB.myProds||[]).find(m => m.id === 'off'+code);
+  if (cached){ window._bcFound = cached;
+    out.innerHTML = `<div class="card" style="margin-top:10px"><b>★ ${esc(cached.n)}</b>
+      <div class="tiny" style="margin-top:2px">${cached.kcal} ккал · Б${cached.p} · Ж${cached.f} · У${cached.c} — на 100 г · уже в моих продуктах</div>
+      <button class="btn full sm" style="margin-top:10px" onclick="bcSave()">Взвесить и в дневник</button></div>`;
+    return; }
+  const tok = (window._bcTok = (window._bcTok||0) + 1);   // защита от гонки двух запросов
   out.innerHTML = '<div class="small" style="margin-top:8px">Ищу товар…</div>';
-  try {
-    const r = await fetch('https://world.openfoodfacts.org/api/v2/product/'+code+'.json?fields=product_name,product_name_ru,brands,nutriments,serving_quantity');
-    const j = await r.json();
-    if (!j.product || j.status === 0){
-      out.innerHTML = '<div class="insight warn" style="margin-top:8px"><p style="margin:0">Такого товара нет в базе. Добавь через «Своё блюдо» — КБЖУ с упаковки.</p></div>'; return;
-    }
-    const pr = j.product, nu = pr.nutriments || {};
-    const name = pr.product_name_ru || pr.product_name || ('Товар '+code);
-    const kcal = Math.round(nu['energy-kcal_100g'] || (nu['energy_100g']||0)/4.184);
-    const P = r1(nu.proteins_100g||0), F = r1(nu.fat_100g||0), C = r1(nu.carbohydrates_100g||0);
-    if (!kcal && !P && !F && !C){
-      out.innerHTML = '<div class="insight warn" style="margin-top:8px"><p style="margin:0">Товар найден ('+esc(name)+'), но КБЖУ в базе нет. Добавь вручную через «Своё блюдо».</p></div>'; return;
-    }
-    window._bcFound = {id:'off'+code, n: name + (pr.brands ? ' · '+pr.brands.split(',')[0].trim() : ''), cat:'ready', kcal, p:P, f:F, c:C, unitG: Math.round(pr.serving_quantity)||0};
-    out.innerHTML = `<div class="card" style="margin-top:10px"><b>${esc(window._bcFound.n)}</b>
-      <div class="tiny" style="margin-top:2px">${kcal} ккал · Б${P} · Ж${F} · У${C} — на 100 г</div>
-      <button class="btn full sm" style="margin-top:10px" onclick="bcSave()">Сохранить и взвесить</button></div>`;
-  } catch(e){
-    out.innerHTML = '<div class="insight warn" style="margin-top:8px"><p style="margin:0">Нет сети или база недоступна. Штрихкод работает онлайн; офлайн выручит «Своё блюдо».</p></div>';
+  let r = null, lastErr = null;
+  for (let att = 0; att < 3; att++){
+    try {
+      r = await fetch('https://world.openfoodfacts.org/api/v2/product/'+code+'.json?fields=product_name,product_name_ru,brands,nutriments,serving_quantity,quantity');
+      lastErr = null;
+      if (r.ok || r.status === 404) break;                 // 429/5xx — подождать и повторить
+    } catch(e){ lastErr = e; }
+    if (tok !== window._bcTok) return;
+    if (att < 2) await new Promise(res => setTimeout(res, 900*(att+1)));
   }
+  if (tok !== window._bcTok) return;
+  if (lastErr || !r){ bcFail('Нет сети. Штрихкод работает онлайн — а пока можно внести вручную.'); return; }
+  let j = null;
+  try { j = await r.json(); } catch(e){ j = null; }
+  if (tok !== window._bcTok) return;
+  if (r.status === 404 || !j || !j.product){
+    bcFail('Этого штрихкода нет в базе Open Food Facts (туда попадает не всё, особенно локальные марки).'); return;
+  }
+  if (!r.ok){ bcFail('База отвечает с перебоями (код '+r.status+'). Подожди полминуты и нажми «Найти» ещё раз.'); return; }
+  const pr = j.product, nu = pr.nutriments || {};
+  const name = pr.product_name_ru || pr.product_name || ('Товар '+code);
+  const servG = parseFloat(pr.serving_quantity) || 0;
+  const n4 = bcNutr(nu, servG);
+  if (!n4.kcal && !n4.p && !n4.f && !n4.c){
+    bcFail('Товар найден («'+esc(name)+'»), но КБЖУ в базе не заполнены.'); return;
+  }
+  window._bcFound = {id:'off'+code, n: name + (pr.brands ? ' · '+pr.brands.split(',')[0].trim() : ''), cat:'ready',
+    kcal:n4.kcal, p:n4.p, f:n4.f, c:n4.c, unitG: Math.round(servG)||0};
+  out.innerHTML = `<div class="card" style="margin-top:10px"><b>${esc(window._bcFound.n)}</b>
+    <div class="tiny" style="margin-top:2px">${n4.kcal} ккал · Б${n4.p} · Ж${n4.f} · У${n4.c} — на 100 г${servG?' · порция '+Math.round(servG)+' г':''}</div>
+    <button class="btn full sm" style="margin-top:10px" onclick="bcSave()">Сохранить и взвесить</button></div>`;
 };
 window.bcSave = function(){
   const x = window._bcFound; if (!x) return;
@@ -3172,7 +3206,7 @@ function vMore(){
       <div class="kv"><span>${PROF.place==='home' ? 'Дом · '+(['db','band','bar'].filter(k=>PROF.equip&&PROF.equip[k]).map(k=>({db:'гантели',band:'резинка',bar:'турник'})[k]).join(', ')||'вес тела') : 'Зал'} · ${PROF.split==='fb'?'Фулбади':'PPL'} · Старт ${PROF.startWeight} кг → ~${Math.round(TARGETS[WEEKS()])} кг к ${fmtD(PROG_END)} (${WEEKS()} нед.)</span></div>
       <button class="btn sec full" style="margin-top:10px" onclick="adjustDlg()">Травмы и активность</button>
       <button class="btn sec full" style="margin-top:8px" onclick="if(confirm('Пересоздать программу заново через анкету? Вес, еда и шаги сохранятся, а журнал тренировок и замены очистятся.')){DB.profile=null;DB.sessions={};DB.swaps={};DB.skips={};DB.dateOv={};save();location.reload();}">Пересоздать программу (анкета)</button></div>`;
-    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 2.5 (база продуктов ×3 с поиском, штрихкод, эмодзи еды, светлая тема) · собрано для Егора и друзей · 19.08.2026. Фото упражнений: free-exercise-db, Public Domain.</div>`;
+    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 2.5.1 (штрихкод стал надёжным: повтор при перегрузке базы, КБЖУ из порции, кэш своих товаров) · собрано для Егора и друзей · 19.08.2026. Фото упражнений: free-exercise-db, Public Domain.</div>`;
   }
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-<meta name="theme-color" content="#0c0c0e">
+<meta name="theme-color" content="#eef6f6">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="PPL">
@@ -15,15 +15,27 @@
   font-weight:200 800; font-style:normal; font-display:swap;
 }
 :root{
-  --bg:#0c0c0e; --card:rgba(255,255,255,.045); --card2:rgba(255,255,255,.07);
-  --border:rgba(255,255,255,.085); --border2:rgba(255,255,255,.14);
-  --text:#f5f5f2; --text2:#b8b8b1; --muted:#84847e;
-  --accent:#3987e5; --accent2:#7a5af8; --accent-dim:#1c5cab;
-  --grad:linear-gradient(135deg,#3f8df0 0%,#7a5af8 100%);
-  --push:#d95926; --pull:#3987e5; --legs:#199e70;
-  --good:#1baf7a; --warn:#eda100; --bad:#e66767;
+  --bg:#eef6f6; --card:rgba(255,255,255,.72); --card2:rgba(255,255,255,.94);
+  --border:rgba(12,74,84,.11); --border2:rgba(12,74,84,.19);
+  --text:#123239; --text2:#41626a; --muted:#6d8a90;
+  --accent:#0b93a4; --accent2:#12ab84; --accent-dim:#9ed6dc;
+  --grad:linear-gradient(135deg,#0aa2b4 0%,#14bd8e 100%);
+  --push:#d9611f; --pull:#2d7bd4; --legs:#128d60;
+  --good:#0f9d6d; --warn:#ad7407; --bad:#d45555;
   --r:20px; --rc:14px; --tap:48px;
-  --shadow:0 14px 34px rgba(0,0,0,.42);
+  --shadow:0 14px 34px rgba(10,84,94,.13);
+  --fig:#1d434c; --glassbr:rgba(255,255,255,.85);
+}
+html[data-theme=dark]{
+  --bg:#0a1215; --card:rgba(255,255,255,.05); --card2:rgba(255,255,255,.08);
+  --border:rgba(255,255,255,.09); --border2:rgba(255,255,255,.15);
+  --text:#edf6f6; --text2:#a7bdbd; --muted:#78908f;
+  --accent:#2ec6d1; --accent2:#2dd6aa; --accent-dim:#135e66;
+  --grad:linear-gradient(135deg,#17b2c2 0%,#22cf9d 100%);
+  --push:#e97e45; --pull:#4f96e8; --legs:#25b57f;
+  --good:#24c08b; --warn:#e8a13c; --bad:#e57373;
+  --shadow:0 14px 34px rgba(0,0,0,.45);
+  --fig:#dff2f2; --glassbr:rgba(255,255,255,.14);
 }
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
 html,body{margin:0; padding:0; height:100%; overscroll-behavior-y:none;
@@ -32,9 +44,13 @@ html,body{margin:0; padding:0; height:100%; overscroll-behavior-y:none;
   font-size:16px; line-height:1.45; color:var(--text)}
 body::before{content:''; position:fixed; inset:0; z-index:-1; pointer-events:none;
   background:
-    radial-gradient(52% 34% at 12% -4%, rgba(63,141,240,.13), transparent 60%),
-    radial-gradient(46% 30% at 108% 12%, rgba(122,90,248,.10), transparent 60%),
-    radial-gradient(60% 42% at 50% 118%, rgba(25,158,112,.05), transparent 65%),
+    radial-gradient(56% 38% at 10% -6%, rgba(14,178,196,.16), transparent 62%),
+    radial-gradient(48% 32% at 106% 10%, rgba(34,207,157,.13), transparent 62%),
+    radial-gradient(64% 44% at 50% 116%, rgba(125,216,232,.12), transparent 66%),
+    var(--bg)}
+html[data-theme=dark] body::before{background:
+    radial-gradient(56% 38% at 10% -6%, rgba(23,178,194,.13), transparent 62%),
+    radial-gradient(48% 32% at 106% 10%, rgba(34,207,157,.09), transparent 62%),
     var(--bg)}
 ::-webkit-scrollbar{width:0; height:0}
 #app{display:flex; flex-direction:column; height:100dvh; max-width:560px; margin:0 auto}
@@ -42,12 +58,13 @@ body::before{content:''; position:fixed; inset:0; z-index:-1; pointer-events:non
 header{padding:calc(14px + env(safe-area-inset-top)) 18px 10px; flex:none}
 header h1{font-size:21px; margin:0; font-weight:800; letter-spacing:-.4px}
 header .sub{color:var(--text2); font-size:13px; margin-top:3px; font-weight:500}
-#hd-prog{height:5px; border-radius:6px; background:rgba(255,255,255,.07); margin-top:12px; overflow:hidden}
+#hd-prog{height:5px; border-radius:6px; background:rgba(12,74,84,.09); margin-top:12px; overflow:hidden}
+html[data-theme=dark] #hd-prog{background:rgba(255,255,255,.07)}
 #hd-prog i{display:block; height:100%; border-radius:6px; background:var(--grad); transition:width .6s cubic-bezier(.2,.8,.2,1)}
 main{flex:1; overflow-y:auto; padding:2px 14px 26px; -webkit-overflow-scrolling:touch}
 /* ---------- навигация ---------- */
 nav{flex:none; display:flex; margin:6px 14px calc(10px + env(safe-area-inset-bottom));
-  background:rgba(24,24,28,.82); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
+  background:rgba(255,255,255,.78); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
   border:1px solid var(--border); border-radius:24px; box-shadow:var(--shadow); padding:4px}
 nav button{flex:1; position:relative; background:none; border:none; color:var(--muted); font:inherit;
   font-size:10.5px; font-weight:700; letter-spacing:.2px; padding:8px 0 7px; min-height:54px; cursor:pointer;
@@ -55,13 +72,16 @@ nav button{flex:1; position:relative; background:none; border:none; color:var(--
   transition:color .2s}
 nav button svg{width:23px; height:23px; fill:none; stroke:currentColor; stroke-width:1.9;
   stroke-linecap:round; stroke-linejoin:round; position:relative; z-index:1}
-nav button.on{color:#eef4ff}
+nav button.on{color:#0b5560}
+html[data-theme=dark] nav{background:rgba(16,26,29,.82)}
+html[data-theme=dark] nav button.on{color:#e5feff}
 nav button.on::before{content:''; position:absolute; top:4px; left:50%; transform:translateX(-50%);
   width:48px; height:30px; border-radius:999px; background:var(--grad); opacity:.28; filter:blur(2px)}
 /* ---------- карточки ---------- */
-.card{background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.028));
+.card{background:var(--card); border-top:1px solid var(--glassbr);
   border:1px solid var(--border); border-radius:var(--r); padding:16px; margin:12px 0;
-  box-shadow:0 8px 24px rgba(0,0,0,.25)}
+  box-shadow:0 8px 24px rgba(10,84,94,.09)}
+html[data-theme=dark] .card{background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.028)); box-shadow:0 8px 24px rgba(0,0,0,.25)}
 .card h3{margin:0 0 10px; font-size:11.5px; color:var(--muted); font-weight:800;
   text-transform:uppercase; letter-spacing:1.4px}
 .row{display:flex; align-items:center; gap:10px}
@@ -81,13 +101,13 @@ nav button.on::before{content:''; position:absolute; top:4px; left:50%; transfor
   transition:transform .12s, box-shadow .2s}
 .btn:active{transform:scale(.96)}
 .btn.sec{background:var(--card2); color:var(--text); border:1px solid var(--border2); box-shadow:none}
-.btn.ghost{background:none; color:#6da7ec; border:none; min-height:42px; box-shadow:none}
+.btn.ghost{background:none; color:var(--accent); border:none; min-height:42px; box-shadow:none}
 .btn.danger{background:none; border:1px solid rgba(230,103,103,.5); color:var(--bad); box-shadow:none}
 .btn.full{width:100%}
 .btn.sm{min-height:38px; font-size:13.5px; padding:0 13px; border-radius:11px}
 .btn:disabled{opacity:.4}
 /* ---------- формы ---------- */
-input[type=number],input[type=text],select{background:rgba(0,0,0,.28); border:1px solid var(--border2);
+input[type=number],input[type=text],select{background:rgba(255,255,255,.9); border:1px solid var(--border2);
   color:var(--text); font:inherit; font-size:17px; font-weight:600; border-radius:12px; padding:10px 13px;
   min-height:var(--tap); width:100%}
 input::placeholder{color:#6a6a64; font-weight:500}
@@ -100,7 +120,7 @@ input:focus,select:focus{outline:none; border-color:var(--accent); box-shadow:0 
 .stepper button:active{transform:scale(.93)}
 .stepper input{text-align:center; font-size:24px; font-weight:800; min-height:54px; font-variant-numeric:tabular-nums}
 .stepper .lbl{width:64px; flex:none; font-size:12.5px; color:var(--text2); font-weight:700}
-.seg{display:flex; background:rgba(0,0,0,.3); border:1px solid var(--border); border-radius:999px;
+.seg{display:flex; background:rgba(12,74,84,.07); border:1px solid var(--border); border-radius:999px;
   padding:4px; gap:4px; margin:8px 0}
 .seg button{flex:1; border:none; background:none; color:var(--text2); font:inherit; font-size:13.5px;
   font-weight:700; padding:9px 4px; border-radius:999px; cursor:pointer; min-height:42px; transition:all .2s}
@@ -110,16 +130,23 @@ input:focus,select:focus{outline:none; border-color:var(--accent); box-shadow:0 
   font-size:12.5px; font-weight:800; letter-spacing:.3px}
 .badge::before{content:''; width:7px; height:7px; border-radius:50%; background:currentColor;
   box-shadow:0 0 8px currentColor}
-.b-push{background:rgba(217,89,38,.14); color:#f08a5c}
-.b-pull{background:rgba(57,135,229,.14); color:#6da7ec}
-.b-legs{background:rgba(25,158,112,.14); color:#3fc796}
-.b-rest{background:rgba(140,140,134,.14); color:var(--text2)}
-.b-deload{background:rgba(237,161,0,.14); color:#f2b53d}
+.b-push{background:rgba(217,97,31,.13); color:#b64d14}
+.b-pull{background:rgba(45,123,212,.13); color:#2461ad}
+.b-legs{background:rgba(18,141,96,.13); color:#0e7350}
+.b-rest{background:rgba(110,138,144,.14); color:var(--text2)}
+.b-deload{background:rgba(173,116,7,.13); color:#8f6206}
+html[data-theme=dark] .b-push{background:rgba(233,126,69,.14); color:#f0955f}
+html[data-theme=dark] .b-pull{background:rgba(79,150,232,.14); color:#7fb3f0}
+html[data-theme=dark] .b-legs{background:rgba(37,181,127,.14); color:#4bcd9b}
+html[data-theme=dark] .b-deload{background:rgba(232,161,60,.14); color:#f2b53d}
 .c-good{color:var(--good)} .c-warn{color:var(--warn)} .c-bad{color:var(--bad)} .c-mut{color:var(--muted)}
 .num{text-align:right; font-variant-numeric:tabular-nums}
 /* ---------- прогресс-бары ---------- */
-.bar{height:10px; border-radius:8px; background:rgba(0,0,0,.32); overflow:hidden; margin-top:6px;
-  border:1px solid rgba(255,255,255,.05)}
+.bar{height:10px; border-radius:8px; background:rgba(12,74,84,.09); overflow:hidden; margin-top:6px;
+  border:1px solid rgba(12,74,84,.05)}
+html[data-theme=dark] input[type=number],html[data-theme=dark] input[type=text],html[data-theme=dark] select,html[data-theme=dark] textarea{background:rgba(0,0,0,.28)}
+html[data-theme=dark] .seg{background:rgba(0,0,0,.3)}
+html[data-theme=dark] .bar{background:rgba(0,0,0,.32); border-color:rgba(255,255,255,.05)}
 .bar i{display:block; height:100%; border-radius:8px; background:var(--grad);
   transition:width .5s cubic-bezier(.2,.8,.2,1)}
 .bar i.over{background:linear-gradient(135deg,#eda100,#e07020)}
@@ -129,8 +156,9 @@ input:focus,select:focus{outline:none; border-color:var(--accent); box-shadow:0 
 .kv b{color:var(--text); font-variant-numeric:tabular-nums}
 /* ---------- плитки ---------- */
 .hero{display:flex; gap:10px; margin:12px 0}
-.tile{flex:1; background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.028));
-  border:1px solid var(--border); border-radius:18px; padding:13px 12px; box-shadow:0 8px 24px rgba(0,0,0,.22)}
+.tile{flex:1; background:var(--card); border-top:1px solid var(--glassbr);
+  border:1px solid var(--border); border-radius:18px; padding:13px 12px; box-shadow:0 8px 24px rgba(10,84,94,.09)}
+html[data-theme=dark] .tile{background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.028)); box-shadow:0 8px 24px rgba(0,0,0,.22)}
 .tile .l{font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; font-weight:800}
 .tile .v{font-size:23px; font-weight:800; margin-top:3px; font-variant-numeric:tabular-nums; letter-spacing:-.5px}
 .hero .tile:first-child .v{background:var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent}
@@ -151,25 +179,28 @@ tr:last-child td{border-bottom:none}
 .exdone .exname{color:var(--text2)}
 .sets{display:flex; flex-wrap:wrap; gap:9px; margin-top:11px}
 .chip{display:inline-flex; align-items:center; justify-content:center; min-width:68px;
-  min-height:48px; padding:4px 12px; border-radius:13px; background:rgba(0,0,0,.26);
+  min-height:48px; padding:4px 12px; border-radius:13px; background:rgba(12,74,84,.06);
   border:1.5px dashed var(--border2); color:var(--muted); font-size:15px; font-weight:700;
   cursor:pointer; font-variant-numeric:tabular-nums; transition:all .15s}
 .chip:active{transform:scale(.94)}
-.chip.done{border-style:solid; border-color:rgba(57,135,229,.55);
-  background:linear-gradient(135deg,rgba(63,141,240,.2),rgba(122,90,248,.16)); color:#eef4ff}
+.chip.done{border-style:solid; border-color:rgba(11,147,164,.55);
+  background:linear-gradient(135deg,rgba(10,162,180,.16),rgba(20,189,142,.13)); color:#0b5560}
+html[data-theme=dark] .chip{background:rgba(0,0,0,.26)}
+html[data-theme=dark] .chip.done{color:#e5feff; border-color:rgba(46,198,209,.55); background:linear-gradient(135deg,rgba(23,178,194,.22),rgba(34,207,157,.16))}
 .chip.add{min-width:48px; border-style:solid}
-.chip.ban{border-style:solid; border-color:rgba(230,103,103,.6); color:#f0908f; background:rgba(230,103,103,.1)}
-.qbtn{background:var(--card2); border:1px solid var(--border2); color:#6da7ec;
+.chip.ban{border-style:solid; border-color:rgba(212,85,85,.55); color:#b23b3b; background:rgba(212,85,85,.08)}
+html[data-theme=dark] .chip.ban{color:#f0908f; border-color:rgba(230,103,103,.6); background:rgba(230,103,103,.1)}
+.qbtn{background:var(--card2); border:1px solid var(--border2); color:var(--accent);
   border-radius:13px; min-width:46px; min-height:46px; font-size:17px; font-weight:800; cursor:pointer; flex:none}
 .swapbtn{background:var(--card2); border:1px solid var(--border2); color:var(--text2);
   border-radius:13px; min-width:46px; min-height:46px; font-size:19px; cursor:pointer; flex:none}
 .rpe{display:flex; gap:7px; margin-top:10px}
 .rpe button{flex:1; min-height:42px; border-radius:11px; border:1px solid var(--border);
-  background:rgba(0,0,0,.24); color:var(--text2); font:inherit; font-weight:800; cursor:pointer; transition:all .15s}
+  background:rgba(12,74,84,.06); color:var(--text2); font:inherit; font-weight:800; cursor:pointer; transition:all .15s}
 .rpe button.on{background:var(--grad); border-color:transparent; color:#fff; box-shadow:0 4px 14px rgba(64,110,235,.35)}
 /* ---------- еда ---------- */
 .mods{display:flex; flex-wrap:wrap; gap:9px}
-.mod{background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.026));
+.mod{background:var(--card); border-top:1px solid var(--glassbr);
   border:1px solid var(--border); border-radius:14px; padding:9px 13px;
   font-size:13.5px; cursor:pointer; min-height:48px; display:flex; flex-direction:column;
   justify-content:center; transition:transform .12s}
@@ -181,7 +212,7 @@ tr:last-child td{border-bottom:none}
 .x{background:none; border:none; color:var(--muted); font-size:20px; min-width:44px; min-height:44px; cursor:pointer}
 /* ---------- аналитика ---------- */
 .insight{border-left:3px solid var(--accent); padding:12px 14px;
-  background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.026));
+  background:var(--card);
   border-top:1px solid var(--border); border-right:1px solid var(--border); border-bottom:1px solid var(--border);
   border-radius:4px 16px 16px 4px; margin:10px 0}
 .insight.good{border-left-color:var(--good)} .insight.warn{border-left-color:var(--warn)} .insight.bad{border-left-color:var(--bad)}
@@ -193,15 +224,37 @@ tr:last-child td{border-bottom:none}
 .tech-steps li{margin:8px 0; font-size:14.5px; color:var(--text)}
 .tech-err{display:flex; gap:9px; margin:9px 0; font-size:14px; color:var(--text2)}
 .tech-err b{color:var(--bad); flex:none; font-size:14px}
-.tech-note{background:rgba(57,135,229,.1); border:1px solid rgba(57,135,229,.35); color:#9cc3f2;
+.tech-note{background:rgba(11,147,164,.09); border:1px solid rgba(11,147,164,.32); color:#0b6a77;
   border-radius:12px; padding:9px 12px; font-size:13px; margin-top:8px}
+html[data-theme=dark] .insight{background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.026))}
+html[data-theme=dark] .tech-note{background:rgba(46,198,209,.1); border-color:rgba(46,198,209,.32); color:#9fe4ea}
 .varrow{display:flex; flex-direction:column; gap:1px; width:100%; text-align:left;
-  background:rgba(0,0,0,.24); border:1.5px solid var(--border2); border-radius:14px;
+  background:rgba(255,255,255,.8); border:1.5px solid var(--border2); border-radius:14px;
   color:var(--text); font:inherit; padding:11px 13px; margin:7px 0; cursor:pointer; font-weight:700}
 .varrow span{font-size:12px; color:var(--muted); font-weight:500}
-.varrow.on{border-color:var(--accent); background:linear-gradient(135deg,rgba(63,141,240,.16),rgba(122,90,248,.12))}
-.animbox{background:#101012; border:1px solid var(--border); border-radius:16px; margin:10px 0 4px; overflow:hidden}
-.animbox.photo{position:relative; background:#0a0a0c}
+.varrow.on{border-color:var(--accent); background:linear-gradient(135deg,rgba(10,162,180,.13),rgba(20,189,142,.10))}
+html[data-theme=dark] .varrow{background:rgba(0,0,0,.24)}
+html[data-theme=dark] .varrow.on{background:linear-gradient(135deg,rgba(23,178,194,.18),rgba(34,207,157,.13))}
+html[data-theme=dark] .mod{background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.026))}
+html[data-theme=dark] .stepper button{background:var(--card2)}
+html[data-theme=dark] .x, html[data-theme=dark] .qbtn, html[data-theme=dark] .swapbtn{}
+.animbox{background:linear-gradient(180deg,rgba(10,162,180,.07),rgba(20,189,142,.05)); border:1px solid var(--border); border-radius:16px; margin:10px 0 4px; overflow:hidden}
+.abone{stroke:var(--fig)} .ahead{fill:var(--fig)} .afar{opacity:.32}
+.aprop{fill:rgba(12,74,84,.20); stroke:none}
+.afloor{stroke:rgba(12,74,84,.30); stroke-width:2.5}
+.aline{stroke:rgba(12,74,84,.34); fill:none; stroke-linecap:round}
+.atool{fill:var(--accent)} .atool2{fill:var(--bg); stroke:none}
+.aplate{fill:rgba(11,147,164,.22); stroke:var(--accent); stroke-width:2.5}
+.acable{stroke:rgba(12,74,84,.55); stroke-width:2; fill:none}
+.aband{stroke:var(--bad); stroke-width:3; fill:none}
+.amus{fill:rgba(20,189,142,.45); stroke:var(--accent2); stroke-width:1.5}
+html[data-theme=dark] .aprop{fill:rgba(255,255,255,.16)}
+html[data-theme=dark] .afloor{stroke:rgba(255,255,255,.25)}
+html[data-theme=dark] .aline{stroke:rgba(255,255,255,.3)}
+html[data-theme=dark] .acable{stroke:rgba(255,255,255,.45)}
+html[data-theme=dark] .aplate{fill:rgba(46,198,209,.18)}
+.animbox.photo{position:relative; background:#e8f2f2}
+html[data-theme=dark] .animbox.photo{background:#0a0a0c}
 .tphoto{width:100%; display:block; transition:opacity .45s ease}
 .tphoto.over{position:absolute; left:0; top:0}
 .ptag{position:absolute; left:10px; bottom:10px; background:rgba(10,10,14,.7); backdrop-filter:blur(6px);
@@ -214,34 +267,40 @@ svg.chart{width:100%; display:block; touch-action:pan-y}
 /* ---------- таймер ---------- */
 #timerbar{position:fixed; left:50%; transform:translateX(-50%);
   bottom:calc(86px + env(safe-area-inset-bottom)); width:min(92%,520px);
-  background:rgba(26,26,32,.92); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
-  border:1px solid rgba(63,141,240,.4); border-radius:18px;
+  background:rgba(255,255,255,.93); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
+  border:1px solid rgba(11,147,164,.4); border-radius:18px;
   padding:12px 16px 15px; display:none; align-items:center; gap:12px; z-index:60;
   box-shadow:0 14px 40px rgba(0,0,0,.55); overflow:hidden}
 #timerbar.show{display:flex}
 #timerbar .t{font-size:26px; font-weight:800; font-variant-numeric:tabular-nums; min-width:74px; letter-spacing:-.5px}
-#timer-line{position:absolute; left:0; right:0; bottom:0; height:4px; background:rgba(255,255,255,.06)}
+#timer-line{position:absolute; left:0; right:0; bottom:0; height:4px; background:rgba(12,74,84,.08)}
+html[data-theme=dark] #timerbar{background:rgba(16,26,29,.92); border-color:rgba(46,198,209,.4)}
+html[data-theme=dark] #timer-line{background:rgba(255,255,255,.06)}
 #timer-line i{display:block; height:100%; background:var(--grad); transition:width .25s linear}
 /* ---------- тост и модалка ---------- */
 #toast{position:fixed; left:50%; transform:translateX(-50%);
   bottom:calc(150px + env(safe-area-inset-bottom));
-  background:rgba(26,26,32,.94); backdrop-filter:blur(14px); border:1px solid var(--border2);
+  background:rgba(255,255,255,.95); backdrop-filter:blur(14px); border:1px solid var(--border2);
   color:var(--text); padding:11px 20px; border-radius:999px; font-size:14px; font-weight:600;
   opacity:0; transition:opacity .25s, transform .25s; pointer-events:none; z-index:70;
   max-width:90%; text-align:center; box-shadow:var(--shadow)}
 #toast.show{opacity:1}
-.modal-wrap{position:fixed; inset:0; background:rgba(5,5,8,.66);
+html[data-theme=dark] #toast{background:rgba(16,26,29,.94)}
+.modal-wrap{position:fixed; inset:0; background:rgba(16,50,57,.4);
   backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
   display:none; z-index:80; align-items:flex-end; justify-content:center}
 .modal-wrap.show{display:flex}
-.modal{background:#17171b; border:1px solid var(--border); border-bottom:none;
+.modal{background:#f2f9f9; border:1px solid var(--border); border-bottom:none;
   border-radius:26px 26px 0 0; padding:10px 18px calc(20px + env(safe-area-inset-bottom));
   width:100%; max-width:560px; max-height:88dvh; overflow-y:auto; box-shadow:0 -20px 60px rgba(0,0,0,.5)}
 .modal::before{content:''; display:block; width:38px; height:4px; border-radius:3px;
-  background:rgba(255,255,255,.18); margin:4px auto 14px}
+  background:rgba(12,74,84,.2); margin:4px auto 14px}
+html[data-theme=dark] .modal-wrap{background:rgba(3,8,9,.66)}
+html[data-theme=dark] .modal{background:#101a1d}
+html[data-theme=dark] .modal::before{background:rgba(255,255,255,.18)}
 .modal h2{margin:0 0 4px; font-size:18px; font-weight:800; letter-spacing:-.3px}
 /* ---------- прочее ---------- */
-.storage-warn{background:rgba(237,161,0,.1); border:1px solid rgba(237,161,0,.38); color:#f2b53d;
+.storage-warn{background:rgba(173,116,7,.09); border:1px solid rgba(173,116,7,.35); color:#8f6206;
   border-radius:14px; padding:11px 13px; font-size:13px; margin:10px 0; display:none}
 .fade-list > *{animation:fin .28s cubic-bezier(.2,.8,.2,1) backwards}
 .fade-list > *:nth-child(2){animation-delay:.03s}
@@ -253,49 +312,6 @@ svg.chart{width:100%; display:block; touch-action:pan-y}
 .cpulse{transform-box:fill-box; transform-origin:center; animation:cpulse 2.2s ease-out infinite}
 a{color:#6da7ec}
 
-/* ---------- светлая тема ---------- */
-html[data-theme=light]{
-  --bg:#eef0f4; --card:#ffffff; --card2:#eef1f6;
-  --border:rgba(21,24,34,.10); --border2:rgba(21,24,34,.18);
-  --text:#191b24; --text2:#4d5160; --muted:#7b7f8c;
-  --accent:#2e6fd6; --accent2:#6c4ee0; --accent-dim:#a9c4ea;
-  --shadow:0 10px 26px rgba(23,26,40,.10);
-}
-html[data-theme=light] body::before{background:
-  radial-gradient(52% 34% at 12% -4%, rgba(63,141,240,.10), transparent 60%),
-  radial-gradient(46% 30% at 108% 12%, rgba(122,90,248,.08), transparent 60%),
-  var(--bg)}
-html[data-theme=light] .card,html[data-theme=light] .tile{
-  background:#fff; box-shadow:0 6px 16px rgba(23,26,40,.06)}
-html[data-theme=light] .mod,html[data-theme=light] .insight{background:#fff}
-html[data-theme=light] .tech-note{background:rgba(46,111,214,.07); color:#2e5f9e}
-html[data-theme=light] input[type=number],html[data-theme=light] input[type=text],
-html[data-theme=light] input[type=date],html[data-theme=light] select,html[data-theme=light] textarea{
-  background:#fff; color:var(--text)}
-html[data-theme=light] .seg{background:rgba(21,24,34,.06)}
-html[data-theme=light] #hd-prog{background:rgba(21,24,34,.08)}
-html[data-theme=light] .bar{background:rgba(21,24,34,.08); border-color:rgba(21,24,34,.04)}
-html[data-theme=light] .chip{background:rgba(21,24,34,.04)}
-html[data-theme=light] .chip.done{color:#1c3f77; background:linear-gradient(135deg,rgba(63,141,240,.14),rgba(122,90,248,.10))}
-html[data-theme=light] .chip.ban{color:#b23b3b; background:rgba(230,103,103,.08)}
-html[data-theme=light] .stepper button{background:#fff}
-html[data-theme=light] .varrow{background:#fff}
-html[data-theme=light] .varrow.on{background:linear-gradient(135deg,rgba(63,141,240,.10),rgba(122,90,248,.07))}
-html[data-theme=light] nav{background:rgba(255,255,255,.88)}
-html[data-theme=light] nav button.on{color:#1c3f77}
-html[data-theme=light] .btn.ghost{color:#2e6fd6}
-html[data-theme=light] .qbtn{color:#2e6fd6}
-html[data-theme=light] #timerbar{background:rgba(255,255,255,.94); border-color:rgba(46,111,214,.4)}
-html[data-theme=light] #timer-line{background:rgba(21,24,34,.07)}
-html[data-theme=light] #toast{background:rgba(255,255,255,.96)}
-html[data-theme=light] .modal-wrap{background:rgba(24,27,38,.38)}
-html[data-theme=light] .modal{background:#f7f8fa; box-shadow:0 -20px 60px rgba(23,26,40,.18)}
-html[data-theme=light] .modal::before{background:rgba(21,24,34,.18)}
-html[data-theme=light] .modal .card{box-shadow:none; border:1px solid var(--border)}
-html[data-theme=light] .animbox{background:#fff}
-html[data-theme=light] .animbox.photo{background:#f2f3f6}
-html[data-theme=light] .storage-warn{background:rgba(196,131,0,.08); color:#9a6b00}
-html[data-theme=light] .exhist{color:#84878f}
 </style>
 </head>
 <body>
@@ -556,20 +572,327 @@ const GYM_ALTS = {
   {m:'Пресс', a:[{n:'Подъём ног в упоре',inc:2.5},{n:'Скручивания на полу с весом',inc:2.5}]},
  ]
 };
-/* ================= ФОТО-ДЕМОНСТРАЦИЯ ТЕХНИКИ ================= */
-let photoInt = null;
-function playPhoto(){
-  const b = document.getElementById('tp1'), tag = document.getElementById('ptag');
-  if (!b) return;
-  let flip = false;
-  photoInt = setInterval(() => {
-    if (!b.isConnected){ stopAnim(); return; }
-    flip = !flip;
-    b.style.opacity = flip ? 1 : 0;
-    if (tag) tag.textContent = flip ? 'конечное положение' : 'исходное положение';
-  }, 1500);
+/* ============ ДВИЖОК АНИМАЦИИ ТЕХНИКИ: 2D-силуэт, вид сбоку ============ */
+/* Углы в градусах: 0 = вверх экрана, 90 = вперёд (+x), 180 = вниз. Фигура смотрит вправо. */
+const BODY = {torso:46, neck:7, head:11.5, uarm:29, farm:26, thigh:34, shin:31, foot:13};
+function rad(a){ return (a-90)*Math.PI/180; }
+function pt(x, y, ang, len){ return [x + Math.cos(rad(ang))*len, y - Math.sin(rad(ang))*-1*len*0 + Math.sin(rad(ang))*0 + 0, 0]; }
+/* прямой расчёт: угол 0 = вверх → dx = sin(a), dy = -cos(a) */
+function step(x, y, ang, len){
+  const r = ang*Math.PI/180;
+  return [x + Math.sin(r)*len, y - Math.cos(r)*len];
 }
-function stopAnim(){ if (photoInt){ clearInterval(photoInt); photoInt = null; } }
+function fk(p){
+  const px = p.px==null?160:p.px, py = p.py==null?100:p.py;
+  const to = p.to||0;
+  const pelvis = [px, py];
+  const neck = step(px, py, to, BODY.torso);
+  const headC = step(neck[0], neck[1], to + (p.hd||0), BODY.neck + BODY.head);
+  const sh = step(px, py, to, BODY.torso*0.92);           // плечо чуть ниже шеи
+  const mkArm = (ua, fa) => {
+    const el = step(sh[0], sh[1], ua, BODY.uarm);
+    const wr = step(el[0], el[1], fa, BODY.farm);
+    return {el, wr};
+  };
+  const mkLeg = (th, sn, ft) => {
+    const kn = step(pelvis[0], pelvis[1], th, BODY.thigh);
+    const an = step(kn[0], kn[1], sn, BODY.shin);
+    const to_ = step(an[0], an[1], ft==null?90:ft, BODY.foot);
+    return {kn, an, toe: to_};
+  };
+  const a1 = mkArm(p.ua==null?180:p.ua, p.fa==null?(p.ua==null?180:p.ua):p.fa);
+  const a2 = mkArm(p.ua2==null?(p.ua==null?180:p.ua):p.ua2, p.fa2==null?(p.fa==null?(p.ua==null?180:p.ua):p.fa):p.fa2);
+  const l1 = mkLeg(p.th==null?180:p.th, p.sh==null?(p.th==null?180:p.th):p.sh, p.ft);
+  const l2 = mkLeg(p.th2==null?(p.th==null?180:p.th):p.th2, p.sh2==null?(p.sh==null?(p.th==null?180:p.th):p.sh):p.sh2, p.ft2==null?p.ft:p.ft2);
+  return {pelvis, neck, headC, sh, a1, a2, l1, l2};
+}
+function lerpPose(A, B, t){
+  const out = {};
+  const keys = new Set([...Object.keys(A), ...Object.keys(B)]);
+  for (const k of keys){
+    const a = A[k] != null ? A[k] : B[k], b = B[k] != null ? B[k] : A[k];
+    out[k] = a + (b - a)*t;
+  }
+  return out;
+}
+function seg(a, b, w, cls){
+  return `<path d="M${a[0].toFixed(1)} ${a[1].toFixed(1)}L${b[0].toFixed(1)} ${b[1].toFixed(1)}" stroke-width="${w}" class="${cls}" stroke-linecap="round" fill="none"/>`;
+}
+function chain(pts, w, cls){
+  let d = `M${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
+  for (let i=1;i<pts.length;i++) d += `L${pts[i][0].toFixed(1)} ${pts[i][1].toFixed(1)}`;
+  return `<path d="${d}" stroke-width="${w}" class="${cls}" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`;
+}
+function drawProps(props, F, layer){
+  if (!props) return '';
+  let h = '';
+  for (const pr of props){
+    if (pr.z !== layer) continue;
+    if (pr.t==='floor') h += `<line x1="14" y1="${pr.y}" x2="306" y2="${pr.y}" class="afloor"/>`;
+    if (pr.t==='bench') h += `<g transform="rotate(${pr.rot||0} ${pr.x} ${pr.y})"><rect x="${pr.x-pr.w/2}" y="${pr.y}" width="${pr.w}" height="9" rx="4" class="aprop"/><rect x="${pr.x-pr.w/2+8}" y="${pr.y+9}" width="7" height="${pr.leg||18}" rx="2" class="aprop"/><rect x="${pr.x+pr.w/2-15}" y="${pr.y+9}" width="7" height="${pr.leg||18}" rx="2" class="aprop"/></g>`;
+    if (pr.t==='box') h += `<rect x="${pr.x}" y="${pr.y}" width="${pr.w}" height="${pr.h}" rx="4" class="aprop"/>`;
+    if (pr.t==='wall') h += `<line x1="${pr.x}" y1="20" x2="${pr.x}" y2="${pr.y2||176}" class="aline" stroke-width="5"/>`;
+    if (pr.t==='barline') h += `<line x1="${pr.x1||90}" y1="${pr.y}" x2="${pr.x2||230}" y2="${pr.y}" class="aline" stroke-width="5"/><line x1="${(pr.x1||90)+8}" y1="${pr.y}" x2="${(pr.x1||90)+8}" y2="18" class="aline" stroke-width="4"/><line x1="${(pr.x2||230)-8}" y1="${pr.y}" x2="${(pr.x2||230)-8}" y2="18" class="aline" stroke-width="4"/>`;
+    if (pr.t==='block') h += `<rect x="${pr.x-9}" y="${pr.y-9}" width="18" height="18" rx="3" class="aprop"/>`;
+    if (pr.t==='seatback') h += `<rect x="${pr.x-4}" y="${pr.y-pr.h}" width="8" height="${pr.h}" rx="3" transform="rotate(${pr.rot||0} ${pr.x} ${pr.y})" class="aprop"/>`;
+    if (pr.t==='chair') h += `<rect x="${pr.x-20}" y="${pr.y}" width="40" height="7" rx="3" class="aprop"/><rect x="${pr.x-20}" y="${pr.y}" width="6" height="${176-pr.y}" class="aprop"/><rect x="${pr.x+14}" y="${pr.y}" width="6" height="${176-pr.y}" class="aprop"/><rect x="${pr.x+16}" y="${pr.y-34}" width="6" height="34" rx="2" class="aprop"/>`;
+  }
+  return h;
+}
+function drawTools(anim, F){
+  let h = '';
+  const wr = F.a1.wr, wr2 = F.a2.wr;
+  if (anim.db){ for (const w of [wr2, wr]) h += `<g class="atool"><circle cx="${w[0]}" cy="${w[1]}" r="6.5"/><circle cx="${w[0]}" cy="${w[1]}" r="2.6" class="atool2"/></g>`; }
+  if (anim.bar === 'wrist') h += `<circle cx="${wr[0]}" cy="${wr[1]}" r="10" class="aplate"/><circle cx="${wr[0]}" cy="${wr[1]}" r="2.4" class="atool2"/>`;
+  if (anim.bar === 'hip') h += `<circle cx="${F.pelvis[0]+6}" cy="${F.pelvis[1]-4}" r="10" class="aplate"/>`;
+  if (anim.bar === 'shoulder') h += `<circle cx="${F.sh[0]+2}" cy="${F.sh[1]+3}" r="9" class="aplate"/>`;
+  if (anim.cable){ const from = anim.cable.at==='ankle' ? F.l1.an : wr; h += `<path d="M${from[0].toFixed(1)} ${from[1].toFixed(1)}L${anim.cable.x} ${anim.cable.y}" class="acable"/><rect x="${anim.cable.x-8}" y="${anim.cable.y-8}" width="16" height="16" rx="3" class="aprop"/>`; }
+  if (anim.band){ const from = anim.band.at==='ankle' ? F.l1.an : wr; h += `<path d="M${from[0].toFixed(1)} ${from[1].toFixed(1)} Q${(from[0]+anim.band.x)/2+6} ${(from[1]+anim.band.y)/2} ${anim.band.x} ${anim.band.y}" class="aband"/>`; }
+  if (anim.grip){ h += `<line x1="${wr2[0]}" y1="${wr2[1]}" x2="${wr[0]}" y2="${wr[1]}" class="aprop" stroke-width="4"/>`; }
+  return h;
+}
+function musPoint(anim, F){
+  if (!anim.mus) return null;
+  const m = anim.mus;
+  const at = {chest:[F.sh, F.neck, .4, 8], shoulder:[F.sh, F.sh, 0, 0], back:[F.pelvis, F.neck, .55, -7],
+    biceps:[F.sh, F.a1.el, .5, 4], triceps:[F.sh, F.a1.el, .5, -5], core:[F.pelvis, F.neck, .45, 8],
+    quad:[F.pelvis, F.l1.kn, .5, 6], ham:[F.pelvis, F.l1.kn, .45, -6], glute:[F.pelvis, F.pelvis, 0, -8],
+    calf:[F.l1.kn, F.l1.an, .5, -5], lat:[F.pelvis, F.neck, .65, -8], forearm:[F.a1.el, F.a1.wr, .5, 3]}[m];
+  if (!at) return null;
+  const [A, B, t, off] = at;
+  const x = A[0] + (B[0]-A[0])*t, y = A[1] + (B[1]-A[1])*t;
+  const dx = B[0]-A[0], dy = B[1]-A[1];
+  const L = Math.hypot(dx, dy) || 1;
+  return [x + (-dy/L)*off, y + (dx/L)*off];
+}
+function renderFrame(anim, pose, tGlob){
+  const F = fk(pose);
+  let h = drawProps(anim.props, F, 0);
+  /* дальние конечности */
+  h += `<g class="afar">` + chain([F.sh, F.a2.el, F.a2.wr], 8, 'abone')
+     + chain([F.pelvis, F.l2.kn, F.l2.an, F.l2.toe], 9.5, 'abone') + `</g>`;
+  /* корпус и голова */
+  h += chain([F.pelvis, F.neck], 17, 'abone');
+  h += `<circle cx="${F.headC[0].toFixed(1)}" cy="${F.headC[1].toFixed(1)}" r="${BODY.head}" class="ahead"/>`;
+  /* ближние конечности */
+  h += chain([F.pelvis, F.l1.kn, F.l1.an, F.l1.toe], 10.5, 'abone');
+  h += chain([F.sh, F.a1.el, F.a1.wr], 9, 'abone');
+  h += drawTools(anim, F);
+  h += drawProps(anim.props, F, 1);
+  const mp = musPoint(anim, F);
+  if (mp){
+    const pulse = 5 + Math.sin(tGlob/300)*1.6;
+    h += `<circle cx="${mp[0].toFixed(1)}" cy="${mp[1].toFixed(1)}" r="${pulse.toFixed(1)}" class="amus"/>`;
+  }
+  return h;
+}
+let animRAF = null;
+function playAnim(anim, svgId){
+  stopAnim();
+  const el = document.getElementById(svgId || 'anim-svg');
+  if (!el || !anim) return;
+  const t0 = performance.now();
+  const dur = anim.dur || 1500;
+  const loop = (now) => {
+    if (!el.isConnected){ stopAnim(); return; }
+    const t = now - t0;
+    let ph = (t % (dur*2)) / dur;          // 0..2 пинг-понг
+    if (ph > 1) ph = 2 - ph;
+    const e = ph<.5 ? 2*ph*ph : 1-Math.pow(-2*ph+2,2)/2;   // easeInOutQuad
+    const pose = lerpPose(anim.frames[0], anim.frames[1] || anim.frames[0], e);
+    el.innerHTML = renderFrame(anim, pose, t);
+    animRAF = requestAnimationFrame(loop);
+  };
+  animRAF = requestAnimationFrame(loop);
+}
+function stopAnim(){ if (animRAF){ cancelAnimationFrame(animRAF); animRAF = null; } }
+
+/* ============ ПОЗЫ ============ */
+const FLOOR = {t:'floor', y:176, z:0};
+const ANIMS = {
+squat:      {mus:'quad', db:1, props:[FLOOR], dur:1600, frames:[
+              {px:150, py:100, to:6, ua:165, fa:55, th:180, sh:183, th2:177},
+              {px:146, py:126, to:34, ua:150, fa:35, th:96, sh:196, th2:92, sh2:198}]},
+squat_bar:  {mus:'quad', bar:'shoulder', props:[FLOOR], dur:1600, frames:[
+              {px:150, py:100, to:4, ua:120, fa:20, th:180, sh:183},
+              {px:146, py:126, to:30, ua:118, fa:16, th:96, sh:196}]},
+squat_chair:{mus:'quad', props:[FLOOR, {t:'chair', x:104, y:138, z:0}], dur:1700, frames:[
+              {px:150, py:100, to:6, ua:120, fa:40, th:180, sh:183},
+              {px:147, py:122, to:30, ua:110, fa:30, th:105, sh:192}]},
+lunge:      {mus:'quad', db:1, props:[FLOOR], dur:1700, frames:[
+              {px:150, py:100, to:4, ua:180, th:180, sh:182, th2:178},
+              {px:158, py:117, to:8, ua:180, th:112, sh:186, th2:212, sh2:138}]},
+splitsquat: {mus:'quad', db:1, props:[FLOOR, {t:'box', x:66, y:134, w:44, h:42, z:0}], dur:1600, frames:[
+              {px:150, py:102, to:6, ua:180, th:155, sh:182, th2:220, sh2:120},
+              {px:148, py:120, to:10, ua:180, th:108, sh:188, th2:232, sh2:104}]},
+stepup:     {mus:'glute', props:[FLOOR, {t:'box', x:196, y:130, w:58, h:46, z:0}], dur:1900, frames:[
+              {px:146, py:100, to:10, ua:180, th:95, sh:128, ft:90, th2:180, sh2:182},
+              {px:212, py:70, to:4, ua:180, th:178, sh:180, th2:192, sh2:190}]},
+rdl:        {mus:'ham', db:1, props:[FLOOR], dur:1700, frames:[
+              {px:150, py:100, to:4, ua:180, fa:180, th:180, sh:183},
+              {px:143, py:104, to:64, ua:180, fa:180, th:188, sh:176}]},
+deadlift:   {mus:'ham', bar:'wrist', props:[FLOOR], dur:1700, frames:[
+              {px:150, py:100, to:6, ua:180, fa:180, th:180, sh:183},
+              {px:143, py:112, to:58, ua:180, fa:180, th:150, sh:196}]},
+goodmorning:{mus:'ham', band:{x:150, y:174}, props:[FLOOR], dur:1700, frames:[
+              {px:150, py:100, to:4, ua:150, fa:35, th:180, sh:183},
+              {px:144, py:103, to:62, ua:120, fa:10, th:186, sh:178}]},
+calfraise:  {mus:'calf', props:[FLOOR, {t:'box', x:150, y:162, w:64, h:14, z:0}], dur:1300, frames:[
+              {px:150, py:92, to:2, ua:180, th:180, sh:181, ft:95},
+              {px:150, py:84, to:2, ua:180, th:180, sh:181, ft:130}]},
+legpress:   {mus:'quad', props:[{t:'floor', y:176, z:0}, {t:'seatback', x:108, y:152, h:64, rot:-32, z:0}, {t:'box', x:204, y:50, w:15, h:64, z:1}], dur:1600, frames:[
+              {px:140, py:132, to:-38, ua:170, fa:120, th:58, sh:62, ft:120},
+              {px:140, py:132, to:-38, ua:170, fa:120, th:24, sh:116, ft:100}]},
+legext:     {mus:'quad', props:[{t:'floor', y:176, z:0}, {t:'chair', x:128, y:120, z:0}], dur:1400, frames:[
+              {px:138, py:104, to:-6, ua:170, fa:150, th:95, sh:178},
+              {px:138, py:104, to:-6, ua:170, fa:150, th:95, sh:98}]},
+legcurl:    {mus:'ham', props:[{t:'bench', x:160, y:130, w:150, leg:28, z:0}], dur:1400, frames:[
+              {px:130, py:124, to:-92, hd:-8, ua:150, fa:210, th:88, sh:90},
+              {px:130, py:124, to:-92, hd:-8, ua:150, fa:210, th:88, sh:338}]},
+hipthrust:  {mus:'glute', bar:'hip', props:[FLOOR, {t:'bench', x:92, y:112, w:74, leg:46, z:0}], dur:1500, frames:[
+              {px:152, py:142, to:-56, hd:18, ua:210, th:70, sh:182},
+              {px:152, py:114, to:-84, hd:26, ua:230, th:94, sh:184}]},
+glutebridge:{mus:'glute', props:[FLOOR], dur:1500, frames:[
+              {px:150, py:158, to:-72, hd:14, ua:175, fa:175, th:55, sh:182},
+              {px:150, py:136, to:-92, hd:22, ua:185, fa:185, th:88, sh:186}]},
+donkeykick: {mus:'glute', props:[FLOOR], dur:1500, frames:[
+              {px:136, py:120, to:-88, hd:16, ua:180, fa:180, th:152, sh:262, th2:168, sh2:262},
+              {px:136, py:120, to:-88, hd:16, ua:180, fa:180, th:52, sh:62, th2:168, sh2:262}]},
+kickback:   {mus:'glute', cable:{x:52, y:160, at:'ankle'}, props:[FLOOR, {t:'block', x:52, y:160, z:0}], dur:1500, frames:[
+              {px:158, py:100, to:14, ua:120, fa:60, th:176, sh:186, th2:180, sh2:182},
+              {px:158, py:100, to:20, ua:120, fa:60, th:222, sh:212, th2:180, sh2:182}]},
+benchpress: {mus:'chest', bar:'wrist', props:[{t:'floor', y:176, z:0}, {t:'bench', x:132, y:128, w:130, leg:40, z:0}], dur:1500, frames:[
+              {px:112, py:122, to:-90, hd:4, ua:-2, fa:-2, th:118, sh:184},
+              {px:112, py:122, to:-90, hd:4, ua:118, fa:-24, th:118, sh:184}]},
+dbbench:    {mus:'chest', db:1, props:[{t:'floor', y:176, z:0}, {t:'bench', x:132, y:128, w:130, leg:40, z:0}], dur:1500, frames:[
+              {px:112, py:122, to:-90, hd:4, ua:-4, fa:-4, th:118, sh:184},
+              {px:112, py:122, to:-90, hd:4, ua:122, fa:-20, th:118, sh:184}]},
+dbfloor:    {mus:'chest', db:1, props:[FLOOR], dur:1500, frames:[
+              {px:130, py:162, to:-90, hd:4, ua:-4, fa:-4, th:96, sh:186},
+              {px:130, py:162, to:-90, hd:4, ua:126, fa:-18, th:96, sh:186}]},
+fly:        {mus:'chest', db:1, props:[FLOOR], dur:1600, frames:[
+              {px:130, py:162, to:-90, hd:4, ua:-4, fa:-8, ua2:-4, fa2:-8, th:96, sh:186},
+              {px:130, py:162, to:-90, hd:4, ua:66, fa:52, ua2:-64, fa2:-56, th:96, sh:186}]},
+incline:    {mus:'chest', db:1, props:[FLOOR, {t:'seatback', x:118, y:150, h:78, rot:-38, z:0}, {t:'box', x:130, y:150, w:44, h:26, z:0}], dur:1500, frames:[
+              {px:136, py:120, to:-44, hd:8, ua:-28, fa:-28, th:130, sh:186},
+              {px:136, py:120, to:-44, hd:8, ua:104, fa:-40, th:130, sh:186}]},
+ohp:        {mus:'shoulder', db:1, props:[FLOOR, {t:'chair', x:142, y:126, z:0}], dur:1500, frames:[
+              {px:150, py:108, to:-2, ua:8, fa:8, th:95, sh:180},
+              {px:150, py:108, to:-2, ua:118, fa:-16, th:95, sh:180}]},
+latraise:   {mus:'shoulder', db:1, props:[FLOOR], dur:1400, frames:[
+              {px:150, py:100, to:4, ua:172, fa:168, ua2:186, fa2:190, th:180, sh:182},
+              {px:150, py:100, to:4, ua:96, fa:92, ua2:264, fa2:268, th:180, sh:182}]},
+reversefly: {mus:'shoulder', db:1, props:[FLOOR], dur:1500, frames:[
+              {px:150, py:100, to:56, ua:180, fa:180, ua2:180, fa2:180, th:186, sh:178},
+              {px:150, py:100, to:56, ua:262, fa:258, ua2:96, fa2:100, th:186, sh:178}]},
+pushdown:   {mus:'triceps', cable:{x:236, y:26}, props:[FLOOR, {t:'block', x:236, y:26, z:0}], dur:1400, frames:[
+              {px:146, py:100, to:12, ua:172, fa:64, th:180, sh:183},
+              {px:146, py:100, to:12, ua:172, fa:168, th:180, sh:183}]},
+frenchpress:{mus:'triceps', db:1, props:[FLOOR], dur:1400, frames:[
+              {px:150, py:100, to:6, ua:16, fa:238, th:180, sh:182},
+              {px:150, py:100, to:6, ua:12, fa:14, th:180, sh:182}]},
+dips:       {mus:'triceps', props:[FLOOR, {t:'box', x:104, y:96, w:12, h:80, z:0}, {t:'box', x:206, y:96, w:12, h:80, z:0}], dur:1500, frames:[
+              {px:152, py:84, to:8, ua:184, fa:182, th:196, sh:242},
+              {px:152, py:102, to:16, ua:224, fa:150, th:200, sh:238}]},
+pushup:     {mus:'chest', props:[FLOOR], dur:1500, frames:[
+              {px:170, py:130, to:-96, hd:6, ua:180, fa:180, th:88, sh:88, ft:150},
+              {px:170, py:146, to:-96, hd:6, ua:216, fa:130, th:88, sh:88, ft:150}]},
+pushup_knee:{mus:'chest', props:[FLOOR], dur:1500, frames:[
+              {px:168, py:132, to:-100, hd:8, ua:180, fa:180, th:120, sh:296},
+              {px:168, py:148, to:-100, hd:8, ua:218, fa:128, th:120, sh:296}]},
+pushup_wall:{mus:'chest', props:[FLOOR, {t:'wall', x:244, z:0}], dur:1500, frames:[
+              {px:150, py:102, to:16, ua:108, fa:104, th:184, sh:182, ft:100},
+              {px:158, py:102, to:24, ua:136, fa:66, th:190, sh:184, ft:110}]},
+pushup_inc: {mus:'chest', props:[FLOOR, {t:'box', x:216, y:126, w:52, h:50, z:0}], dur:1500, frames:[
+              {px:126, py:118, to:-58, hd:10, ua:142, fa:140, th:114, sh:112, ft:160},
+              {px:132, py:128, to:-62, hd:10, ua:186, fa:104, th:112, sh:110, ft:160}]},
+pushup_dec: {mus:'chest', props:[FLOOR, {t:'box', x:238, y:136, w:52, h:40, z:0}], dur:1500, frames:[
+              {px:158, py:120, to:-102, hd:6, ua:180, fa:180, th:74, sh:72},
+              {px:158, py:136, to:-102, hd:6, ua:216, fa:132, th:74, sh:72}]},
+pulldown:   {mus:'lat', grip:1, cable:{x:196, y:14}, props:[{t:'floor', y:176, z:0}, {t:'chair', x:146, y:126, z:0}, {t:'block', x:196, y:14, z:0}], dur:1500, frames:[
+              {px:150, py:108, to:-8, ua:12, fa:10, ua2:24, fa2:22, th:95, sh:180},
+              {px:150, py:108, to:-14, ua:152, fa:44, ua2:160, fa2:56, th:95, sh:180}]},
+pullup:     {mus:'lat', props:[{t:'barline', y:22, z:0}], dur:1700, frames:[
+              {px:158, py:118, to:-4, ua:5, fa:3, th:186, sh:212},
+              {px:158, py:88, to:-6, ua:70, fa:-60, th:188, sh:224}]},
+kneeraise:  {mus:'core', props:[{t:'barline', y:22, z:0}], dur:1500, frames:[
+              {px:158, py:118, to:-2, ua:5, fa:3, th:184, sh:196},
+              {px:158, py:118, to:-6, ua:5, fa:3, th:82, sh:148}]},
+row_cable:  {mus:'back', cable:{x:252, y:134}, props:[FLOOR, {t:'block', x:252, y:134, z:0}], dur:1500, frames:[
+              {px:132, py:136, to:14, ua:76, fa:80, th:96, sh:138, ft:120},
+              {px:132, py:136, to:-4, ua:196, fa:96, th:96, sh:138, ft:120}]},
+row_bent:   {mus:'back', db:1, props:[FLOOR], dur:1500, frames:[
+              {px:146, py:102, to:56, ua:178, fa:176, th:186, sh:176},
+              {px:146, py:102, to:56, ua:236, fa:148, th:186, sh:176}]},
+row_onearm: {mus:'back', db:1, props:[FLOOR, {t:'bench', x:214, y:120, w:86, leg:48, z:0}], dur:1500, frames:[
+              {px:142, py:100, to:62, ua2:112, fa2:112, ua:180, fa:178, th:184, sh:178, th2:120, sh2:236},
+              {px:142, py:100, to:62, ua2:112, fa2:112, ua:242, fa:146, th:184, sh:178, th2:120, sh2:236}]},
+row_austr:  {mus:'back', props:[FLOOR, {t:'barline', y:96, x1:96, x2:220, z:0}], dur:1500, frames:[
+              {px:168, py:146, to:-64, hd:10, ua:-16, fa:-14, th:104, sh:106, ft:150},
+              {px:160, py:132, to:-62, hd:10, ua:44, fa:-58, th:106, sh:108, ft:150}]},
+facepull:   {mus:'shoulder', cable:{x:250, y:58}, props:[FLOOR, {t:'block', x:250, y:58, z:0}], dur:1400, frames:[
+              {px:144, py:100, to:6, ua:66, fa:62, th:180, sh:183},
+              {px:144, py:100, to:2, ua:128, fa:34, th:180, sh:183}]},
+curl:       {mus:'biceps', db:1, props:[FLOOR], dur:1400, frames:[
+              {px:150, py:100, to:2, ua:178, fa:176, th:180, sh:182},
+              {px:150, py:100, to:2, ua:174, fa:58, th:180, sh:182}]},
+superman:   {mus:'back', props:[FLOOR], dur:1600, frames:[
+              {px:160, py:164, to:-90, hd:-4, ua:-88, fa:-88, th:90, sh:92},
+              {px:160, py:161, to:-75, hd:-16, ua:-70, fa:-68, th:78, sh:74}]},
+plank:      {mus:'core', props:[FLOOR], dur:1800, frames:[
+              {px:170, py:136, to:-96, hd:8, ua:184, fa:272, th:86, sh:86, ft:150},
+              {px:170, py:134, to:-96, hd:8, ua:184, fa:272, th:86, sh:86, ft:150}]},
+crunch_fl:  {mus:'core', props:[FLOOR], dur:1400, frames:[
+              {px:152, py:158, to:-88, hd:16, ua:-50, fa:120, th:58, sh:180},
+              {px:152, py:158, to:-58, hd:22, ua:-16, fa:150, th:58, sh:180}]},
+crunch_cab: {mus:'core', cable:{x:238, y:18}, props:[FLOOR, {t:'block', x:238, y:18, z:0}], dur:1400, frames:[
+              {px:140, py:126, to:8, ua:26, fa:222, th:178, sh:268},
+              {px:140, py:126, to:46, ua:60, fa:250, th:178, sh:268}]},
+};
+/* соответствие: имя упражнения → анимация */
+const ANIM_OF = {
+ 'Жим штанги лёжа':'benchpress','Жим в Смите лёжа':'benchpress','Жим лёжа узким хватом':'benchpress','Жим в тренажёре (грудь)':'benchpress',
+ 'Жим гантелей лёжа':'dbbench','Жим гантелей лёжа (пол)':'dbfloor','Разведения гантелей лёжа':'fly',
+ 'Жим гантелей на наклонной 30°':'incline','Жим в Смите на наклонной':'incline','Жим в тренажёре на наклонной':'incline',
+ 'Жим гантелей сидя':'ohp','Жим гантелей сидя/стоя':'ohp','Жим штанги сидя':'ohp','Жим в тренажёре (плечи)':'ohp','Жим Арнольда':'ohp','Жим Смита сидя (плечи)':'ohp','Жим одной гантели от груди стоя':'ohp',
+ 'Разведения гантелей в стороны':'latraise','Махи в кроссовере':'latraise','Разведения в тренажёре':'latraise','Разведения с резинкой в стороны':'latraise','Подъёмы бутылок/гантелей в стороны':'latraise','Подъёмы перед собой (гантели)':'latraise',
+ 'Разгибания на блоке (канат)':'pushdown','Разгибания из-за головы на блоке':'frenchpress','Разгибания на блоке (прямая рукоять)':'pushdown','Кик-бэк с гантелью':'row_bent',
+ 'Французский жим с гантелью':'frenchpress',
+ 'Брусья / гравитрон':'dips','Отжимания на брусьях':'dips',
+ 'Отжимания от пола':'pushup','Отжимания широкой постановкой':'pushup','Отжимания узким хватом':'pushup',
+ 'Отжимания с колен':'pushup_knee','Отжимания от стены':'pushup_wall',
+ 'Отжимания от опоры':'pushup_inc','Отжимания узким хватом от опоры':'pushup_inc',
+ 'Отжимания с ногами на возвышении':'pushup_dec','Пиковые отжимания («домиком»)':'pushup_dec',
+ 'Тяга верхнего блока к груди':'pulldown','Тяга верхнего блока обратным хватом':'pulldown','Тяга верхнего блока узким хватом':'pulldown','Подтягивания в гравитроне':'pulldown','Пуловер на верхнем блоке':'pushdown',
+ 'Подтягивания':'pullup','Подтягивания обратным хватом':'pullup',
+ 'Подъём ног в упоре':'kneeraise','Подъём ног в висе':'kneeraise',
+ 'Тяга горизонтального блока':'row_cable','Рычажная тяга в тренажёре':'row_cable','Тяга резинки сидя':'row_cable','Тяга нижнего блока одной рукой':'row_cable',
+ 'Тяга штанги в наклоне':'row_bent','Тяга двух гантелей в наклоне':'row_bent','Тяга Т-грифа':'row_bent','Тяга бутылок в наклоне':'row_bent','Тяга гири в наклоне':'row_bent','Тяга резинки одной рукой':'row_cable',
+ 'Тяга гантели одной рукой':'row_onearm','Рычажная тяга одной рукой':'row_onearm',
+ 'Австралийские подтягивания (стол)':'row_austr',
+ 'Тяга каната к лицу (face pull)':'facepull','Тяга резинки к лицу':'facepull',
+ 'Обратные разведения':'reversefly','Обратные разведения в тренажёре':'reversefly','Обратные разведения с гантелями':'reversefly','Разведения в наклоне с гантелями':'reversefly',
+ 'Сгибания на бицепс (штанга/EZ)':'curl','Сгибания с гантелями':'curl','«Молотки» с гантелями':'curl','Сгибания на блоке':'curl','Сгибания в тренажёре':'curl','Сгибания с резинкой':'curl','Канат на блоке (нейтральный хват)':'curl','Сгибания обратным хватом':'curl','Сгибания Зоттмана':'curl','Концентрированные сгибания':'curl',
+ 'Супермен':'superman','Лодочка (супермен с вытяжением)':'superman',
+ 'Жим ногами':'legpress','Гакк-машина':'legpress',
+ 'Ягодичный мост со штангой':'hipthrust','Мост в Смите':'hipthrust','Мост в тренажёре':'hipthrust',
+ 'Ягодичный мост на полу':'glutebridge','Ягодичный мост на одной ноге':'glutebridge',
+ 'Ягодичные махи на четвереньках':'donkeykick',
+ 'Отведения в тренажёре':'kickback','Махи в кроссовере назад':'kickback','Отведение ноги на блоке':'kickback',
+ 'Румынская тяга со штангой':'rdl','Румынская тяга с гантелями':'rdl','Становая тяга (классика)':'deadlift','Сумо-тяга':'deadlift',
+ 'Наклоны с резинкой (доброе утро)':'goodmorning','Гиперэкстензия':'superman','Гиперэкстензия с весом':'superman',
+ 'Сгибания ног лёжа':'legcurl','Сгибания сидя':'legcurl','Сгибания стоя одной ногой':'legcurl','Сгибания с резинкой сидя':'legcurl',
+ 'Разгибания ног':'legext',
+ 'Икры стоя в тренажёре':'calfraise','Икры в жиме ногами':'calfraise','Икры сидя':'calfraise','Икры стоя на возвышении':'calfraise',
+ 'Скручивания на верхнем блоке':'crunch_cab',
+ 'Скручивания на полу с весом':'crunch_fl','Скручивания на полу':'crunch_fl','Русские скручивания':'crunch_fl',
+ 'Планка':'plank',
+ 'Гоблет-присед':'squat','Гоблет-присед с гантелью':'squat','Плие-присед с гантелью':'squat','Приседания с паузой':'squat','Присед на стул (ограниченная глубина)':'squat_chair','Приседания со штангой':'squat_bar','Присед в Смите':'squat_bar','Фронтальный присед':'squat_bar',
+ 'Выпады':'lunge','Выпады с гантелями':'lunge','Ходьба выпадами':'lunge','Болгарские сплит-приседы':'splitsquat',
+ 'Зашагивания на тумбу':'stepup','Зашагивания на низкую ступеньку':'stepup','Прыжки на тумбу':'stepup',
+};
+function animFor(name){ return ANIMS[ANIM_OF[name]] || null; }
+
 const REST_BASE = 'Разминка: 5 мин кардио + суставная. Перед 1-м базовым: гриф×10 → 50%×6 → 75%×3.';
 /* ================= ТЕХНИКА: шаги и ошибки ================= */
 const TECH = {
@@ -1289,34 +1612,31 @@ window.setRPE = function(sid, ei, v){
   const st = DB.sessions[sid]; st.rpe[ei] = st.rpe[ei]===v ? null : v; save(); render();
 };
 /* --- техника упражнения --- */
-const FEM_NO_PHOTO = new Set(['Ягодичный мост со штангой','Ягодичный мост на полу','Ягодичный мост на одной ноге','Мост в Смите','Мост в тренажёре','Ягодичные махи на четвереньках','Отведения в тренажёре','Махи в кроссовере назад','Плие-присед с гантелью','Разведения ног в тренажёре','Сведения ног в тренажёре','Отведение ноги на блоке','Наклоны с резинкой (доброе утро)','Гиперэкстензия','Гиперэкстензия с весом']);
 window.techDlg = function(sid, ei){
   const s = SESSIONS[sid];
   const v = variantOf(sid, ei);
   const grp = ALTS[s.type][ei] ? ALTS[s.type][ei].m : '';
-  let T = techFor(v.n);
+  const T = techFor(v.n);
   const fem = PROF.sex === 'f';
-  if (fem && T && T.img && FEM_NO_PHOTO.has(v.n)) T = {...T, img: null};
+  const A = animFor(v.n);
+  const animHtml = A ? `<div class="animbox"><svg id="anim-svg" viewBox="0 0 320 200" style="width:100%;display:block"></svg></div>` : '';
   const yt = 'https://www.youtube.com/results?search_query='+encodeURIComponent(v.n+' техника выполнения'+(fem?' для девушек':''));
   let body;
   if (T){
-    body = `${T.img?`<div class="animbox photo">
-        <img class="tphoto" id="tp0" src="img/${T.img}_0.jpg" alt="исходное положение">
-        <img class="tphoto over" id="tp1" src="img/${T.img}_1.jpg" alt="конечное положение" style="opacity:0">
-        <div class="ptag" id="ptag">исходное положение</div></div>`:''}
+    body = `${animHtml}
       <div class="section-t" style="margin-top:10px">Техника</div>
       <ol class="tech-steps">${T.s.map(x=>`<li>${esc(x)}</li>`).join('')}</ol>
       <div class="section-t">Частые ошибки</div>
       ${T.e.map(x=>`<div class="tech-err"><b>✗</b><span>${esc(x)}</span></div>`).join('')}
       ${T.note?`<div class="tech-note">${esc(T.note)}${T.baseName?' Остальное — как в базовом варианте («'+esc(T.baseName)+'»).':''}</div>`:''}`;
   } else {
-    body = `<div class="small" style="margin:10px 0">Разбор для этого упражнения ещё не добавлен — держи общий принцип: полная амплитуда, контроль на негативе 2 секунды, без рывков корпусом.</div>`;
+    body = `${animHtml}<div class="small" style="margin:10px 0">Разбор для этого упражнения ещё не добавлен — держи общий принцип: полная амплитуда, контроль на негативе 2 секунды, без рывков корпусом.</div>`;
   }
   openModal(`<h2>${esc(v.n)}</h2><div class="small">${esc(grp)}</div>
     ${body}
     <a class="btn sec full" style="margin-top:14px;text-decoration:none" href="${yt}" target="_blank" rel="noopener">${fem?'▶ Видео женской техники':'Видео-разборы на YouTube'}</a>
     <button class="btn full" style="margin-top:8px" onclick="closeModal()">Понятно</button>`);
-  if (T && T.img) playPhoto();
+  if (A) playAnim(A);
 };
 /* --- замена упражнения на аналог --- */
 let swapSel = 0;
@@ -1544,7 +1864,7 @@ function vWeight(){
       <button class="${chartMode==='4w'?'on':''}" onclick="chartMode='4w';render()">4 недели</button>
       <button class="${chartMode==='all'?'on':''}" onclick="chartMode='all';render()">Вся программа</button></div>
     <div id="chart-box">${weightChart()}</div>
-    <div class="legend"><span><i style="background:#3987e5"></i>факт</span>
+    <div class="legend"><span><i style="background:var(--accent)"></i>факт</span>
       <span><i style="background:transparent;border-top:2.5px dashed var(--muted)"></i>ориентир</span></div>
     <div id="chart-tip" class="tiny" style="min-height:16px;margin-top:4px"></div></div>`;
   // недельная таблица
@@ -1666,9 +1986,9 @@ window.saveWaist = function(w){
 };
 /* SVG-график */
 let chartCtx = null;
-function CC(){ return (DB.theme==='light')
-  ? {grid:'#e2e4ea', axis:'#8b8e99', plan:'#9aa0ad', dot:'#ffffff'}
-  : {grid:'#2b2b29', axis:'#8a8a85', plan:'#8a8a85', dot:'#0c0c0e'}; }
+function CC(){ return (DB.theme==='dark')
+  ? {grid:'#22333a', axis:'#78908f', plan:'#78908f', dot:'#0a1215', line:'#2ec6d1'}
+  : {grid:'#d8e6e7', axis:'#7d989e', plan:'#93aab0', dot:'#ffffff', line:'#0b93a4'}; }
 function weightChart(){
   const d0full = PROF.legacyWeek0 ? new Date(2026,7,19) : new Date(Math.min(W1, today()));
   const dEnd = new Date(Math.max(PROG_END, today()));
@@ -1704,20 +2024,20 @@ function weightChart(){
   const factPath = pts.map((p,j)=>(j?'L':'M')+xs(p.i).toFixed(1)+' '+ys(p.v).toFixed(1)).join('');
   const areaPath = pts.length>1
     ? factPath+`L${xs(pts[pts.length-1].i).toFixed(1)} ${H-B}L${xs(pts[0].i).toFixed(1)} ${H-B}Z` : '';
-  const dots = pts.length<=45 ? pts.map(p=>`<circle cx="${xs(p.i).toFixed(1)}" cy="${ys(p.v).toFixed(1)}" r="3" fill="#3f8df0" stroke="${CC().dot}" stroke-width="1.5"/>`).join('') : '';
+  const dots = pts.length<=45 ? pts.map(p=>`<circle cx="${xs(p.i).toFixed(1)}" cy="${ys(p.v).toFixed(1)}" r="3" fill="${CC().line}" stroke="${CC().dot}" stroke-width="1.5"/>`).join('') : '';
   const lastP = pts.length ? pts[pts.length-1] : null;
-  const pulse = lastP ? `<circle class="cpulse" cx="${xs(lastP.i).toFixed(1)}" cy="${ys(lastP.v).toFixed(1)}" r="5" fill="none" stroke="#3f8df0" stroke-width="2"/>
-    <circle cx="${xs(lastP.i).toFixed(1)}" cy="${ys(lastP.v).toFixed(1)}" r="4" fill="#3f8df0" stroke="${CC().dot}" stroke-width="1.5"/>` : '';
+  const pulse = lastP ? `<circle class="cpulse" cx="${xs(lastP.i).toFixed(1)}" cy="${ys(lastP.v).toFixed(1)}" r="5" fill="none" stroke="${CC().line}" stroke-width="2"/>
+    <circle cx="${xs(lastP.i).toFixed(1)}" cy="${ys(lastP.v).toFixed(1)}" r="4" fill="${CC().line}" stroke="${CC().dot}" stroke-width="1.5"/>` : '';
   chartCtx = {d0, days, xs, L, W, R, H, T, ph, pts, plan, vmin, vmax};
   return `<svg class="chart" id="wchart" viewBox="0 0 ${W} ${H}">
     <defs><linearGradient id="wgrad" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#3f8df0" stop-opacity=".26"/>
-      <stop offset="1" stop-color="#3f8df0" stop-opacity="0"/>
+      <stop offset="0" stop-color="${CC().line}" stop-opacity=".26"/>
+      <stop offset="1" stop-color="${CC().line}" stop-opacity="0"/>
     </linearGradient></defs>
     ${g}
     ${areaPath?`<path d="${areaPath}" fill="url(#wgrad)"/>`:''}
     <path d="${planPath}" fill="none" stroke="${CC().plan}" stroke-width="2" stroke-dasharray="6 5"/>
-    ${factPath?`<path d="${factPath}" fill="none" stroke="#3f8df0" stroke-width="2.4"/>`:''}
+    ${factPath?`<path d="${factPath}" fill="none" stroke="${CC().line}" stroke-width="2.4"/>`:''}
     ${dots}
     ${pulse}
     <line id="wc-cross" x1="0" y1="${T}" x2="0" y2="${H-B}" stroke="#f2f2ef" stroke-width="1" opacity="0"/>
@@ -2842,7 +3162,7 @@ window.myRecipeDlg = function(mid){
     <div id="mr-list" class="tiny" style="margin-top:8px"></div>
     <div class="kv"><span>Итого</span><b id="mr-tot">0 ккал</b></div>
     <div class="wlab">Шаги (по строке на шаг, можно пропустить)</div>
-    <textarea id="mr-s" rows="3" style="width:100%;background:rgba(0,0,0,.28);border:1px solid var(--border2);color:var(--text);border-radius:12px;font:inherit;padding:10px"></textarea>
+    <textarea id="mr-s" rows="3" style="width:100%;background:rgba(255,255,255,.9);border:1px solid var(--border2);color:var(--text);border-radius:12px;font:inherit;padding:10px"></textarea>
     <button class="btn full" style="margin-top:12px" onclick="mrSave('${mid||''}')">Сохранить рецепт</button>`);
 };
 window.mrAdd = function(){
@@ -3301,8 +3621,8 @@ function vMore(){
   let h = `<div class="seg">` + secs.map(s=>`<button class="${moreSec===s[0]?'on':''}" onclick="moreSec='${s[0]}';render()">${s[1]}</button>`).join('') + `</div>`;
   h += `<div class="row" style="margin:10px 2px 2px"><div class="grow small">Тема оформления</div>
     <div class="seg" style="flex:none;margin:0;min-width:150px">
-      <button class="${(DB.theme||'dark')!=='light'?'on':''}" style="min-height:36px;padding:0 12px" onclick="setTheme('dark')">🌙</button>
-      <button class="${DB.theme==='light'?'on':''}" style="min-height:36px;padding:0 12px" onclick="setTheme('light')">☀️</button></div></div>`;
+      <button class="${(DB.theme||'light')!=='dark'?'on':''}" style="min-height:36px;padding:0 12px" onclick="setTheme('light')">☀️</button>
+      <button class="${DB.theme==='dark'?'on':''}" style="min-height:36px;padding:0 12px" onclick="setTheme('dark')">🌙</button></div></div>`;
   if (moreSec==='insights'){
     const ins = insights();
     h += ins.length ? ins.map(insightHTML).join('') : `<div class="card small">Пока нечего советовать — записывай вес, еду и тренировки.</div>`;
@@ -3383,7 +3703,7 @@ function vMore(){
       <div class="kv"><span>${PROF.place==='home' ? 'Дом · '+(['db','band','bar'].filter(k=>PROF.equip&&PROF.equip[k]).map(k=>({db:'гантели',band:'резинка',bar:'турник'})[k]).join(', ')||'вес тела') : 'Зал'} · ${PROF.split==='fb'?'Фулбади':'PPL'} · Старт ${PROF.startWeight} кг → ~${Math.round(TARGETS[WEEKS()])} кг к ${fmtD(PROG_END)} (${WEEKS()} нед.)</span></div>
       <button class="btn sec full" style="margin-top:10px" onclick="adjustDlg()">Настройка: уровень · травмы · разнообразие</button>
       <button class="btn sec full" style="margin-top:8px" onclick="if(confirm('Пересоздать программу заново через анкету? Вес, еда и шаги сохранятся, а журнал тренировок и замены очистятся.')){DB.profile=null;DB.sessions={};DB.swaps={};DB.skips={};DB.dateOv={};save();location.reload();}">Пересоздать программу (анкета)</button></div>`;
-    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 2.7 (уровень подготовки и щадящая программа для новичков, чередование упражнений, женская техника, новый сканер штрихкодов) · собрано для Егора и друзей · 19.08.2026. Фото упражнений: free-exercise-db, Public Domain.</div>`;
+    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 2.8 (новая бело-бирюзовая тема, свой движок анимаций техники вместо фото, фикс сводки анкеты) · собрано для Егора и друзей · 19.08.2026. Анимации техники — собственный движок, силуэт без пола и возраста.</div>`;
   }
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }
@@ -3422,7 +3742,7 @@ const ICON512 = 'iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAMAUlEQVR42u3dXWi
 try{
   const man = {
     name:'PPL трекер', short_name:'PPL', start_url:'.', scope:'.', display:'standalone',
-    background_color:'#0c0c0e', theme_color:'#0c0c0e',
+    background_color:'#eef6f6', theme_color:'#eef6f6',
     icons:[{src:'data:image/png;base64,'+ICON192, sizes:'192x192', type:'image/png'},
            {src:'data:image/png;base64,'+ICON512, sizes:'512x512', type:'image/png'}]
   };
@@ -3815,8 +4135,8 @@ window.wizardCalc = function(){
     <div class="kv"><span>Траектория ${wzWeeks} недель</span><b>${p.startWeight} → ~${c.targets[wzWeeks]} кг</b></div>
     <div class="kv"><span>Старт → финиш</span><b>${fmtD(monday)} (Пн) → ${fmtD(finish)}</b></div>
     <div class="kv"><span>Дни</span><b>${wzDays.map(d=>DAY_N[d]).join(' · ')}</b></div>
-    <div class="kv"><span>Формат</span><b>${wzPlace==='home' ? 'Дом · '+(['db','band','bar'].filter(k=>wzEq[k]).map(k=>({db:'гантели',band:'резинка',bar:'турник'})[k]).join(', ')||'вес тела') : 'Зал'} · PPL</b></div>
-    <div class="kv"><span>Тренировок</span><b>${wzWeeks*(wzSplit==='fb'?3:4)} · ${wzSplit==='fb'?'Фулбади A/B':'Push/Pull/Legs'}</b></div>
+    <div class="kv"><span>Формат</span><b>${wzPlace==='home' ? 'Дом · '+(['db','band','bar'].filter(k=>wzEq[k]).map(k=>({db:'гантели',band:'резинка',bar:'турник'})[k]).join(', ')||'вес тела') : 'Зал'} · ${wzSplit==='fb'?'Фулбади A/B':'Push/Pull/Legs'}</b></div>
+    <div class="kv"><span>Тренировок</span><b>${wzWeeks*(wzSplit==='fb'?3:4)} за ${wzWeeks} недель</b></div>
     <div class="kv"><span>Стартовые веса</span><b>${starts.bench?('жим '+(Math.round(starts.bench*0.7/2.5)*2.5)+' кг'):(starts.hbench?('жим гантелей '+(Math.round(starts.hbench*0.7/2)*2)+' кг'):'подбор на 1-й неделе')}</b></div>
     <div class="tiny" style="margin-top:8px">Начинаем с ~70% рабочих весов — первые 2 недели лёгкие, это план, а не осторожничание. Калории можно будет менять корректировками.</div>
     <div class="row" style="gap:8px; margin-top:12px">
@@ -3844,10 +4164,10 @@ window.wizardGo = function(){
 };
 /* ============ 15. ЗАГРУЗКА ============ */
 function applyTheme(){
-  const t = DB.theme || 'dark';
+  const t = DB.theme || 'light';
   document.documentElement.dataset.theme = t;
   const mt = document.querySelector('meta[name=theme-color]');
-  if (mt) mt.setAttribute('content', t==='light' ? '#eef0f4' : '#0c0c0e');
+  if (mt) mt.setAttribute('content', t==='dark' ? '#0a1215' : '#eef6f6');
 }
 window.setTheme = function(t){ DB.theme = t; save(); applyTheme(); render(); toast(t==='light' ? 'Светлая тема' : 'Тёмная тема'); };
 (function boot(){

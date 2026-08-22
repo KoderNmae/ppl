@@ -630,14 +630,15 @@ function chain(pts, w, cls){
   for (let i=1;i<pts.length;i++) d += `L${pts[i][0].toFixed(1)} ${pts[i][1].toFixed(1)}`;
   return `<path d="${d}" stroke-width="${w}" class="${cls}" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`;
 }
-function drawProps(props, F, layer){
+function drawProps(props, F, layer, pose){
   if (!props) return '';
   let h = '';
   for (const pr of props){
     if (pr.z !== layer) continue;
     if (pr.t==='floor') h += `<line x1="14" y1="${pr.y}" x2="306" y2="${pr.y}" class="afloor"/>`;
     if (pr.t==='bench') h += `<g transform="rotate(${pr.rot||0} ${pr.x} ${pr.y})"><rect x="${pr.x-pr.w/2}" y="${pr.y}" width="${pr.w}" height="9" rx="4" class="aprop"/><rect x="${pr.x-pr.w/2+8}" y="${pr.y+9}" width="7" height="${pr.leg||18}" rx="2" class="aprop"/><rect x="${pr.x+pr.w/2-15}" y="${pr.y+9}" width="7" height="${pr.leg||18}" rx="2" class="aprop"/></g>`;
-    if (pr.t==='box') h += `<rect x="${pr.x}" y="${pr.y}" width="${pr.w}" height="${pr.h}" rx="4" class="aprop"/>`;
+    if (pr.t==='box'){ const bx = (pr.kx != null && pose && pose[pr.kx] != null) ? pose[pr.kx] : pr.x;
+      h += `<rect x="${bx}" y="${pr.y}" width="${pr.w}" height="${pr.h}" rx="4" class="aprop"/>`; }
     if (pr.t==='wall') h += `<line x1="${pr.x}" y1="20" x2="${pr.x}" y2="${pr.y2||176}" class="aline" stroke-width="5"/>`;
     if (pr.t==='barline') h += `<line x1="${pr.x1||90}" y1="${pr.y}" x2="${pr.x2||230}" y2="${pr.y}" class="aline" stroke-width="5"/><line x1="${(pr.x1||90)+8}" y1="${pr.y}" x2="${(pr.x1||90)+8}" y2="18" class="aline" stroke-width="4"/><line x1="${(pr.x2||230)-8}" y1="${pr.y}" x2="${(pr.x2||230)-8}" y2="18" class="aline" stroke-width="4"/>`;
     if (pr.t==='block') h += `<rect x="${pr.x-9}" y="${pr.y-9}" width="18" height="18" rx="3" class="aprop"/>`;
@@ -655,6 +656,7 @@ function drawTools(anim, F){
   if (anim.bar === 'shoulder') h += `<circle cx="${F.sh[0]+2}" cy="${F.sh[1]+3}" r="9" class="aplate"/>`;
   if (anim.cable){ const from = anim.cable.at==='ankle' ? F.l1.an : wr; h += `<path d="M${from[0].toFixed(1)} ${from[1].toFixed(1)}L${anim.cable.x} ${anim.cable.y}" class="acable"/><rect x="${anim.cable.x-8}" y="${anim.cable.y-8}" width="16" height="16" rx="3" class="aprop"/>`; }
   if (anim.band){ const from = anim.band.at==='ankle' ? F.l1.an : wr; h += `<path d="M${from[0].toFixed(1)} ${from[1].toFixed(1)} Q${(from[0]+anim.band.x)/2+6} ${(from[1]+anim.band.y)/2} ${anim.band.x} ${anim.band.y}" class="aband"/>`; }
+  if (anim.pad === 'ankle') h += `<circle cx="${F.l1.an[0]}" cy="${F.l1.an[1]}" r="6.5" class="aprop"/>`;
   if (anim.grip){ h += `<line x1="${wr2[0]}" y1="${wr2[1]}" x2="${wr[0]}" y2="${wr[1]}" class="aprop" stroke-width="4"/>`; }
   return h;
 }
@@ -699,7 +701,7 @@ function musHighlight(anim, F){
 }
 function renderFrame(anim, pose, tGlob){
   const F = fk(pose);
-  let h = drawProps(anim.props, F, 0);
+  let h = drawProps(anim.props, F, 0, pose);
   /* дальние конечности */
   h += `<g class="afar">` + chain([F.sh, F.a2.el, F.a2.wr], 8, 'abone')
      + chain([F.pelvis, F.l2.kn, F.l2.an, F.l2.toe], 9.5, 'abone') + `</g>`;
@@ -710,7 +712,7 @@ function renderFrame(anim, pose, tGlob){
   h += chain([F.pelvis, F.l1.kn, F.l1.an, F.l1.toe], 10.5, 'abone');
   h += chain([F.sh, F.a1.el, F.a1.wr], 9, 'abone');
   h += drawTools(anim, F);
-  h += drawProps(anim.props, F, 1);
+  h += drawProps(anim.props, F, 1, pose);
   h += musHighlight(anim, F);
   return h;
 }
@@ -744,9 +746,9 @@ squat:      {mus:['quad','glute'], db:1, props:[FLOOR], dur:1600, frames:[
 squat_bar:  {mus:['quad','glute','core'], bar:'shoulder', props:[FLOOR], dur:1600, frames:[
               {px:150, py:110, to:4, ua:120, fa:20, th:180, sh:183},
               {px:146, py:136, to:30, ua:118, fa:16, th:98, sh:200}]},
-squat_chair:{mus:['quad','glute'], props:[FLOOR, {t:'chair', x:147, y:134, z:0}], dur:1700, frames:[
-              {px:150, py:110, to:6, ua:120, fa:40, th:180, sh:183},
-              {px:147, py:132, to:30, ua:110, fa:30, th:105, sh:192}]},
+squat_chair:{mus:['quad','glute'], props:[FLOOR, {t:'chair', x:145, y:134, z:0}], dur:1700, frames:[
+              {px:160, py:110, to:6, ua:120, fa:40, th:180, sh:183},
+              {px:146, py:132, to:30, ua:110, fa:30, th:105, sh:192}]},
 lunge:      {mus:['quad','glute'], db:1, props:[FLOOR], dur:1700, frames:[
               {px:150, py:110, to:4, ua:180, th:180, sh:182, th2:178},
               {px:158, py:127, to:8, ua:180, th:112, sh:186, th2:212, sh2:138}]},
@@ -765,21 +767,21 @@ deadlift:   {mus:['ham','glute','erectors'], bar:'wrist', props:[FLOOR], dur:170
 goodmorning:{mus:['ham','erectors'], band:{x:150, y:174}, props:[FLOOR], dur:1700, frames:[
               {px:150, py:110, to:4, ua:150, fa:35, th:180, sh:183},
               {px:144, py:113, to:62, ua:120, fa:10, th:186, sh:178}]},
-calfraise:  {mus:['calf'], props:[FLOOR, {t:'box', x:150, y:160, w:64, h:16, z:0}], dur:1300, frames:[
-              {px:150, py:94, to:2, ua:180, th:180, sh:181, ft:95},
-              {px:150, py:86, to:2, ua:180, th:180, sh:181, ft:130}]},
-legpress:   {mus:['quad','glute'], props:[{t:'floor', y:176, z:0}, {t:'seatback', x:108, y:152, h:64, rot:-32, z:0}, {t:'box', x:204, y:50, w:15, h:64, z:1}], dur:1600, frames:[
-              {px:140, py:132, to:-38, ua:170, fa:120, th:58, sh:62, ft:120},
-              {px:140, py:132, to:-38, ua:170, fa:120, th:24, sh:116, ft:100}]},
-legext:     {mus:['quad'], props:[{t:'floor', y:176, z:0}, {t:'chair', x:134, y:120, z:0}], dur:1400, frames:[
+calfraise:  {mus:['calf'], props:[FLOOR, {t:'box', x:154, y:164, w:44, h:12, z:0}], dur:1300, frames:[
+              {px:150, py:101, to:2, ua:180, th:180, sh:181, ft:95},
+              {px:153, py:91, to:2, ua:180, th:180, sh:181, ft:128}]},
+legpress:   {mus:['quad','glute'], props:[{t:'floor', y:176, z:0}, {t:'seatback', x:102, y:168, h:78, rot:-44, z:0}, {t:'box', x:96, y:148, w:52, h:28, z:0}, {t:'box', kx:'bx', x:166, y:58, w:14, h:74, z:1}], dur:1600, frames:[
+              {px:120, py:136, to:-42, hd:6, ua:170, fa:110, th:20, sh:83, ft:0, bx:166},
+              {px:120, py:136, to:-42, hd:6, ua:170, fa:110, th:64, sh:64, ft:0, bx:181}]},
+legext:     {mus:['quad'], pad:'ankle', props:[{t:'floor', y:176, z:0}, {t:'chair', x:134, y:120, z:0}], dur:1400, frames:[
               {px:138, py:116, to:-6, ua:170, fa:150, th:95, sh:178},
               {px:138, py:116, to:-6, ua:170, fa:150, th:95, sh:98}]},
-legcurl:    {mus:['ham'], props:[{t:'bench', x:160, y:130, w:150, leg:28, z:0}], dur:1400, frames:[
-              {px:130, py:124, to:-92, hd:-8, ua:150, fa:210, th:88, sh:90},
-              {px:130, py:124, to:-92, hd:-8, ua:150, fa:210, th:88, sh:338}]},
-hipthrust:  {mus:['glute','ham'], bar:'hip', props:[FLOOR, {t:'bench', x:92, y:112, w:74, leg:46, z:0}], dur:1500, frames:[
-              {px:152, py:142, to:-56, hd:18, ua:210, th:70, sh:182},
-              {px:152, py:114, to:-84, hd:26, ua:230, th:94, sh:184}]},
+legcurl:    {mus:['ham'], pad:'ankle', props:[{t:'floor', y:176, z:0}, {t:'bench', x:145, y:132, w:170, leg:26, z:0}], dur:1400, frames:[
+              {px:168, py:128, to:-90, hd:-6, ua:262, fa:268, th:88, sh:88, ft:150},
+              {px:168, py:128, to:-90, hd:-6, ua:262, fa:268, th:88, sh:350, ft:340}]},
+hipthrust:  {mus:['glute','ham'], bar:'hip', props:[FLOOR, {t:'bench', x:106, y:118, w:72, leg:50, z:0}], dur:1500, frames:[
+              {px:146, py:144, to:-47, hd:20, ua:205, fa:195, th:87, sh:20, ft:90},
+              {px:160, py:122, to:-96, hd:14, ua:215, fa:200, th:125, sh:6, ft:90}]},
 glutebridge:{mus:['glute','ham'], props:[FLOOR], dur:1500, frames:[
               {px:150, py:158, to:-72, hd:14, ua:175, fa:175, th:55, sh:182},
               {px:150, py:136, to:-92, hd:22, ua:185, fa:185, th:88, sh:186}]},
@@ -790,20 +792,20 @@ kickback:   {mus:['glute'], cable:{x:52, y:160, at:'ankle'}, props:[FLOOR, {t:'b
               {px:158, py:110, to:14, ua:120, fa:60, th:176, sh:186, th2:180, sh2:182},
               {px:158, py:110, to:20, ua:120, fa:60, th:222, sh:212, th2:180, sh2:182}]},
 benchpress: {mus:['chest','triceps'], bar:'wrist', props:[{t:'floor', y:176, z:0}, {t:'bench', x:132, y:128, w:130, leg:40, z:0}], dur:1500, frames:[
-              {px:112, py:122, to:-90, hd:4, ua:-2, fa:-2, th:118, sh:184},
-              {px:112, py:122, to:-90, hd:4, ua:118, fa:-24, th:118, sh:184}]},
+              {px:126, py:122, to:-90, hd:4, ua:-2, fa:-2, th:135, sh:195, ft:95},
+              {px:126, py:122, to:-90, hd:4, ua:118, fa:-24, th:135, sh:195, ft:95}]},
 dbbench:    {mus:['chest','triceps'], db:1, props:[{t:'floor', y:176, z:0}, {t:'bench', x:132, y:128, w:130, leg:40, z:0}], dur:1500, frames:[
-              {px:112, py:122, to:-90, hd:4, ua:-4, fa:-4, th:118, sh:184},
-              {px:112, py:122, to:-90, hd:4, ua:122, fa:-20, th:118, sh:184}]},
+              {px:126, py:122, to:-90, hd:4, ua:-4, fa:-4, th:135, sh:195, ft:95},
+              {px:126, py:122, to:-90, hd:4, ua:122, fa:-20, th:135, sh:195, ft:95}]},
 dbfloor:    {mus:['chest','triceps'], db:1, props:[FLOOR], dur:1500, frames:[
               {px:130, py:162, to:-90, hd:4, ua:-4, fa:-4, th:96, sh:186},
               {px:130, py:162, to:-90, hd:4, ua:126, fa:-18, th:96, sh:186}]},
 fly:        {mus:['chest'], db:1, props:[FLOOR], dur:1600, frames:[
               {px:130, py:162, to:-90, hd:4, ua:-4, fa:-8, ua2:-4, fa2:-8, th:96, sh:186},
               {px:130, py:162, to:-90, hd:4, ua:66, fa:52, ua2:-64, fa2:-56, th:96, sh:186}]},
-incline:    {mus:['chest','delts'], db:1, props:[FLOOR, {t:'seatback', x:118, y:150, h:78, rot:-38, z:0}, {t:'box', x:130, y:150, w:44, h:26, z:0}], dur:1500, frames:[
-              {px:136, py:120, to:-44, hd:8, ua:-28, fa:-28, th:130, sh:186},
-              {px:136, py:120, to:-44, hd:8, ua:104, fa:-40, th:130, sh:186}]},
+incline:    {mus:['chest','delts'], db:1, props:[FLOOR, {t:'seatback', x:124, y:142, h:82, rot:-45, z:0}, {t:'box', x:116, y:142, w:44, h:34, z:0}], dur:1500, frames:[
+              {px:140, py:132, to:-45, hd:10, ua:118, fa:8, th:120, sh:170, ft:100},
+              {px:140, py:132, to:-45, hd:10, ua:45, fa:45, th:120, sh:170, ft:100}]},
 ohp:        {mus:['delts','triceps'], db:1, props:[FLOOR, {t:'chair', x:146, y:146, z:0}], dur:1500, frames:[
               {px:150, py:142, to:-2, ua:8, fa:8, th:95, sh:180},
               {px:150, py:142, to:-2, ua:118, fa:-16, th:95, sh:180}]},
@@ -819,9 +821,9 @@ pushdown:   {mus:['triceps'], cable:{x:236, y:26}, props:[FLOOR, {t:'block', x:2
 frenchpress:{mus:['triceps'], db:1, props:[FLOOR], dur:1400, frames:[
               {px:150, py:110, to:6, ua:16, fa:238, th:180, sh:182},
               {px:150, py:110, to:6, ua:12, fa:14, th:180, sh:182}]},
-dips:       {mus:['triceps','chest'], props:[FLOOR, {t:'box', x:104, y:96, w:12, h:80, z:0}, {t:'box', x:206, y:96, w:12, h:80, z:0}], dur:1500, frames:[
+dips:       {mus:['triceps','chest'], props:[FLOOR, {t:'box', x:147, y:97, w:9, h:79, z:0}], dur:1500, frames:[
               {px:152, py:84, to:8, ua:184, fa:182, th:196, sh:242},
-              {px:152, py:102, to:16, ua:224, fa:150, th:200, sh:238}]},
+              {px:152, py:102, to:16, ua:230, fa:142, th:200, sh:238}]},
 pushup:     {mus:['chest','triceps'], props:[FLOOR], dur:1500, frames:[
               {px:182, py:139, to:-59, hd:12, ua:180, fa:180, th:121, sh:121, ft:155},
               {px:175, py:157, to:-77, hd:14, ua:107, fa:225, th:103, sh:103, ft:155}]},
@@ -841,20 +843,20 @@ pulldown:   {mus:['lats','biceps'], grip:1, cable:{x:196, y:14}, props:[{t:'floo
               {px:150, py:142, to:-8, ua:12, fa:10, ua2:24, fa2:22, th:95, sh:180},
               {px:150, py:142, to:-14, ua:152, fa:44, ua2:160, fa2:56, th:95, sh:180}]},
 pullup:     {mus:['lats','biceps'], props:[{t:'barline', y:22, z:0}], dur:1700, frames:[
-              {px:158, py:118, to:-4, ua:5, fa:3, th:186, sh:212},
-              {px:158, py:88, to:-6, ua:70, fa:-60, th:188, sh:224}]},
+              {px:158, py:118, to:-4, ua:5, fa:3, th:188, sh:280, ft:200},
+              {px:158, py:88, to:-6, ua:70, fa:-60, th:190, sh:266, ft:200}]},
 kneeraise:  {mus:['abs'], props:[{t:'barline', y:22, z:0}], dur:1500, frames:[
               {px:158, py:118, to:-2, ua:5, fa:3, th:184, sh:196},
               {px:158, py:118, to:-6, ua:5, fa:3, th:82, sh:148}]},
-row_cable:  {mus:['lats','biceps'], cable:{x:252, y:134}, props:[FLOOR, {t:'block', x:252, y:134, z:0}], dur:1500, frames:[
+row_cable:  {mus:['lats','biceps'], cable:{x:252, y:134}, props:[FLOOR, {t:'block', x:252, y:134, z:0}, {t:'box', x:112, y:141, w:36, h:35, z:0}], dur:1500, frames:[
               {px:132, py:136, to:14, ua:76, fa:80, th:96, sh:138, ft:120},
               {px:132, py:136, to:-4, ua:196, fa:96, th:96, sh:138, ft:120}]},
 row_bent:   {mus:['lats','erectors'], db:1, props:[FLOOR], dur:1500, frames:[
               {px:146, py:111, to:56, ua:178, fa:176, th:186, sh:176},
               {px:146, py:111, to:56, ua:236, fa:148, th:186, sh:176}]},
-row_onearm: {mus:['lats','biceps'], db:1, props:[FLOOR, {t:'bench', x:214, y:102, w:86, leg:66, z:0}], dur:1500, frames:[
-              {px:142, py:110, to:62, ua2:112, fa2:112, ua:180, fa:178, th:184, sh:178, th2:120, sh2:236},
-              {px:142, py:110, to:62, ua2:112, fa2:112, ua:242, fa:146, th:184, sh:178, th2:120, sh2:236}]},
+row_onearm: {mus:['lats','biceps'], db:1, props:[FLOOR, {t:'bench', x:214, y:110, w:86, leg:58, z:0}], dur:1500, frames:[
+              {px:142, py:110, to:62, ua2:112, fa2:112, ua:180, fa:178, th:184, sh:178, th2:172, sh2:176},
+              {px:142, py:110, to:62, ua2:112, fa2:112, ua:242, fa:146, th:184, sh:178, th2:172, sh2:176}]},
 row_austr:  {mus:['lats','biceps'], props:[FLOOR, {t:'barline', y:76, x1:96, x2:220, z:0}], dur:1500, frames:[
               {px:168, py:146, to:-64, hd:10, ua:-16, fa:-14, th:104, sh:106, ft:150},
               {px:160, py:132, to:-62, hd:10, ua:44, fa:-58, th:106, sh:108, ft:150}]},
@@ -874,8 +876,8 @@ crunch_fl:  {mus:['abs'], props:[FLOOR], dur:1400, frames:[
               {px:152, py:158, to:-88, hd:16, ua:-50, fa:120, th:58, sh:180},
               {px:152, py:158, to:-58, hd:22, ua:-16, fa:150, th:58, sh:180}]},
 crunch_cab: {mus:['abs'], cable:{x:238, y:18}, props:[FLOOR, {t:'block', x:238, y:18, z:0}], dur:1400, frames:[
-              {px:140, py:142, to:8, ua:26, fa:222, th:182, sh:268},
-              {px:140, py:142, to:46, ua:60, fa:250, th:182, sh:268}]},
+              {px:150, py:140, to:14, hd:8, ua:60, fa:230, th:180, sh:268, ft:270},
+              {px:150, py:140, to:52, hd:30, ua:64, fa:234, th:180, sh:268, ft:270}]},
 };
 /* соответствие: имя упражнения → анимация */
 const ANIM_OF = {
@@ -3780,7 +3782,7 @@ function vMore(){
       <div class="kv"><span>${PROF.place==='home' ? 'Дом · '+(['db','band','bar'].filter(k=>PROF.equip&&PROF.equip[k]).map(k=>({db:'гантели',band:'резинка',bar:'турник'})[k]).join(', ')||'вес тела') : 'Зал'} · ${PROF.split==='fb'?'Фулбади':'PPL'} · Старт ${PROF.startWeight} кг → ~${Math.round(TARGETS[WEEKS()])} кг к ${fmtD(PROG_END)} (${WEEKS()} нед.)</span></div>
       <button class="btn sec full" style="margin-top:10px" onclick="adjustDlg()">Настройка: уровень · травмы · разнообразие</button>
       <button class="btn sec full" style="margin-top:8px" onclick="if(confirm('Пересоздать программу заново через анкету? Вес, еда и шаги сохранятся, а журнал тренировок и замены очистятся.')){DB.profile=null;DB.sessions={};DB.swaps={};DB.skips={};DB.dateOv={};save();location.reload();}">Пересоздать программу (анкета)</button></div>`;
-    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 2.8.1 (анимации починены по всем контактам, подсветка работающих мышц на фигуре, анатомическая карта мышц) · собрано для Егора и друзей · 19.08.2026. Анимации техники — собственный движок, силуэт без пола и возраста.</div>`;
+    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 2.8.2 (пересобраны позы тренажёров: жим ногами, мост, сгибания лёжа, жимы лёжа и наклонный, брусья, тяги, вис) · собрано для Егора и друзей · 19.08.2026. Анимации техники — собственный движок, силуэт без пола и возраста.</div>`;
   }
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }

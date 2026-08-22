@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#eef6f6">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="PPL">
@@ -1687,13 +1689,22 @@ function vHome(){
     <div class="kv" style="margin-top:8px"><span>Белок</span><span><b>${Math.round(ft.p)}</b> / ${pt} г</span></div>
     <div class="bar"><i class="${ft.p>=pt*0.95?'good':''}" style="width:${Math.min(100,ft.p/pt*100)}%"></i></div>
     ${nm?`<div class="small" style="margin-top:10px"><b>Следующий приём:</b> ${esc(nm.txt)}${(()=>{const it=(nm.m.id==='b'||nm.m.id==='l'||nm.m.id==='d')&&wmGet(k,nm.m.id); const r=it&&findRecipe(it.rid); return r?' · по меню: '+esc(r.n):'';})()}</div>`:''}
-    <div class="tiny" style="margin-top:6px">${esc(fc.txt)}</div></div>`;
+    <div class="tiny" style="margin-top:6px">${esc(fc.txt)}</div>${fastLine()}</div>`;
   // шаги
   const goal = STEP_GOAL(Math.min(w,WEEKS()));
   h += `<div class="card"><h3>Шаги</h3><div class="row">
     <div class="grow"><div class="big">${stToday?(+stToday).toLocaleString('ru-RU'):'—'}</div>
     <div class="tiny">цель ${goal.toLocaleString('ru-RU')} · среднее 7 дн: ${avg7(DB.steps,d)?Math.round(avg7(DB.steps,d)).toLocaleString('ru-RU'):'—'}</div></div>
     <button class="btn sec sm" onclick="askSteps()">Записать</button></div></div>`;
+  // вода
+  const wtr = (DB.water||{})[k] || 0, wg = waterGoal();
+  h += `<div class="card"><h3>Вода</h3><div class="row">
+    <div class="grow"><div class="big">${wtr>=1000?((wtr/1000).toFixed(2).replace(/\.?0+$/,''))+' <span class="small">л</span>':wtr+' <span class="small">мл</span>'}</div>
+    <div class="tiny">цель ${(wg/1000).toFixed(1).replace('.0','')} л${wtr>=wg?' · выполнено ✅':''}</div></div>
+    <button class="btn sec sm" onclick="waterAdd(-250)">−</button>
+    <button class="btn sec sm" onclick="waterAdd(250)">+250</button>
+    <button class="btn sec sm" onclick="waterAdd(500)">+500</button></div>
+    <div class="bar" style="margin-top:8px"><i class="${wtr>=wg?'good':''}" style="width:${Math.min(100,Math.round(wtr/wg*100))}%"></i></div></div>`;
   // рекомендации
   if (ins.length){
     h += `<div class="section-t">Рекомендации</div>` + ins.map(insightHTML).join('') +
@@ -2405,6 +2416,157 @@ window.expCSVweight = function(){
   if (rows.length === 1) return toast('Пока нет записей веса');
   dlText('\ufeff'+rows.join('\n'), 'ppl-ves.csv');
 };
+/* --- вода, ИГ, шаблоны еды, голос, фото прогресса --- */
+function waterGoal(){
+  const lw = lastWeight();
+  const w = (lw && lw.v) || PROF.startWeight || 90;
+  return Math.max(2000, Math.min(3500, Math.round(w*30/250)*250));
+}
+window.waterAdd = function(ml){
+  const k = key(today());
+  (DB.water = DB.water || {})[k] = Math.max(0, ((DB.water||{})[k]||0) + ml);
+  save(); render();
+};
+function fastLine(){
+  const f = DB.fastCfg;
+  if (!f || !f.on) return '';
+  const now = new Date();
+  const h = now.getHours() + now.getMinutes()/60;
+  if (h >= f.from && h < f.to){
+    const left = f.to - h;
+    return `<div class="tiny">⏳ Окно питания открыто · закроется в ${f.to}:00 (через ${left>=1?Math.round(left)+' ч':Math.max(1,Math.round(left*60))+' мин'})</div>`;
+  }
+  const till = h < f.from ? f.from - h : (24 - h + f.from);
+  return `<div class="tiny">🌙 Голодание · окно откроется в ${f.from}:00 (через ${till>=1?Math.round(till)+' ч':Math.max(1,Math.round(till*60))+' мин'})</div>`;
+}
+function fastCard(){
+  const f = DB.fastCfg || {};
+  return `<div class="card"><h3>Интервальное голодание</h3>
+    <div class="row"><div class="grow small">${f.on?`Окно питания: <b>${f.from}:00–${f.to}:00</b>`:'Выключено — ешь по расписанию приёмов'}</div>
+      <button class="btn sec sm" onclick="fastDlg()">${f.on?'Изменить':'Включить'}</button></div></div>`;
+}
+window.fastDlg = function(){
+  const f = DB.fastCfg || {on:false, from:12, to:20};
+  openModal(`<h2>Интервальное голодание</h2>
+    <div class="small">Ешь только внутри окна, остальное время — вода, чай, кофе без сахара и молока. Схема 16/8 = 8-часовое окно. Цели по калориям и белку не меняются — их надо уместить в окно.</div>
+    <div class="sets" style="margin-top:10px">
+      <button class="chip" onclick="fastSet(12,20)">16/8 · 12–20</button>
+      <button class="chip" onclick="fastSet(11,21)">14/10 · 11–21</button>
+      <button class="chip" onclick="fastSet(10,20)">14/10 · 10–20</button></div>
+    <div class="stepper" style="margin-top:8px"><span class="lbl">Открытие окна, ч</span><button onclick="stepNum('fs-from',-1)">−</button><input id="fs-from" type="number" inputmode="numeric" value="${f.from}"><button onclick="stepNum('fs-from',1)">+</button></div>
+    <div class="stepper"><span class="lbl">Закрытие окна, ч</span><button onclick="stepNum('fs-to',-1)">−</button><input id="fs-to" type="number" inputmode="numeric" value="${f.to}"><button onclick="stepNum('fs-to',1)">+</button></div>
+    <div class="row" style="gap:8px;margin-top:6px">
+      ${f.on?`<button class="btn danger grow" onclick="DB.fastCfg.on=false;save();closeModal();render();toast('Голодание выключено')">Выключить</button>`:`<button class="btn sec grow" onclick="closeModal()">Отмена</button>`}
+      <button class="btn grow" onclick="fastSave()">Сохранить</button></div>`);
+};
+window.fastSet = function(a,b){ $('#fs-from').value = a; $('#fs-to').value = b; };
+window.fastSave = function(){
+  const a = parseInt($('#fs-from').value), b = parseInt($('#fs-to').value);
+  if (!isFinite(a) || !isFinite(b) || a < 4 || a > 16 || b <= a + 3 || b > 23) return toast('Проверь окно: открытие 4–16, длина минимум 4 часа, закрытие до 23');
+  DB.fastCfg = {on:true, from:a, to:b};
+  save(); closeModal(); render(); toast('Окно питания: '+a+':00–'+b+':00');
+};
+window.tplDlg = function(mid){
+  DB.mealTpl = DB.mealTpl || [];
+  const items = mealItems(foodDate, mid);
+  openModal(`<h2>⭐ Шаблоны приёмов</h2>
+    <div class="small">Сохрани привычный набор еды и добавляй его одной кнопкой в любой день.</div>` +
+    (DB.mealTpl.length ? DB.mealTpl.map((t,i)=>{
+      const kcal = Math.round(t.items.reduce((a,x)=>a+x.kcal*(x.q||1),0));
+      const prot = Math.round(t.items.reduce((a,x)=>a+x.p*(x.q||1),0));
+      return `<div class="row" style="margin-top:10px"><div class="grow"><b>${esc(t.n)}</b><div class="tiny">${t.items.length} поз. · ${kcal} ккал · Б ${prot} г</div></div>
+        <button class="btn sm" onclick="tplApply(${i},'${mid}')">Добавить</button>
+        <button class="x" onclick="tplDel(${i},'${mid}')">✕</button></div>`;
+    }).join('') : `<div class="small" style="margin-top:10px">Шаблонов пока нет. Добавь еду в приём и сохрани её как шаблон.</div>`) +
+    (items.length ? `<button class="btn sec full" style="margin-top:12px" onclick="tplSave('${mid}')">Сохранить текущий приём как шаблон (${items.length} поз.)</button>` : '') +
+    `<button class="btn full" style="margin-top:8px" onclick="closeModal()">Закрыть</button>`);
+};
+window.tplSave = function(mid){
+  const items = mealItems(foodDate, mid);
+  if (!items.length) return;
+  const name = prompt('Название шаблона (например «Мой завтрак»):');
+  if (!name) return;
+  const copy = items.map(o => { const c = {...o.x}; delete c.meal; return c; });
+  (DB.mealTpl = DB.mealTpl || []).push({n: name.slice(0,40), items: copy});
+  save(); tplDlg(mid); toast('Шаблон сохранён');
+};
+window.tplApply = function(i, mid){
+  const t = (DB.mealTpl||[])[i]; if (!t) return;
+  if (!DB.food[foodDate]) DB.food[foodDate] = {items:[]};
+  for (const x of t.items) DB.food[foodDate].items.push({...x, meal: mid});
+  save(); closeModal(); render(); toast('Добавил: '+t.n);
+};
+window.tplDel = function(i, mid){
+  (DB.mealTpl||[]).splice(i,1); save(); tplDlg(mid);
+};
+window.voiceInto = function(id){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return toast('Голосовой ввод не поддерживается этим браузером');
+  try {
+    const r = new SR();
+    r.lang = 'ru-RU'; r.interimResults = false; r.maxAlternatives = 1;
+    toast('Говори…');
+    r.onresult = e => {
+      const txt = e.results[0][0].transcript;
+      const el = document.getElementById(id);
+      if (el){ el.value = txt; el.dispatchEvent(new Event('input')); }
+    };
+    r.onerror = e => toast(e.error === 'not-allowed' ? 'Разреши доступ к микрофону в настройках браузера' : 'Не расслышал — попробуй ещё раз');
+    r.start();
+  } catch(e){ toast('Голосовой ввод недоступен'); }
+};
+function photosCard(){
+  DB.photos = DB.photos || {};
+  const keys = Object.keys(DB.photos).sort();
+  const strip = keys.length
+    ? `<div style="display:flex;gap:8px;overflow-x:auto;padding:4px 0 2px">` +
+      keys.map(k=>`<div style="flex:none;text-align:center;cursor:pointer" onclick="photoView('${k}')">
+        <img src="${DB.photos[k]}" style="height:110px;border-radius:10px;display:block">
+        <div class="tiny" style="margin-top:2px">${fmtD(fromKey(k))}</div></div>`).join('') + `</div>`
+    : `<div class="small">Раз в 2–4 недели, в одном месте, освещении и позе — так прогресс видно лучше, чем на весах. Фото сжимаются и хранятся в приложении (попадают в экспорт-бэкап).</div>`;
+  return `<div class="card"><h3>Фото прогресса</h3>${strip}
+    <button class="btn sec full" style="margin-top:10px" onclick="photoAdd()">📷 Добавить фото</button>
+    <input type="file" id="ph-file" accept="image/*" style="display:none"></div>`;
+}
+window.photoAdd = function(){
+  const inp = $('#ph-file'); if (!inp) return;
+  inp.onchange = () => {
+    const f = inp.files[0]; if (!f) return;
+    const img = new Image();
+    img.onload = () => {
+      const mx = 500, sc = Math.min(1, mx/Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.max(1, Math.round(img.width*sc));
+      c.height = Math.max(1, Math.round(img.height*sc));
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      const data = c.toDataURL('image/jpeg', 0.55);
+      URL.revokeObjectURL(img.src);
+      if (JSON.stringify(DB).length + data.length > 4300000)
+        return toast('Хранилище почти заполнено — удали старые фото (тап по фото) или сделай экспорт');
+      (DB.photos = DB.photos || {})[key(today())] = data;
+      save(); render(); toast('Фото сохранено');
+    };
+    img.onerror = () => toast('Не удалось прочитать фото');
+    img.src = URL.createObjectURL(f);
+    inp.value = '';
+  };
+  inp.click();
+};
+window.photoView = function(k){
+  DB.photos = DB.photos || {};
+  if (!DB.photos[k]) return;
+  const keys = Object.keys(DB.photos).sort();
+  const first = keys[0];
+  const cmp = keys.length >= 2 && k !== first;
+  openModal(`<h2>Фото · ${fmtD(fromKey(k))}</h2>` +
+    (cmp ? `<div class="row" style="gap:8px;align-items:flex-start;margin-top:6px">
+      <div class="grow" style="text-align:center;min-width:0"><img src="${DB.photos[first]}" style="width:100%;border-radius:12px"><div class="tiny" style="margin-top:3px">${fmtD(fromKey(first))} · старт</div></div>
+      <div class="grow" style="text-align:center;min-width:0"><img src="${DB.photos[k]}" style="width:100%;border-radius:12px"><div class="tiny" style="margin-top:3px">${fmtD(fromKey(k))}</div></div></div>`
+       : `<img src="${DB.photos[k]}" style="width:100%;border-radius:12px;margin-top:6px">`) +
+    `<div class="row" style="gap:8px;margin-top:12px">
+      <button class="btn danger" onclick="if(confirm('Удалить это фото?')){delete DB.photos['${k}'];save();closeModal();render();}">Удалить</button>
+      <button class="btn grow" onclick="closeModal()">Закрыть</button></div>`);
+};
 /* ============ 8. ТАЙМЕР ОТДЫХА ============ */
 let timerEnd = null, timerTick = null, timerTotal = 0;
 function startTimer(sec, label){
@@ -2486,6 +2648,7 @@ function vWeight(){
     ${rows}</table>
     <div class="week-note">Δ: зелёный — идеальный темп (−0,5…−1,6) · оранжевый — медленно · красный — слишком быстро. Талию меряй по воскресеньям, тап по ячейке.</div></div>`;
   h += measCard();
+  h += photosCard();
   // чек-поинты
   const anc = anchorsOf();
   h += `<div class="section-t">Якоря силы</div><div class="card">` +
@@ -3098,7 +3261,9 @@ window.pantryDlg = function(backMid, mode){
       <button class="${!isEx?'on':''}" onclick="pantryDlg(${backMid?`'${backMid}'`:'null'},'have')">Есть дома</button>
       <button class="${isEx?'on':''}" onclick="pantryDlg(${backMid?`'${backMid}'`:'null'},'ex')">Не ем</button></div>
     <div class="small">${isEx?'Отметь, что не ешь — эти продукты исчезнут из всех рецептов и подборов.':'Отметь, что есть дома — рецепты соберутся из этого. Список запоминается.'}</div>
-    <input type="text" id="pt-q" placeholder="Поиск среди ${ING_ALL.length} продуктов…" style="margin-top:8px" oninput="pantrySearch(this.value)">` +
+    <div class="row" style="gap:8px;margin-top:8px">
+      <input type="text" id="pt-q" class="grow" placeholder="Поиск среди ${ING_ALL.length} продуктов…" style="margin:0" oninput="pantrySearch(this.value)">
+      ${(window.SpeechRecognition||window.webkitSpeechRecognition)?`<button class="btn sec sm" style="flex:none;min-width:48px" onclick="voiceInto('pt-q')">🎤</button>`:''}</div>` +
     cats.map(c => `<div class="wlab" data-plab="${c}" style="margin-top:12px">${ING_CAT_N[c]}</div><div class="mods" data-pcat="${c}">` +
       ING_ALL.filter(x=>x[2]===c).map(x=>{
         if (isEx){
@@ -3956,6 +4121,8 @@ function vFood(){
     <div class="bar" style="height:6px"><i class="${t.c>(kt-pt*4-(fatRange()[0]+fatRange()[1])/2*9)/4*1.05?'over':''}" style="width:${Math.min(100,t.c/((kt-pt*4-(fatRange()[0]+fatRange()[1])/2*9)/4)*100)}%"></i></div>
   </div>`;
   const focus = dayFocus(k);
+  const fl = fastLine();
+  if (fl) h += `<div class="card" style="margin-top:4px;padding:10px 14px">${fl}</div>`;
   h += `<div class="insight ${focus.mode==='balance'||focus.mode==='done'?'good':'warn'}" style="margin-top:4px"><p style="margin:0">${esc(focus.txt)}</p></div>`;
   h += `<div class="row" style="gap:8px;margin:10px 0 2px">
     <button class="btn sec grow sm" onclick="pantryDlg()">Продукты${DB.pantry&&Object.keys(DB.pantry).length?' ('+Object.keys(DB.pantry).length+')':''}</button>
@@ -3999,7 +4166,8 @@ function vFood(){
     }
     h += `<div class="row" style="gap:8px;margin-top:10px">
       <button class="btn grow sm" onclick="recipesDlg('${m.id}')">Что приготовить</button>
-      <button class="btn sec grow sm" onclick="modulesDlg('${m.id}')">Добавить</button></div></div>`;
+      <button class="btn sec grow sm" onclick="modulesDlg('${m.id}')">Добавить</button>
+      <button class="btn sec sm" style="flex:none;min-width:46px" onclick="tplDlg('${m.id}')">⭐</button></div></div>`;
   }
   // записи без приёма (старый формат)
   const legacy = (DB.food[k]?.items||[]).map((x,i)=>({x,i})).filter(o=>!o.x.meal);
@@ -4289,6 +4457,7 @@ function vMore(){
         <b style="min-width:56px;text-align:center">${DB.protTarget}</b>
         <button class="btn sec sm" onclick="adjProt(5)">+5</button></div>
       <button class="btn sec full" style="margin-top:10px" onclick="goalDlg()">${PROF.goal ? '🎯 '+PROF.goal.w+' кг к '+fmtD(fromKey(PROF.goal.date))+' — изменить' : '🎯 Поставить целевой вес и срок'}</button></div>`;
+    h += fastCard();
     h += `<div class="card"><h3>Резервная копия</h3>
       <div class="small" style="margin-bottom:10px">Записей: ${n} · последний экспорт: ${DB.lastExport?fmtD(fromKey(DB.lastExport)):'ещё не делал'}</div>
       <div class="row" style="gap:8px">
@@ -4306,7 +4475,7 @@ function vMore(){
       <div class="kv"><span>${PROF.place==='home' ? 'Дом · '+(['db','band','bar'].filter(k=>PROF.equip&&PROF.equip[k]).map(k=>({db:'гантели',band:'резинка',bar:'турник'})[k]).join(', ')||'вес тела') : 'Зал'} · ${PROF.split==='fb'?'Фулбади':'PPL'} · Старт ${PROF.startWeight} кг → ~${Math.round(TARGETS[WEEKS()])} кг к ${fmtD(PROG_END)} (${WEEKS()} нед.)</span></div>
       <button class="btn sec full" style="margin-top:10px" onclick="adjustDlg()">Настройка: уровень · травмы · разнообразие</button>
       <button class="btn sec full" style="margin-top:8px" onclick="if(confirm('Пересоздать программу заново через анкету? Вес, еда и шаги сохранятся, а журнал тренировок и замены очистятся.')){DB.profile=null;DB.sessions={};DB.swaps={};DB.skips={};DB.dateOv={};save();location.reload();}">Пересоздать программу (анкета)</button></div>`;
-    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 3.7 (объём по мышцам, серия, итоги месяца, замеры тела, экспорт CSV) · собрано для Егора и друзей · 22.08.2026. Анимации техники — собственный движок, силуэт без пола и возраста.</div>`;
+    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 3.8 (вода, шаблоны приёмов, окно питания, голосовой поиск, фото прогресса) · собрано для Егора и друзей · 22.08.2026. Анимации техники — собственный движок, силуэт без пола и возраста.</div>`;
   }
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }

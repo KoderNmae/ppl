@@ -1832,6 +1832,7 @@ function vHome(){
   const ins = insights().slice(0,2);
   let h = storageOk ? '' :
     `<div class="storage-warn" style="display:block">Хранилище браузера недоступно — данные не сохранятся после закрытия. Открой приложение по обычной ссылке (не из предпросмотра).</div>`;
+  h += levelCard(true);
   // вес
   h += `<div class="card"><h3>Вес сегодня</h3>`;
   if (wToday !== undefined && wToday !== null && wToday !== ''){
@@ -5148,6 +5149,167 @@ window.adjustKcal = function(delta, reason){
   (DB.kcalLog = DB.kcalLog||[]).push({d:key(today()), delta, reason});
   save(); toast('Новая цель: '+DB.kcalTarget+' ккал ('+(delta>0?'+':'')+delta+')'); render();
 };
+/* ============ 11а. ГЕЙМИФИКАЦИЯ · ПРОГНОЗЫ · ДАЙДЖЕСТ ============ */
+const LVL_TITLES = ['Новичок','В ритме','Дисциплина','Работяга','Атлет','Зверь','Машина','Титан','Легенда зала','Бессмертный'];
+function xpCalc(){
+  let xp = 0;
+  const doneSess = Object.values(DB.sessions).filter(s=>s && s.done);
+  xp += doneSess.length * 50;
+  xp += doneSess.reduce((a,s)=>a + Object.values(s.sets||{}).flat().filter(Boolean).length, 0) * 2;
+  xp += Object.keys(DB.weights||{}).length * 3;
+  xp += Object.keys(DB.meas||{}).length * 8;
+  xp += (DB.photos||[]).length * 12;
+  const foodDays = Object.keys(DB.food||{}).filter(k => (DB.food[k].items||[]).length >= 2).length;
+  xp += foodDays * 6;
+  xp += (DB.cycles||[]).length * 300;
+  const stk = (typeof streakCount==='function') ? streakCount() : 0;
+  xp += Math.min(stk, 30) * 15;
+  return Math.round(xp);
+}
+function levelInfo(){
+  const xp = xpCalc();
+  const lvl = Math.min(LVL_TITLES.length, Math.floor(Math.sqrt(xp/120)) + 1);
+  const base = 120 * Math.pow(lvl-1, 2), next = 120 * Math.pow(lvl, 2);
+  const pct = lvl >= LVL_TITLES.length ? 100 : Math.round((xp - base) / (next - base) * 100);
+  return { xp, lvl, title: LVL_TITLES[lvl-1], pct: Math.max(0, Math.min(100, pct)), next };
+}
+function levelCard(compact){
+  const L = levelInfo();
+  if (compact) return `<div class="card" style="padding:12px 16px" onclick="tab='more';moreSec='insights';render()">
+    <div class="row"><div class="grow"><b style="font-size:15px">Ур. ${L.lvl} · ${L.title}</b>
+      <div class="tiny">${L.xp.toLocaleString('ru-RU')} XP${L.lvl<LVL_TITLES.length?' · до следующего '+(L.next-L.xp).toLocaleString('ru-RU'):' · максимум'}</div></div>
+      <div style="flex:none;font-size:22px">${L.lvl>=8?'👑':L.lvl>=5?'🔥':'💪'}</div></div>
+    <div class="bar" style="margin-top:8px"><i style="width:${L.pct}%"></i></div></div>`;
+  return '';
+}
+/* — задачи недели (детерминированные, прогресс из данных) — */
+function isoWeekKey(d){
+  const dt = new Date(d); dt.setHours(0,0,0,0);
+  dt.setDate(dt.getDate() + 3 - (dt.getDay()+6)%7);
+  const w1 = new Date(dt.getFullYear(),0,4);
+  return dt.getFullYear()+'-'+ (1 + Math.round(((dt-w1)/864e5 - 3 + (w1.getDay()+6)%7)/7));
+}
+function weekQuests(){
+  const d = today();
+  const mon = new Date(d); mon.setDate(d.getDate() - (d.getDay()+6)%7); mon.setHours(0,0,0,0);
+  const keys = []; for (let i=0;i<7;i++){ const x = new Date(mon); x.setDate(mon.getDate()+i); keys.push(key(x)); }
+  const doneSess = Object.entries(DB.sessions).filter(([id,s])=>s && s.done && keys.includes(s.done));
+  const planN = Math.min(3, (PROF.days||3));
+  const protDays = keys.filter(k => { const t = foodTotals(k); return t.p >= DB.protTarget * 0.95; }).length;
+  const weighDays = keys.filter(k => DB.weights[k] != null).length;
+  const waterDays = keys.filter(k => ((DB.water||{})[k]||0) >= waterGoal()).length;
+  const seed = parseInt(isoWeekKey(d).replace(/\D/g,''),10) || 1;
+  const pool = [
+    {t:`Закрыть ${planN} тренировки`, cur: doneSess.length, max: planN},
+    {t:'Белок в цель 4 дня', cur: protDays, max: 4},
+    {t:'Взвеситься 3 раза', cur: weighDays, max: 3},
+    {t:'Вода в норме 4 дня', cur: waterDays, max: 4},
+  ];
+  const qs = [pool[0], pool[1 + seed % 3], pool[1 + (seed+1) % 3]].filter((q,i,arr)=>arr.findIndex(x=>x.t===q.t)===i).slice(0,3);
+  return qs.map(q => ({...q, cur: Math.min(q.cur, q.max), done: q.cur >= q.max}));
+}
+function questsCard(){
+  const qs = weekQuests();
+  const allDone = qs.every(q=>q.done);
+  return `<div class="card"><h3>Задачи недели ${allDone?'· все закрыты 🎉':''}</h3>` +
+    qs.map(q => `<div class="kv" style="margin-top:8px"><span style="${q.done?'text-decoration:line-through;opacity:.6':''}">${q.done?'✅':'⬜'} ${q.t}</span><span class="tiny num">${q.cur}/${q.max}</span></div>
+      <div class="bar" style="margin-top:4px"><i class="${q.done?'good':''}" style="width:${Math.round(q.cur/q.max*100)}%"></i></div>`).join('') +
+    `</div>`;
+}
+/* — прогнозы — */
+function linTrend(pairs){ // [[dayIndex, value]] -> {k, b} per day
+  const n = pairs.length; if (n < 2) return null;
+  const sx = pairs.reduce((a,p)=>a+p[0],0), sy = pairs.reduce((a,p)=>a+p[1],0);
+  const sxx = pairs.reduce((a,p)=>a+p[0]*p[0],0), sxy = pairs.reduce((a,p)=>a+p[0]*p[1],0);
+  const den = n*sxx - sx*sx; if (!den) return null;
+  const k = (n*sxy - sx*sy)/den;
+  return {k, b:(sy - k*sx)/n};
+}
+function forecastWeight(){
+  const ks = Object.keys(DB.weights||{}).sort().slice(-30);
+  if (ks.length < 5) return null;
+  const t0 = fromKey(ks[0]).getTime();
+  const pairs = ks.map(k => [ (fromKey(k).getTime()-t0)/864e5, +DB.weights[k] ]).filter(p=>isFinite(p[1]));
+  const tr = linTrend(pairs); if (!tr) return null;
+  const perWeek = tr.k * 7;
+  const nowD = (today().getTime()-t0)/864e5;
+  const cur = tr.k*nowD + tr.b;
+  const in4w = cur + perWeek*4;
+  const tgts = PROF.targets || {};
+  const goal = Math.min(...Object.values(tgts).filter(isFinite));
+  let eta = null;
+  if (isFinite(goal) && perWeek < -0.05 && cur > goal){
+    const weeks = (cur - goal) / (-perWeek);
+    if (weeks < 200){ const d = new Date(today().getTime() + weeks*7*864e5); eta = {goal, date: d, weeks: Math.round(weeks)}; }
+  }
+  return { perWeek, in4w, cur, eta };
+}
+function forecastAnchors(){
+  const out = [];
+  for (const t of TYPES()){
+    const ei = anchorsOf()[t]; if (ei == null) continue;
+    const name = (variantOf(SESSIONS.find(s=>s.type===t)?.id ?? 0, ei) || EXDB[t][ei]).n || EXDB[t][ei].n;
+    const hist = exHistory(t, ei, 12, 0).reverse();
+    if (hist.length < 3) continue;
+    const t0 = fromKey(hist[0].date).getTime();
+    const pairs = hist.map(h => {
+      let best = 0; h.sets.forEach(x => { if (x.w!=null) best = Math.max(best, x.w*(1+x.r/30)); });
+      return [ (fromKey(h.date).getTime()-t0)/864e5, best ];
+    }).filter(p=>p[1]>0);
+    if (pairs.length < 3) continue;
+    const tr = linTrend(pairs); if (!tr || tr.k <= 0.001) continue;
+    const nowD = (today().getTime()-t0)/864e5;
+    const cur = tr.k*nowD + tr.b;
+    const mile = Math.ceil((cur+1)/10)*10;
+    const days = (mile - cur)/tr.k;
+    if (days < 0 || days > 400) continue;
+    out.push({ name, cur: Math.round(cur), mile, date: new Date(today().getTime()+days*864e5) });
+  }
+  return out.slice(0,3);
+}
+function fmtMonth(d){ return d.toLocaleDateString('ru-RU', {day:'numeric', month:'long'}); }
+function forecastCard(){
+  const fw = forecastWeight();
+  const fa = forecastAnchors();
+  if (!fw && !fa.length) return '';
+  let h = `<div class="card"><h3>Прогнозы</h3><div class="tiny" style="margin:2px 0 6px">Математика по твоим данным: линейный тренд. Не приговор, а ориентир.</div>`;
+  if (fw){
+    const dir = fw.perWeek < -0.05 ? '↓' : fw.perWeek > 0.05 ? '↑' : '→';
+    h += `<div class="kv"><span>Вес: тренд</span><span><b>${dir} ${Math.abs(fw.perWeek).toFixed(2)}</b> кг/нед</span></div>
+      <div class="kv"><span>Через 4 недели</span><span>≈ <b>${fw.in4w.toFixed(1)}</b> кг</span></div>`;
+    if (fw.eta) h += `<div class="kv"><span>Цель ${fw.eta.goal.toFixed(1)} кг</span><span>≈ <b>${fmtMonth(fw.eta.date)}</b> (${fw.eta.weeks} нед)</span></div>`;
+    else if (fw.perWeek > -0.05 && isFinite(Math.min(...Object.values(PROF.targets||{}).filter(isFinite))))
+      h += `<div class="tiny" style="margin-top:4px">Тренд стоит на месте — при текущем питании прогноз до цели не строится. Держи дефицит несколько дней подряд, и дата появится.</div>`;
+  }
+  if (fa.length){
+    h += `<div class="wlab" style="margin-top:10px">Сила (расчётный 1ПМ)</div>` +
+      fa.map(a => `<div class="kv"><span>${esc(a.name.length>26?a.name.slice(0,25)+'…':a.name)}</span><span>${a.cur} → <b>${a.mile} кг</b> ≈ ${fmtMonth(a.date)}</span></div>`).join('');
+  }
+  h += `</div>`;
+  return h;
+}
+/* — дайджест: курируемая лента (обновляется с релизами) — */
+const DIGEST = [
+ {d:'22.08', t:'Креатин работает у всех — и у новичков, и у опытных', s:'Свежая мета-2025/26 по дозе-эффекту: 3–5 г моногидрата в день дают прирост силы и сухой массы независимо от стажа. Загрузка не обязательна, циклировать не нужно.', src:'JISSN, мета-анализ', url:'https://pmc.ncbi.nlm.nih.gov/articles/PMC12777911/'},
+ {d:'22.08', t:'До отказа — не обязательно', s:'Обзоры показывают: подходы с 1–3 повторами в запасе растят мышцы так же, как отказные, но с меньшей усталостью и риском. Отказ — инструмент для изоляции и последних подходов, не стиль жизни. Наша программа так и построена.', src:'обзор FPA', url:'https://fitness-pro.ru/biblioteka/stoit-li-trenirovatsya-do-otkaza-myshts-i-silovykh-vozmozhnostey-obzor-issledovaniy/'},
+ {d:'22.08', t:'Белок: 1,6–2,2 г на кг — и распределение имеет значение', s:'Позиция ISSN подтверждается: для роста мышц на дефиците держи белок ближе к 2 г/кг и раскладывай на 3–5 приёмов по 25–45 г. Наши цели по приёмам это уже считают.', src:'ISSN position stand', url:'https://jissn.biomedcentral.com/articles/10.1186/s12970-017-0177-8'},
+ {d:'22.08', t:'Силовые улучшают сон — а сон растит силу', s:'Мета-анализ 2025: тренировки с отягощениями — лучший вид активности для качества сна у людей с бессонницей. Обратное тоже верно: меньше 7 часов сна — минус к восстановлению и прогрессу.', src:'обзор исследований', url:'https://www.techinsider.ru/news/news-1742541-uchenye-vyyasnili-kakoi-vid-uprajnenii-luchshe-vsego-pomogaet-pri-problemah-so-snom/'},
+ {d:'22.08', t:'Группа 2 раза в неделю ≥ 1 раза', s:'При равном недельном объёме частота 2+ раза на группу даёт равный или лучший рост, чем один большой день. Поэтому фулбоди/PPL с ротацией бьют «понедельник — грудь».', src:'Schoenfeld et al.', url:'https://pubmed.ncbi.nlm.nih.gov/27102172/'},
+ {d:'22.08', t:'Тренды-2026: база побеждает гаджеты', s:'Из обзоров трендов года: рост популярности силовых у всех возрастов и «умных» EMS/нейро-штук. Наука пока на стороне скучного: прогрессия нагрузок, сон, белок. Гаджеты — приправа, не блюдо.', src:'обзор трендов', url:'https://www.mentoday.ru/fitness/theory/kak-izmenilis-silovye-trenirovki-v-2026-godu-5-principov-kotorye-vajno-znat/'},
+ {d:'22.08', t:'Кардио не «съедает» мышцы — если не мешает силовой', s:'Интерференция реальна только при большом объёме кардио впритык к силовой. 2–3 лёгких кардио по 20–40 мин в другие дни (или после железа) улучшают восстановление и дефицит.', src:'мета-обзор', url:'https://pubmed.ncbi.nlm.nih.gov/34965313/'},
+ {d:'22.08', t:'Полная амплитуда и растяжение — недооценённый стимул', s:'Работа в растянутой позиции (глубокие приседы, полная амплитуда в жимах и тягах) даёт больше гипертрофии, чем частичные повторы в укороченной. Проверь глубину, прежде чем добавлять вес.', src:'lengthened partials, обзоры 2024–2026', url:'https://pubmed.ncbi.nlm.nih.gov/36662126/'},
+];
+let digestOpen = false;
+function digestCard(){
+  const items = digestOpen ? DIGEST : DIGEST.slice(0,3);
+  return `<div class="card"><h3>Дайджест · проверенные источники</h3>
+    <div class="tiny" style="margin:2px 0 4px">Выпуск от 22.08.2026 · обновляю с каждым апдейтом приложения. Только исследования и позиции научных организаций — без инфоцыганства.</div>` +
+    items.map(x => `<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border2)">
+      <b style="font-size:14px">${x.t}</b>
+      <div class="small" style="margin-top:3px">${x.s}</div>
+      <a class="tiny" href="${x.url}" target="_blank" rel="noopener" style="display:inline-block;margin-top:4px">${x.src} ↗</a></div>`).join('') +
+    `<button class="btn ghost full sm" style="margin-top:10px" onclick="digestOpen=!digestOpen;render()">${digestOpen?'Свернуть':'Показать все ('+DIGEST.length+')'}</button></div>`;
+}
 /* ============ 11б. БАЗА УПРАЖНЕНИЙ (873, Free Exercise DB) ============ */
 const ENC_IMG = 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/';
 const MUSRU = {chest:'Грудь',lats:'Широчайшие',traps:'Трапеции',delts:'Дельты',biceps:'Бицепс',triceps:'Трицепс',forearm:'Предплечья',abs:'Пресс',obliques:'Косые',quad:'Квадрицепс',ham:'Бицепс бедра',glute:'Ягодицы',adductor:'Приводящие',calf:'Икры',erectors:'Разгибатели спины'};
@@ -5223,8 +5385,9 @@ function vMore(){
       <button class="${DB.theme==='auto'?'on':''}" style="min-height:36px;padding:0 10px;font-size:12.5px" onclick="setTheme('auto')">Авто</button></div></div>`;
   if (moreSec==='insights'){
     const ins = insights();
+    h += questsCard() + forecastCard();
     h += ins.length ? ins.map(insightHTML).join('') : `<div class="card small">Пока нечего советовать — записывай вес, еду и тренировки.</div>`;
-    h += bodyMapWeekCard() + weekVolumeCard() + monthReportCard() + achCard();
+    h += bodyMapWeekCard() + weekVolumeCard() + monthReportCard() + achCard() + digestCard();
     if (DB.kcalLog && DB.kcalLog.length){
       h += `<div class="card"><h3>История корректировок</h3>` +
         DB.kcalLog.map(x=>`<div class="kv"><span>${fmtD(fromKey(x.d))} · ${esc(x.reason)}</span><span class="${x.delta<0?'c-warn':'c-good'}">${x.delta>0?'+':''}${x.delta}</span></div>`).join('') +
@@ -5311,7 +5474,7 @@ function vMore(){
       <div class="kv"><span>${PROF.place==='home' ? 'Дом · '+(['db','band','bar'].filter(k=>PROF.equip&&PROF.equip[k]).map(k=>({db:'гантели',band:'резинка',bar:'турник'})[k]).join(', ')||'вес тела') : 'Зал'} · ${PROF.split==='fb'?'Фулбади':'PPL'} · Старт ${PROF.startWeight} кг → ~${Math.round(TARGETS[WEEKS()])} кг к ${fmtD(PROG_END)} (${WEEKS()} нед.)</span></div>
       <button class="btn sec full" style="margin-top:10px" onclick="adjustDlg()">Настройка: уровень · травмы · разнообразие</button>
       <button class="btn sec full" style="margin-top:8px" onclick="if(confirm('Пересоздать программу заново через анкету? Вес, еда и шаги сохранятся, а журнал тренировок и замены очистятся.')){DB.profile=null;DB.sessions={};DB.swaps={};DB.skips={};DB.dateOv={};save();location.reload();}">Пересоздать программу (анкета)</button></div>`;
-    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 4.5 (питание 2.0: каталог по категориям вместо плиток, «повторить вчерашнее», график недели) · собрано для Егора и друзей · 22.08.2026. Фото упражнений — Free Exercise DB (public domain).</div>`;
+    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 4.6 (уровни и задачи недели, прогнозы веса и силы, дайджест науки) · собрано для Егора и друзей · 22.08.2026. Фото упражнений — Free Exercise DB (public domain).</div>`;
   }
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }

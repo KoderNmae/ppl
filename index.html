@@ -1660,7 +1660,8 @@ function vHome(){
   }
   h += `</div>`;
   // тренировка
-  h += `<div class="card"><h3>Тренировка</h3>`;
+  const stk = streakCount();
+  h += `<div class="card"><h3>Тренировка</h3>${stk>=2?`<div class="tiny" style="margin:-2px 0 8px">🔥 Серия: ${stk} тренировок подряд — не рви цепочку</div>`:''}`;
   if (ns){
     const nd = sessDate(ns);
     const overdue = nd < d, todayIs = key(nd) === k;
@@ -2259,6 +2260,151 @@ function exChart(vals, dates, bw){
     <text x="${W-p}" y="${H-3}" font-size="9" text-anchor="end" fill="#7a9aa0">${fmtD(fromKey(dates[dates.length-1]))}</text>
   </svg><div class="tiny" style="text-align:center;margin-top:2px">${bw?'макс повторы за подход':'лучший вес подхода'} по тренировкам</div></div>`;
 }
+/* --- серия, объём, отчёт, замеры, CSV --- */
+function streakCount(){
+  const seq = SESSIONS.filter(s => (DB.sessions[s.id] && DB.sessions[s.id].done) || DB.skips[s.id]);
+  let n = 0;
+  for (let i = seq.length-1; i >= 0; i--){
+    const st = DB.sessions[seq[i].id];
+    if (st && st.done) n++; else break;
+  }
+  return n;
+}
+function weekVolumeCard(){
+  const now = today(), from = new Date(now); from.setDate(from.getDate()-6);
+  const vol = {};
+  for (const s of SESSIONS){
+    const st = DB.sessions[s.id];
+    if (!st || !st.done) continue;
+    const dd = fromKey(st.done);
+    if (dd < from || dd > now) continue;
+    for (const ei in st.sets){
+      const n = (st.sets[ei]||[]).filter(Boolean).length;
+      if (!n) continue;
+      const g = (ALTS[s.type] && ALTS[s.type][ei] && ALTS[s.type][ei].m) || 'Другое';
+      vol[g] = (vol[g]||0) + n;
+    }
+  }
+  const entries = Object.entries(vol).sort((a,b)=>b[1]-a[1]);
+  if (!entries.length) return '';
+  const mx = Math.max(...entries.map(e=>e[1]));
+  return `<div class="card"><h3>Объём за 7 дней</h3>` +
+    entries.map(([g,n])=>`<div class="kv" style="margin-bottom:2px"><span>${esc(g)}</span><span><b>${n}</b> подх.</span></div>
+      <div class="bar"><i class="${n>=10?'good':''}" style="width:${Math.max(6,Math.round(n/mx*100))}%"></i></div>`).join('') +
+    `<div class="tiny" style="margin-top:8px">Ориентир для роста мышц: 10–20 рабочих подходов на группу в неделю.</div></div>`;
+}
+function monthReportCard(){
+  const now = today(), from = new Date(now); from.setDate(from.getDate()-29);
+  let trains = 0, sets = 0, ton = 0;
+  const exTon = {};
+  for (const s of SESSIONS){
+    const st = DB.sessions[s.id];
+    if (!st || !st.done) continue;
+    const dd = fromKey(st.done);
+    if (dd < from || dd > now) continue;
+    trains++;
+    for (const ei in st.sets){
+      const arr = (st.sets[ei]||[]).filter(Boolean);
+      sets += arr.length;
+      const t = arr.reduce((a,x)=>a+(x.w||0)*x.r,0);
+      ton += t;
+      if (t > 0){
+        let nm = ''; try { nm = variantOf(s.id, +ei).n; } catch(e){}
+        if (nm) exTon[nm] = (exTon[nm]||0) + t;
+      }
+    }
+  }
+  if (!trains) return '';
+  const wk = Object.keys(DB.weights).filter(k=>{const d=fromKey(k);return d>=from&&d<=now&&DB.weights[k]!=null&&DB.weights[k]!=='';}).sort();
+  let dW = null;
+  if (wk.length >= 2) dW = (+DB.weights[wk[wk.length-1]]) - (+DB.weights[wk[0]]);
+  const top = Object.entries(exTon).sort((a,b)=>b[1]-a[1])[0];
+  return `<div class="card"><h3>Итоги 30 дней</h3>
+    <div class="kv"><span>Тренировок</span><b>${trains}</b></div>
+    <div class="kv"><span>Подходов</span><b>${sets}</b></div>
+    <div class="kv"><span>Тоннаж</span><b>${Math.round(ton).toLocaleString('ru-RU')} кг</b></div>
+    ${dW!=null?`<div class="kv"><span>Вес тела за период</span><b class="${dW<0?'c-good':'c-warn'}">${dW>0?'+':''}${dW.toFixed(1)} кг</b></div>`:''}
+    ${top?`<div class="kv"><span>Больше всего тоннажа</span><b>${esc(top[0])}</b></div>`:''}</div>`;
+}
+function measCard(){
+  DB.meas = DB.meas || {};
+  const keys = Object.keys(DB.meas).sort();
+  const F = [['waist','Талия'],['chest','Грудь'],['hip','Бедро'],['arm','Бицепс']];
+  let rows;
+  const last5 = keys.slice(-5).reverse();
+  if (last5.length){
+    rows = `<table><tr><th>Дата</th>${F.map(f=>`<th class="num">${f[1]}</th>`).join('')}</tr>` +
+      last5.map(k=>{
+        const m = DB.meas[k], pi = keys.indexOf(k)-1, pm = pi>=0 ? DB.meas[keys[pi]] : null;
+        return `<tr><td>${fmtD(fromKey(k))}</td>` + F.map(([id])=>{
+          const v = m[id];
+          const d = (pm && v!=null && pm[id]!=null) ? Math.round((v-pm[id])*10)/10 : null;
+          return `<td class="num">${v!=null?v:'—'}${d?` <span class="tiny ${d<0?'c-good':'c-mut'}">${d>0?'+':''}${d}</span>`:''}</td>`;
+        }).join('') + `</tr>`;
+      }).join('') + `</table>`;
+  } else {
+    rows = `<div class="small">Раз в 1–2 недели, утром: талия — на уровне пупка, бицепс — в напряжении, лента параллельно полу. Замеры покажут прогресс, даже когда весы стоят.</div>`;
+  }
+  return `<div class="card"><h3>Замеры тела, см</h3>${rows}
+    <button class="btn sec full" style="margin-top:10px" onclick="measDlg()">Записать замеры</button></div>`;
+}
+window.measDlg = function(){
+  DB.meas = DB.meas || {};
+  const keys = Object.keys(DB.meas).sort();
+  const last = keys.length ? DB.meas[keys[keys.length-1]] : {};
+  const F = [['waist','Талия'],['chest','Грудь'],['hip','Бедро (обхват)'],['arm','Бицепс']];
+  openModal(`<h2>Замеры тела</h2><div class="small">в сантиметрах · можно заполнить не всё</div>` +
+    F.map(([id,l])=>`<div class="stepper"><span class="lbl">${l}</span>
+      <button onclick="stepNum('ms-${id}',-0.5)">−</button>
+      <input id="ms-${id}" type="number" step="0.5" inputmode="decimal" value="${last[id]!=null?last[id]:''}" placeholder="—">
+      <button onclick="stepNum('ms-${id}',0.5)">+</button></div>`).join('') +
+    `<div class="row" style="gap:8px;margin-top:4px">
+      <button class="btn sec grow" onclick="closeModal()">Отмена</button>
+      <button class="btn grow" onclick="saveMeas()">Сохранить</button></div>`);
+};
+window.saveMeas = function(){
+  const m = {};
+  let any = false;
+  for (const id of ['waist','chest','hip','arm']){
+    const v = parseFloat(($('#ms-'+id)||{}).value);
+    if (isFinite(v) && v > 10 && v < 300){ m[id] = Math.round(v*10)/10; any = true; }
+  }
+  if (!any) return toast('Заполни хотя бы одно поле');
+  (DB.meas = DB.meas || {})[key(today())] = m;
+  save(); closeModal(); render(); toast('Замеры записаны');
+};
+function dlText(txt, name, mime){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([txt], {type: mime || 'text/csv;charset=utf-8'}));
+  a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 5000);
+  toast('Файл сохранён: '+name);
+}
+window.expCSVtrain = function(){
+  const rows = ['Дата;Тип;Упражнение;Подход;Вес кг;Повторы;RPE'];
+  for (const s of SESSIONS){
+    const st = DB.sessions[s.id];
+    if (!st || !st.done) continue;
+    for (const ei in st.sets){
+      let nm = 'упражнение '+ei; try { nm = variantOf(s.id, +ei).n; } catch(e){}
+      (st.sets[ei]||[]).forEach((x,si)=>{
+        if (!x) return;
+        rows.push([st.done, typeLabel(s.type), nm, si+1, x.w!=null?String(x.w).replace('.',','):'', x.r!=null?x.r:'', (st.rpe && st.rpe[ei]) || ''].join(';'));
+      });
+    }
+  }
+  if (rows.length === 1) return toast('Пока нет завершённых тренировок');
+  dlText('\ufeff'+rows.join('\n'), 'ppl-trenirovki.csv');
+};
+window.expCSVweight = function(){
+  const rows = ['Дата;Вес кг'];
+  Object.keys(DB.weights).sort().forEach(k=>{
+    if (DB.weights[k]!=null && DB.weights[k]!=='') rows.push(k+';'+String(DB.weights[k]).replace('.',','));
+  });
+  if (rows.length === 1) return toast('Пока нет записей веса');
+  dlText('\ufeff'+rows.join('\n'), 'ppl-ves.csv');
+};
 /* ============ 8. ТАЙМЕР ОТДЫХА ============ */
 let timerEnd = null, timerTick = null, timerTotal = 0;
 function startTimer(sec, label){
@@ -2339,6 +2485,7 @@ function vWeight(){
     <tr><th>Нед</th><th class="num">Средний</th><th class="num">Δ</th><th class="num">План</th><th class="num">Талия</th></tr>
     ${rows}</table>
     <div class="week-note">Δ: зелёный — идеальный темп (−0,5…−1,6) · оранжевый — медленно · красный — слишком быстро. Талию меряй по воскресеньям, тап по ячейке.</div></div>`;
+  h += measCard();
   // чек-поинты
   const anc = anchorsOf();
   h += `<div class="section-t">Якоря силы</div><div class="card">` +
@@ -4078,6 +4225,7 @@ function vMore(){
   if (moreSec==='insights'){
     const ins = insights();
     h += ins.length ? ins.map(insightHTML).join('') : `<div class="card small">Пока нечего советовать — записывай вес, еду и тренировки.</div>`;
+    h += weekVolumeCard() + monthReportCard();
     if (DB.kcalLog && DB.kcalLog.length){
       h += `<div class="card"><h3>История корректировок</h3>` +
         DB.kcalLog.map(x=>`<div class="kv"><span>${fmtD(fromKey(x.d))} · ${esc(x.reason)}</span><span class="${x.delta<0?'c-warn':'c-good'}">${x.delta>0?'+':''}${x.delta}</span></div>`).join('') +
@@ -4147,7 +4295,10 @@ function vMore(){
         <button class="btn grow" onclick="expData()">Экспорт в файл</button>
         <button class="btn sec grow" onclick="impData()">Импорт</button></div>
       <input type="file" id="imp-file" accept=".json" style="display:none">
-      <button class="btn ghost full" onclick="copyData()" style="margin-top:6px">Скопировать в буфер</button></div>`;
+      <button class="btn ghost full" onclick="copyData()" style="margin-top:6px">Скопировать в буфер</button>
+      <div class="row" style="gap:8px;margin-top:6px">
+        <button class="btn ghost grow" onclick="expCSVtrain()">CSV тренировок</button>
+        <button class="btn ghost grow" onclick="expCSVweight()">CSV веса</button></div></div>`;
     h += `<div class="card"><h3>Опасная зона</h3>
       <button class="btn danger full" onclick="if(confirm('Точно стереть все записи? Экспорт сделал?')){DB=defaultDB();save();location.reload();}">Стереть все данные</button></div>`;
     h += `<div class="card"><h3>Профиль</h3>
@@ -4155,7 +4306,7 @@ function vMore(){
       <div class="kv"><span>${PROF.place==='home' ? 'Дом · '+(['db','band','bar'].filter(k=>PROF.equip&&PROF.equip[k]).map(k=>({db:'гантели',band:'резинка',bar:'турник'})[k]).join(', ')||'вес тела') : 'Зал'} · ${PROF.split==='fb'?'Фулбади':'PPL'} · Старт ${PROF.startWeight} кг → ~${Math.round(TARGETS[WEEKS()])} кг к ${fmtD(PROG_END)} (${WEEKS()} нед.)</span></div>
       <button class="btn sec full" style="margin-top:10px" onclick="adjustDlg()">Настройка: уровень · травмы · разнообразие</button>
       <button class="btn sec full" style="margin-top:8px" onclick="if(confirm('Пересоздать программу заново через анкету? Вес, еда и шаги сохранятся, а журнал тренировок и замены очистятся.')){DB.profile=null;DB.sessions={};DB.swaps={};DB.skips={};DB.dateOv={};save();location.reload();}">Пересоздать программу (анкета)</button></div>`;
-    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 3.6 (калькулятор блинов, разминочные подходы, графики и рекорды) · собрано для Егора и друзей · 22.08.2026. Анимации техники — собственный движок, силуэт без пола и возраста.</div>`;
+    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 3.7 (объём по мышцам, серия, итоги месяца, замеры тела, экспорт CSV) · собрано для Егора и друзей · 22.08.2026. Анимации техники — собственный движок, силуэт без пола и возраста.</div>`;
   }
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }

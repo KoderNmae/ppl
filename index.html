@@ -153,6 +153,16 @@ html[data-theme=dark] .bar{background:rgba(0,0,0,.32); border-color:rgba(255,255
   transition:width .5s cubic-bezier(.2,.8,.2,1)}
 .bar i.over{background:linear-gradient(135deg,#eda100,#e07020)}
 .bar i.good{background:linear-gradient(135deg,#1baf7a,#0f8f74)}
+:root{--ringtrack:rgba(12,74,84,.09)}
+html[data-theme=dark]{--ringtrack:rgba(255,255,255,.08)}
+.ringrow{display:flex; align-items:center; gap:16px}
+.ringrow .rside{flex:1; min-width:0}
+@keyframes cfall{to{transform:translateY(108vh) rotate(720deg); opacity:.95}}
+.chip.pop{animation:chippop .5s cubic-bezier(.3,1.7,.4,1)}
+@keyframes chippop{0%{transform:scale(.55)}60%{transform:scale(1.14)}100%{transform:scale(1)}}
+.minibar{margin-top:8px}
+.minibar .kv{margin-top:0; font-size:12.5px}
+.minibar .bar{height:7px; margin-top:3px}
 .kv{display:flex; justify-content:space-between; align-items:baseline; font-size:13.5px;
   color:var(--text2); margin-top:3px; gap:10px}
 .kv b{color:var(--text); font-variant-numeric:tabular-nums}
@@ -1686,10 +1696,18 @@ function vHome(){
   const kt = DB.kcalTarget, pt = DB.protTarget;
   const nm = nextMealInfo(k), fc = dayFocus(k);
   h += `<div class="card" onclick="foodDate=key(today());tab='food';render()"><h3>Питание сегодня</h3>
-    <div class="kv"><span>Калории</span><span><b>${Math.round(ft.kcal)}</b> / ${kt}</span></div>
-    <div class="bar"><i class="${ft.kcal>kt*1.04?'over':''}" style="width:${Math.min(100,ft.kcal/kt*100)}%"></i></div>
-    <div class="kv" style="margin-top:8px"><span>Белок</span><span><b>${Math.round(ft.p)}</b> / ${pt} г</span></div>
-    <div class="bar"><i class="${ft.p>=pt*0.95?'good':''}" style="width:${Math.min(100,ft.p/pt*100)}%"></i></div>
+    <div class="ringrow">
+      ${ring(ft.kcal, kt, {size:124})}
+      <div class="rside">
+        <div class="kv"><span>Съедено</span><span><b>${Math.round(ft.kcal)}</b> / ${kt}</span></div>
+        <div class="minibar"><div class="kv"><span>Белок</span><span><b>${Math.round(ft.p)}</b> / ${pt} г</span></div>
+          <div class="bar"><i class="${ft.p>=pt*0.95?'good':''}" style="width:${Math.min(100,ft.p/pt*100)}%"></i></div></div>
+        <div class="minibar"><div class="kv"><span>Жиры</span><span>${Math.round(ft.f)} / ${fatRange()[1]} г</span></div>
+          <div class="bar"><i class="${ft.f>fatRange()[1]?'over':''}" style="width:${Math.min(100,ft.f/fatRange()[1]*100)}%"></i></div></div>
+        <div class="minibar"><div class="kv"><span>Углеводы</span><span>${Math.round(ft.c)} г</span></div>
+          <div class="bar"><i style="width:${Math.min(100,ft.c/((kt-pt*4-(fatRange()[0]+fatRange()[1])/2*9)/4)*100)}%"></i></div></div>
+      </div>
+    </div>
     ${nm?`<div class="small" style="margin-top:10px"><b>Следующий приём:</b> ${esc(nm.txt)}${(()=>{const it=(nm.m.id==='b'||nm.m.id==='l'||nm.m.id==='d')&&wmGet(k,nm.m.id); const r=it&&findRecipe(it.rid); return r?' · по меню: '+esc(r.n):'';})()}</div>`:''}
     <div class="tiny" style="margin-top:6px">${esc(fc.txt)}</div>${fastLine()}</div>`;
   // шаги
@@ -1793,7 +1811,8 @@ function vTrain(){
       <div class="sets">` +
       Array.from({length: Math.max(ex.sets, (st.sets[ex.ei]||[]).length)}, (_,si) => {
         const v = (st.sets[ex.ei]||[])[si];
-        return `<button class="chip ${v?'done':''}" onclick="logSet(${s.id},${ex.ei},${si},${ex.rest},${sg.w||0})">${v ? (v.w!=null ? v.w+'×'+v.r : v.r+' повт')+(v.fail?'⚡':'') : 'П'+(si+1)}</button>`;
+        const pop = window._lastChip && window._lastChip.ei===ex.ei && window._lastChip.si===si && (Date.now()-window._lastChip.t) < 1600;
+        return `<button class="chip ${v?'done':''}${pop?' pop':''}" onclick="logSet(${s.id},${ex.ei},${si},${ex.rest},${sg.w||0})">${v ? (v.w!=null ? v.w+'×'+v.r : v.r+' повт')+(v.fail?'⚡':'') : 'П'+(si+1)}</button>`;
       }).join('') +
       ((st.sets[ex.ei]||[]).length >= ex.sets && (st.sets[ex.ei]||[]).slice(ex.sets).length < 2
         ? `<button class="chip add" onclick="logSet(${s.id},${ex.ei},${(st.sets[ex.ei]||[]).length},${ex.rest},${sg.w||0})">+</button>` : '') +
@@ -1808,7 +1827,8 @@ function vTrain(){
     <input type="text" id="sess-note" value="${esc(st.note||'')}" placeholder="самочувствие, сон, что болело…"
       onchange="DB.sessions[${s.id}].note=this.value;save()"></div>`;
   h += st.done
-    ? `<div class="insight good"><b>Выполнена ${fmtD(fromKey(st.done))}</b><p>Можно исправить любой подход — просто тыкни в него.</p></div>`
+    ? `<div class="insight good"><b>Выполнена ${fmtD(fromKey(st.done))}</b><p>Можно исправить любой подход — просто тыкни в него.</p>
+      <button class="btn sm" style="margin-top:8px" onclick="shareWorkoutCard(${s.id})">📸 Карточка для сторис</button></div>`
     : `<button class="btn full" onclick="finishSession(${s.id})">Завершить тренировку</button>`;
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }
@@ -2161,6 +2181,7 @@ window.saveSet = function(sid, ei, si, rest){
   if (!isFinite(r) || r<1 || r>99) return toast('Проверь повторы');
   const st = DB.sessions[sid];
   if (!st.sets[ei]) st.sets[ei] = [];
+  window._lastChip = {ei, si, t: Date.now()};
   const failFl = $('#set-fail') && $('#set-fail').checked;
   st.sets[ei][si] = wEl ? {w:r1(w), r} : {w:null, r};
   if (failFl) st.sets[ei][si].fail = 1;
@@ -2175,7 +2196,7 @@ window.saveSet = function(sid, ei, si, rest){
     for (const h of exHistory(s.type, ei, 999, v2.idx))
       for (const x of h.sets) if (x.w!=null) best = Math.max(best, x.w*(1+x.r/30));
     (st.sets[ei]||[]).forEach((x,idx)=>{ if(x && idx!==si && x.w!=null) best = Math.max(best, x.w*(1+x.r/30)); });
-    if (best > 0 && e1 > best + 1e-9) setTimeout(()=>toast('🎉 Личный рекорд: '+w+' кг × '+r), 700);
+    if (best > 0 && e1 > best + 1e-9) setTimeout(()=>{ toast('🎉 Личный рекорд: '+w+' кг × '+r); confetti(); }, 700);
   }
   achCheck();
   const nDone = st.sets[ei].filter(Boolean).length;
@@ -2616,7 +2637,7 @@ function achCheck(){
     DB.achSeen = DB.achSeen || {};
     const fresh = [];
     for (const a of ACH) if (!DB.achSeen[a.id] && a.f(s)){ DB.achSeen[a.id] = key(today()); fresh.push(a); }
-    if (fresh.length){ save(); setTimeout(()=>toast('🏅 Достижение: '+fresh.map(a=>a.e+' '+a.n).join(' · ')), 900); }
+    if (fresh.length){ save(); setTimeout(()=>{ toast('🏅 Достижение: '+fresh.map(a=>a.e+' '+a.n).join(' · ')); confetti(); }, 900); }
   } catch(e){}
 }
 function achCard(){
@@ -2784,6 +2805,165 @@ window.newCycleGo = function(){
   trainSelected = null; tab = 'home';
   closeModal(); render();
   toast('Новый цикл: '+weeks+' недель, старт в понедельник 🚀');
+};
+/* --- кольца, конфетти, карта недели, восстановление, шеринг-карточка --- */
+let _ringN = 0;
+function ring(val, goal, o){
+  o = o || {};
+  const size = o.size || 128, sw = o.sw || 11;
+  const r = (size - sw) / 2, c = size / 2;
+  const L = 2 * Math.PI * r;
+  const p = goal > 0 ? Math.min(1, Math.max(0, val / goal)) : 0;
+  const over = goal > 0 && val > goal * 1.04;
+  const id = 'rg' + (++_ringN);
+  const center = o.center != null ? o.center : Math.abs(Math.round(goal - val));
+  const sub = o.sub || (over ? 'перебор' : 'осталось');
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="display:block;flex:none">
+    <defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="${over ? '#eda100' : '#0aa2b4'}"/>
+      <stop offset="1" stop-color="${over ? '#e07020' : '#14bd8e'}"/></linearGradient></defs>
+    <circle cx="${c}" cy="${c}" r="${r}" fill="none" stroke="var(--ringtrack)" stroke-width="${sw}"/>
+    <circle cx="${c}" cy="${c}" r="${r}" fill="none" stroke="url(#${id})" stroke-width="${sw}" stroke-linecap="round"
+      stroke-dasharray="${L.toFixed(1)}" stroke-dashoffset="${(L * (1 - p)).toFixed(1)}" transform="rotate(-90 ${c} ${c})"
+      style="transition:stroke-dashoffset .8s cubic-bezier(.2,.8,.2,1)"/>
+    <text x="${c}" y="${c - 2}" text-anchor="middle" font-size="${Math.round(size * .22)}" font-weight="800" fill="var(--text)" style="font-variant-numeric:tabular-nums">${center}</text>
+    <text x="${c}" y="${c + size * .13}" text-anchor="middle" font-size="${Math.round(size * .085)}" font-weight="700" fill="var(--muted)">${sub}</text>
+  </svg>`;
+}
+function confetti(){
+  const colors = ['#0aa2b4','#14bd8e','#f0b13d','#e97e45','#4f96e8'];
+  const h = document.createElement('div');
+  h.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:9999;overflow:hidden';
+  for (let i = 0; i < 28; i++){
+    const p = document.createElement('i');
+    const sz = 6 + Math.random() * 7;
+    p.style.cssText = `position:absolute;top:-14px;left:${(Math.random()*100).toFixed(1)}%;width:${sz.toFixed(0)}px;height:${(sz*0.62).toFixed(0)}px;background:${colors[i % colors.length]};border-radius:2px;transform:rotate(${(Math.random()*360)|0}deg);animation:cfall ${(1+Math.random()*0.9).toFixed(2)}s ${(Math.random()*0.35).toFixed(2)}s cubic-bezier(.2,.6,.4,1) forwards;opacity:0`;
+    h.appendChild(p);
+  }
+  document.body.appendChild(h);
+  setTimeout(() => h.remove(), 2800);
+}
+function weekMuscleData(){
+  const now = today(), from = new Date(now); from.setDate(from.getDate() - 6);
+  const vol = {}, lastT = {};
+  for (const s of SESSIONS){
+    const st = DB.sessions[s.id];
+    if (!st || !st.done) continue;
+    const dd = fromKey(st.done);
+    if (dd > now) continue;
+    const counted = {};
+    for (const ei in (st.sets || {})){
+      const n = (st.sets[ei] || []).filter(Boolean).length;
+      if (!n) continue;
+      let nm; try { nm = variantOf(s.id, +ei).n; } catch(e){ continue; }
+      const A = animFor(nm);
+      if (!A || !A.mus) continue;
+      const tags = A.mus.flatMap(t => MZ_ALIAS[t] || [t]);
+      for (const tg of tags){
+        if (dd >= from) vol[tg] = (vol[tg] || 0) + n;
+        if (!lastT[tg] || st.done > lastT[tg]) lastT[tg] = st.done;
+      }
+    }
+  }
+  return {vol, lastT};
+}
+function bodyMapWeekCard(){
+  const {vol, lastT} = weekMuscleData();
+  const anyVol = Object.keys(vol).length;
+  const op = n => n >= 10 ? 1 : n >= 5 ? .68 : n >= 1 ? .4 : 0;
+  const side = nm => {
+    let z = '';
+    for (const id in MZONES[nm]){
+      const o = op(vol[id] || 0);
+      z += `<path d="${MZONES[nm][id]}" class="mz${o ? ' on' : ''}"${o && o < 1 ? ` style="opacity:${o}"` : ''}/>`;
+    }
+    return `<div class="mm-side"><svg viewBox="0 0 90 196">${MBODY}${z}</svg><div class="tiny" style="text-align:center;margin-top:2px">${nm === 'front' ? 'спереди' : 'сзади'}</div></div>`;
+  };
+  let h = `<div class="card"><h3>Карта недели</h3>
+    <div class="mm-wrap">${side('front')}${side('back')}</div>
+    <div class="tiny" style="text-align:center;margin-top:6px">насыщенность = подходы за 7 дней: <span style="opacity:.4">1–4</span> · <span style="opacity:.7">5–9</span> · 10+</div>`;
+  if (!anyVol) h += `<div class="small" style="margin-top:8px">Пока пусто — завершай тренировки, и карта раскрасится.</div>`;
+  // восстановление
+  const legTags = {quad:1, ham:1, glute:1, calf:1, erectors:1};
+  const rows = [];
+  const nowK = key(today());
+  for (const tg in lastT){
+    const days = Math.round((fromKey(nowK) - fromKey(lastT[tg])) / 864e5);
+    if (days > 3) continue;
+    const need = legTags[tg] ? 2 : 1.5;
+    const ready = days >= need;
+    const pct = Math.min(100, Math.round(days / need * 100));
+    rows.push({tg, days, ready, pct});
+  }
+  if (rows.length){
+    rows.sort((a,b) => a.pct - b.pct);
+    h += `<div class="section-t" style="margin:14px 0 4px">Восстановление</div>` +
+      rows.slice(0, 6).map(r => `<div class="minibar"><div class="kv"><span>${MUS_RU[r.tg] || r.tg}</span><span class="${r.ready ? 'c-good' : 'c-mut'}">${r.ready ? 'готова ✓' : (r.days === 0 ? 'тренирована сегодня' : 'восстанавливается')}</span></div>
+        <div class="bar"><i class="${r.ready ? 'good' : ''}" style="width:${Math.max(8, r.pct)}%"></i></div></div>`).join('') +
+      `<div class="tiny" style="margin-top:8px">Мелкие группы ~36 ч, ноги и спина ~48 ч. Остальные мышцы отдохнули и готовы.</div>`;
+  }
+  return h + `</div>`;
+}
+window.shareWorkoutCard = function(sid){
+  const s = SESSIONS[sid], st = DB.sessions[sid];
+  if (!st) return;
+  const sets = Object.values(st.sets || {}).flat().filter(Boolean);
+  const ton = sets.reduce((a, x) => a + (x.w || 0) * x.r, 0);
+  let top = null;
+  for (const x of sets) if (x.w != null && (!top || x.w * (1 + x.r / 30) > top.w * (1 + top.r / 30))) top = x;
+  const stk = streakCount();
+  const c = document.createElement('canvas'); c.width = 1080; c.height = 1350;
+  const g = c.getContext('2d');
+  const bg = g.createLinearGradient(0, 0, 1080, 1350);
+  bg.addColorStop(0, '#0aa2b4'); bg.addColorStop(1, '#12ab84');
+  g.fillStyle = bg; g.fillRect(0, 0, 1080, 1350);
+  g.fillStyle = 'rgba(255,255,255,.07)';
+  g.beginPath(); g.arc(960, 130, 330, 0, 7); g.fill();
+  g.beginPath(); g.arc(60, 1270, 280, 0, 7); g.fill();
+  g.fillStyle = 'rgba(255,255,255,.13)';
+  g.beginPath(); g.arc(890, 1150, 190, 0, 7); g.fill();
+  const F = n => `${n}px Manrope,system-ui,sans-serif`;
+  if (!g.roundRect) g.roundRect = function(x, y, w, h){ this.rect(x, y, w, h); };
+  // логотип-штанга
+  g.fillStyle = '#fff';
+  g.beginPath(); g.roundRect(72, 84, 210, 16, 8); g.fill();
+  g.beginPath(); g.roundRect(96, 58, 26, 68, 8); g.fill();
+  g.beginPath(); g.roundRect(232, 58, 26, 68, 8); g.fill();
+  g.font = '800 ' + F(56); g.fillText('PPL', 306, 128);
+  g.font = '600 ' + F(38); g.fillStyle = 'rgba(255,255,255,.85)';
+  g.fillText(fmtLong(fromKey(st.done || key(today()))), 74, 236);
+  g.fillStyle = '#fff'; g.font = '800 ' + F(200);
+  g.fillText(typeLabel(s.type).toUpperCase().slice(0, 8), 62, 460);
+  g.font = '700 ' + F(44); g.fillStyle = 'rgba(255,255,255,.9)';
+  g.fillText('неделя ' + s.w + ' · тренировка выполнена', 74, 540);
+  const rows = [
+    [String(sets.length), 'подходов'],
+    [Math.round(ton).toLocaleString('ru-RU'), 'кг тоннаж'],
+  ];
+  if (top && top.w != null) rows.push([top.w + '×' + top.r, 'топ-подход']);
+  if (stk >= 2) rows.push(['🔥 ' + stk, 'подряд']);
+  let y = 700;
+  for (const [v, l] of rows){
+    g.fillStyle = '#fff'; g.font = '800 ' + F(104);
+    g.fillText(v, 74, y);
+    g.fillStyle = 'rgba(255,255,255,.8)'; g.font = '600 ' + F(42);
+    g.fillText(l, 74, y + 52);
+    y += 176;
+  }
+  g.fillStyle = 'rgba(255,255,255,.75)'; g.font = '700 ' + F(36);
+  g.fillText('kodernmae.github.io/ppl', 74, 1290);
+  c.toBlob(b => {
+    if (!b) return toast('Не получилось собрать карточку');
+    const f = new File([b], 'ppl-workout.png', {type: 'image/png'});
+    if (navigator.canShare && navigator.canShare({files: [f]})){
+      navigator.share({files: [f], title: 'Тренировка'}).catch(() => {});
+    } else {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(b); a.download = 'ppl-workout.png';
+      document.body.appendChild(a); a.click(); a.remove();
+      toast('Карточка сохранена — можно постить');
+    }
+  }, 'image/png');
 };
 /* ============ 8. ТАЙМЕР ОТДЫХА ============ */
 let timerEnd = null, timerTick = null, timerTotal = 0;
@@ -4329,14 +4509,18 @@ function vFood(){
     <div class="grow" style="text-align:center"><b>${key(today())===k?'Сегодня':fmtLong(d)}</b>
       ${isFree?'<div class="tiny c-warn">свободный приём использован</div>':''}</div>
     <button class="btn sec sm" onclick="foodShift(1)" ${k>=key(today())?'disabled':''}>→</button></div>
-    <div class="kv" style="margin-top:10px"><span>Калории</span><span><b>${Math.round(t.kcal)}</b> / ${kt}</span></div>
-    <div class="bar"><i class="${t.kcal>kt*1.04?'over':''}" style="width:${Math.min(100,t.kcal/kt*100)}%"></i></div>
-    <div class="kv" style="margin-top:7px"><span>Белок</span><span><b>${Math.round(t.p)}</b> / ${pt} г</span></div>
-    <div class="bar"><i class="${t.p>=pt*0.95?'good':''}" style="width:${Math.min(100,t.p/pt*100)}%"></i></div>
-    <div class="kv" style="margin-top:7px"><span class="tiny">Жиры</span><span class="tiny">${Math.round(t.f)} / ${fatRange()[1]} г</span></div>
-    <div class="bar" style="height:6px"><i class="${t.f>fatRange()[1]?'over':''}" style="width:${Math.min(100,t.f/fatRange()[1]*100)}%"></i></div>
-    <div class="kv" style="margin-top:6px"><span class="tiny">Углеводы</span><span class="tiny">${Math.round(t.c)} / ${Math.round((kt-pt*4-(fatRange()[0]+fatRange()[1])/2*9)/4)} г</span></div>
-    <div class="bar" style="height:6px"><i class="${t.c>(kt-pt*4-(fatRange()[0]+fatRange()[1])/2*9)/4*1.05?'over':''}" style="width:${Math.min(100,t.c/((kt-pt*4-(fatRange()[0]+fatRange()[1])/2*9)/4)*100)}%"></i></div>
+    <div class="ringrow" style="margin-top:12px">
+      ${ring(t.kcal, kt, {size:118})}
+      <div class="rside">
+        <div class="kv"><span>Съедено</span><span><b>${Math.round(t.kcal)}</b> / ${kt}</span></div>
+        <div class="minibar"><div class="kv"><span>Белок</span><span><b>${Math.round(t.p)}</b> / ${pt} г</span></div>
+          <div class="bar"><i class="${t.p>=pt*0.95?'good':''}" style="width:${Math.min(100,t.p/pt*100)}%"></i></div></div>
+        <div class="minibar"><div class="kv"><span>Жиры</span><span>${Math.round(t.f)} / ${fatRange()[1]} г</span></div>
+          <div class="bar"><i class="${t.f>fatRange()[1]?'over':''}" style="width:${Math.min(100,t.f/fatRange()[1]*100)}%"></i></div></div>
+        <div class="minibar"><div class="kv"><span>Углеводы</span><span>${Math.round(t.c)} / ${Math.round((kt-pt*4-(fatRange()[0]+fatRange()[1])/2*9)/4)} г</span></div>
+          <div class="bar"><i class="${t.c>(kt-pt*4-(fatRange()[0]+fatRange()[1])/2*9)/4*1.05?'over':''}" style="width:${Math.min(100,t.c/((kt-pt*4-(fatRange()[0]+fatRange()[1])/2*9)/4)*100)}%"></i></div></div>
+      </div>
+    </div>
   </div>`;
   const focus = dayFocus(k);
   const fl = fastLine();
@@ -4612,7 +4796,7 @@ function vMore(){
   if (moreSec==='insights'){
     const ins = insights();
     h += ins.length ? ins.map(insightHTML).join('') : `<div class="card small">Пока нечего советовать — записывай вес, еду и тренировки.</div>`;
-    h += weekVolumeCard() + monthReportCard() + achCard();
+    h += bodyMapWeekCard() + weekVolumeCard() + monthReportCard() + achCard();
     if (DB.kcalLog && DB.kcalLog.length){
       h += `<div class="card"><h3>История корректировок</h3>` +
         DB.kcalLog.map(x=>`<div class="kv"><span>${fmtD(fromKey(x.d))} · ${esc(x.reason)}</span><span class="${x.delta<0?'c-warn':'c-good'}">${x.delta>0?'+':''}${x.delta}</span></div>`).join('') +
@@ -4698,7 +4882,7 @@ function vMore(){
       <div class="kv"><span>${PROF.place==='home' ? 'Дом · '+(['db','band','bar'].filter(k=>PROF.equip&&PROF.equip[k]).map(k=>({db:'гантели',band:'резинка',bar:'турник'})[k]).join(', ')||'вес тела') : 'Зал'} · ${PROF.split==='fb'?'Фулбади':'PPL'} · Старт ${PROF.startWeight} кг → ~${Math.round(TARGETS[WEEKS()])} кг к ${fmtD(PROG_END)} (${WEEKS()} нед.)</span></div>
       <button class="btn sec full" style="margin-top:10px" onclick="adjustDlg()">Настройка: уровень · травмы · разнообразие</button>
       <button class="btn sec full" style="margin-top:8px" onclick="if(confirm('Пересоздать программу заново через анкету? Вес, еда и шаги сохранятся, а журнал тренировок и замены очистятся.')){DB.profile=null;DB.sessions={};DB.swaps={};DB.skips={};DB.dateOv={};save();location.reload();}">Пересоздать программу (анкета)</button></div>`;
-    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 4.0 (итоги цикла с «до/после» и новый цикл с переносом весов) · собрано для Егора и друзей · 22.08.2026. Анимации техники — собственный движок, силуэт без пола и возраста.</div>`;
+    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 4.1 (кольцо калорий, карта недели с восстановлением, сторис-карточки, конфетти) · собрано для Егора и друзей · 22.08.2026. Анимации техники — собственный движок, силуэт без пола и возраста.</div>`;
   }
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }

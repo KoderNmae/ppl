@@ -1677,7 +1677,9 @@ function vHome(){
         <button class="btn sec sm" style="flex:1" onclick="event.stopPropagation();dateDlg(${ns.id})">Перенести</button>
         <button class="btn sec sm" style="flex:1" onclick="event.stopPropagation();skipDlg(${ns.id})">Пропустить</button></div>`;
   } else {
-    h += `<div class="small">Все ${SESSIONS.length} тренировок выполнены. Программа завершена — пора собирать итоги и строить следующую.</div>`;
+    h += `<div class="small">Все ${SESSIONS.length} тренировок выполнены. Программа завершена 🎉</div>
+      <button class="btn full" style="margin-top:10px" onclick="cycleReport()">📊 Итоги цикла</button>
+      <button class="btn sec full" style="margin-top:8px" onclick="newCycleDlg()">🔄 Начать новый цикл</button>`;
   }
   h += `</div>`;
   // питание
@@ -2253,8 +2255,9 @@ window.exStatsDlg = function(sid, ei){
         <div class="small">Расчётный 1ПМ (Эпли): <b>${r1(bestE)} кг</b> · ${fmtD(fromKey(pts.find(p=>p.e1===bestE).d))}</div>`;
     }
   }
+  const prevBest = (DB.cycles && DB.cycles.length) ? ((DB.cycles[DB.cycles.length-1].best||{})[v.n] || null) : null;
   openModal(`<h2>${esc(v.n)}</h2><div class="small">прогресс · тренировок в истории: ${pts.length}</div>
-    ${chart}${recs}
+    ${chart}${recs}${prevBest?`<div class="small" style="margin-top:4px">Прошлый цикл: макс <b>${prevBest} кг</b></div>`:''}
     <div class="section-t">Заметка к упражнению</div>
     <input type="text" value="${esc(DB.exNotes[noteKey]||'')}" placeholder="настройки тренажёра, хват, нюансы…"
       onchange="(DB.exNotes=DB.exNotes||{})['${noteKey}']=this.value;save()">
@@ -2652,6 +2655,135 @@ window.shareApp = function(){
   const url = 'https://kodernmae.github.io/ppl/';
   if (navigator.share) navigator.share({title:'PPL трекер', text:'Тренировки, питание и прогресс — программа настраивается под тебя', url}).catch(()=>{});
   else if (navigator.clipboard){ navigator.clipboard.writeText(url); toast('Ссылка скопирована'); }
+};
+/* --- итоги цикла и новый цикл --- */
+window.cycleReport = function(){
+  const s = achStats();
+  const lw = lastWeight();
+  const dW = lw ? lw.v - PROF.startWeight : null;
+  const anc = anchorsOf();
+  let strength = '';
+  for (const t of TYPES()){
+    const ei = anc[t];
+    const sess0 = SESSIONS.find(x=>x.type===t);
+    if (!sess0) continue;
+    let nm; try { nm = variantOf(sess0.id, ei).n; } catch(e){ continue; }
+    let first = null, bestW = 0;
+    for (const ss of SESSIONS){
+      if (ss.type !== t) continue;
+      const st = DB.sessions[ss.id];
+      if (!st || !st.done) continue;
+      const arr = (st.sets && st.sets[ei] || []).filter(x=>x && x.w!=null);
+      if (!arr.length) continue;
+      const top = Math.max(...arr.map(x=>x.w));
+      if (first === null) first = top;
+      bestW = Math.max(bestW, top);
+    }
+    if (first != null) strength += `<div class="kv"><span>${esc(nm)}</span><b>${first} → ${bestW} кг${bestW>first?` <span class="c-good">+${r1(bestW-first)}</span>`:''}</b></div>`;
+  }
+  const mk = Object.keys(DB.meas||{}).sort();
+  let measHtml = '';
+  if (mk.length >= 2){
+    const a = DB.meas[mk[0]], b = DB.meas[mk[mk.length-1]];
+    const F = [['waist','Талия'],['chest','Грудь'],['hip','Бедро'],['arm','Бицепс']];
+    measHtml = F.filter(([id])=>a[id]!=null && b[id]!=null).map(([id,l])=>{
+      const d = Math.round((b[id]-a[id])*10)/10;
+      return `<div class="kv"><span>${l}</span><b>${a[id]} → ${b[id]} см${d!==0?` <span class="${d<0?'c-good':'c-mut'}">${d>0?'+':''}${d}</span>`:''}</b></div>`;
+    }).join('');
+  }
+  const pk = Object.keys(DB.photos||{}).sort();
+  const photoHtml = pk.length >= 2 ? `<div class="row" style="gap:8px;margin-top:6px;align-items:flex-start">
+    <div class="grow" style="text-align:center;min-width:0"><img src="${DB.photos[pk[0]]}" style="width:100%;border-radius:12px"><div class="tiny" style="margin-top:3px">${fmtD(fromKey(pk[0]))}</div></div>
+    <div class="grow" style="text-align:center;min-width:0"><img src="${DB.photos[pk[pk.length-1]]}" style="width:100%;border-radius:12px"><div class="tiny" style="margin-top:3px">${fmtD(fromKey(pk[pk.length-1]))}</div></div></div>` : '';
+  DB.achSeen = DB.achSeen || {};
+  const achN = ACH.filter(a=>DB.achSeen[a.id] || a.f(s)).length;
+  openModal(`<h2>Итоги цикла</h2><div class="small">${fmtD(W1)} → ${fmtD(PROG_END)} · ${WEEKS()} недель</div>
+    <div class="section-t">Тренировки</div>
+    <div class="kv"><span>Выполнено</span><b>${s.done} из ${s.total}</b></div>
+    <div class="kv"><span>Подходов</span><b>${s.sets}</b></div>
+    <div class="kv"><span>Тоннаж</span><b>${Math.round(s.ton).toLocaleString('ru-RU')} кг</b></div>
+    <div class="kv"><span>Достижений</span><b>${achN} из ${ACH.length}</b></div>
+    ${dW!=null?`<div class="section-t">Вес</div>
+      <div class="kv"><span>${PROF.startWeight} → ${lw.v.toFixed(1)} кг</span><b class="${dW<0?'c-good':'c-warn'}">${dW>0?'+':''}${dW.toFixed(1)} кг</b></div>`:''}
+    ${strength?`<div class="section-t">Сила — рабочие веса, старт → лучший</div>${strength}`:''}
+    ${measHtml?`<div class="section-t">Замеры</div>${measHtml}`:''}
+    ${photoHtml?`<div class="section-t">До / после</div>${photoHtml}`:''}
+    <button class="btn sec full" style="margin-top:12px" onclick="shareResults()">🔗 Поделиться итогами</button>
+    <button class="btn full" style="margin-top:8px" onclick="newCycleDlg()">🔄 Начать новый цикл</button>
+    <button class="btn ghost full" style="margin-top:6px" onclick="closeModal()">Закрыть</button>`);
+};
+window.shareResults = function(){
+  const s = achStats();
+  const lw = lastWeight();
+  const dW = lw ? (lw.v - PROF.startWeight) : 0;
+  const txt = `Мой цикл в PPL трекере: ${s.done} тренировок, ${s.sets} подходов, тоннаж ${Math.round(s.ton).toLocaleString('ru-RU')} кг${dW?`, вес ${dW>0?'+':''}${dW.toFixed(1)} кг`:''} 💪`;
+  if (navigator.share) navigator.share({title:'Итоги цикла', text:txt, url:'https://kodernmae.github.io/ppl/'}).catch(()=>{});
+  else if (navigator.clipboard){ navigator.clipboard.writeText(txt); toast('Итоги скопированы'); }
+};
+window.newCycleDlg = function(){
+  openModal(`<h2>🔄 Новый цикл</h2>
+    <div class="small">Текущая программа уйдёт в архив. История веса, замеров, фото, еды и достижений сохранится. Новая программа соберётся от сегодняшнего веса, стартовые веса якорей — ~90% от лучших рабочих (правильный разгон нового цикла).</div>
+    <div class="stepper" style="margin-top:10px"><span class="lbl">Длительность, недель</span>
+      <button onclick="stepNum('nc-w',-4)">−</button><input id="nc-w" type="number" value="${PROF.weeks||12}" readonly><button onclick="stepNum('nc-w',4)">+</button></div>
+    <div class="tiny" style="margin:2px 2px 8px">8 — быстрый · 12 — классика · 16 — длинный, обе разгрузки</div>
+    <div class="row" style="gap:8px">
+      <button class="btn sec grow" onclick="closeModal()">Отмена</button>
+      <button class="btn grow" onclick="newCycleGo()">Начать</button></div>`);
+};
+window.newCycleGo = function(){
+  const weeks = Math.max(8, Math.min(16, Math.round(parseInt($('#nc-w').value)/4)*4));
+  // лучшие рабочие веса цикла по названиям
+  const best = {};
+  for (const s of SESSIONS){
+    const st = DB.sessions[s.id];
+    if (!st) continue;
+    for (const ei in (st.sets||{})){
+      let nm; try { nm = variantOf(s.id, +ei).n; } catch(e){ continue; }
+      for (const x of (st.sets[ei]||[])) if (x && x.w!=null) best[nm] = Math.max(best[nm]||0, x.w);
+    }
+  }
+  const stats = achStats();
+  const lw = lastWeight();
+  (DB.cycles = DB.cycles || []).push({
+    n: (DB.cycles||[]).length + 1,
+    w1: PROF.w1, weeks: PROF.weeks || 12, ended: key(today()),
+    trains: stats.done, sets: stats.sets, ton: Math.round(stats.ton),
+    wStart: PROF.startWeight, wEnd: lw ? lw.v : null,
+    best,
+    sessions: DB.sessions, skips: DB.skips, waist: DB.waist,
+  });
+  const p = {...PROF};
+  p.startWeight = lw ? Math.round(lw.v*10)/10 : PROF.startWeight;
+  p.weeks = weeks;
+  p.legacyWeek0 = false;
+  const d = today(); const dow = (d.getDay()+6)%7;
+  const mon = new Date(d); mon.setDate(d.getDate() + (dow===0 ? 7 : 7-dow));
+  p.w1 = key(mon);
+  const plan = calcPlan(p);
+  p.targets = plan.targets;
+  const st90 = n => best[n] ? (r25(best[n]*0.9)+' кг') : null;
+  const pick = (...ns) => { for (const n of ns){ const v = st90(n); if (v) return v; } return null; };
+  p.startsText = {
+    bench: pick('Жим штанги лёжа','Жим в Смите лёжа','Жим гантелей лёжа') || (PROF.startsText||{}).bench,
+    pull: pick('Тяга верхнего блока к груди','Тяга горизонтального блока','Подтягивания в гравитроне') || (PROF.startsText||{}).pull,
+    leg: pick('Жим ногами','Гакк-машина','Приседания со штангой') || (PROF.startsText||{}).leg,
+    thrust: pick('Ягодичный мост со штангой','Мост в Смите','Румынская тяга со штангой') || (PROF.startsText||{}).thrust,
+  };
+  if (DB.kcalTarget !== plan.kcal){
+    (DB.kcalLog = DB.kcalLog || []).push({d:key(today()), delta: plan.kcal - DB.kcalTarget, reason:'новый цикл'});
+  }
+  DB.profile = p;
+  DB.sessions = {};
+  DB.skips = {};
+  DB.waist = {};
+  DB.kcalTarget = plan.kcal;
+  DB.protTarget = plan.prot;
+  PROF = p;
+  save();
+  buildProgram();
+  trainSelected = null; tab = 'home';
+  closeModal(); render();
+  toast('Новый цикл: '+weeks+' недель, старт в понедельник 🚀');
 };
 /* ============ 8. ТАЙМЕР ОТДЫХА ============ */
 let timerEnd = null, timerTick = null, timerTotal = 0;
@@ -4502,6 +4634,9 @@ function vMore(){
       }
       if (from <= N) phRows += `<tr><td>Нед. ${from}–${N}</td><td>Новая территория · RPE 8–9, топ-сеты</td></tr>`;
     }
+    h += `<div class="card"><h3>Цикл ${DB.cycles&&DB.cycles.length?('№'+(DB.cycles.length+1)):''}</h3>
+      ${DB.cycles&&DB.cycles.length?`<div class="small" style="margin-bottom:8px">Завершено циклов: ${DB.cycles.length}. История веса, замеров и фото — сквозная.</div>`:''}
+      <button class="btn sec full" onclick="cycleReport()">📊 Итоги цикла — можно смотреть в любой момент</button></div>`;
     h += `<div class="card"><h3>Фазы (${N} недель)</h3><table class="plan-table">${phRows}</table></div>`;
     if (PROF.split === 'fb'){
       h += `<div class="card"><h3>Ротация (Пн · Ср · Пт)</h3><table>
@@ -4563,7 +4698,7 @@ function vMore(){
       <div class="kv"><span>${PROF.place==='home' ? 'Дом · '+(['db','band','bar'].filter(k=>PROF.equip&&PROF.equip[k]).map(k=>({db:'гантели',band:'резинка',bar:'турник'})[k]).join(', ')||'вес тела') : 'Зал'} · ${PROF.split==='fb'?'Фулбади':'PPL'} · Старт ${PROF.startWeight} кг → ~${Math.round(TARGETS[WEEKS()])} кг к ${fmtD(PROG_END)} (${WEEKS()} нед.)</span></div>
       <button class="btn sec full" style="margin-top:10px" onclick="adjustDlg()">Настройка: уровень · травмы · разнообразие</button>
       <button class="btn sec full" style="margin-top:8px" onclick="if(confirm('Пересоздать программу заново через анкету? Вес, еда и шаги сохранятся, а журнал тренировок и замены очистятся.')){DB.profile=null;DB.sessions={};DB.swaps={};DB.skips={};DB.dateOv={};save();location.reload();}">Пересоздать программу (анкета)</button></div>`;
-    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 3.9 (достижения, отказные подходы, установка приложения, авто-тема) · собрано для Егора и друзей · 22.08.2026. Анимации техники — собственный движок, силуэт без пола и возраста.</div>`;
+    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 4.0 (итоги цикла с «до/после» и новый цикл с переносом весов) · собрано для Егора и друзей · 22.08.2026. Анимации техники — собственный движок, силуэт без пола и возраста.</div>`;
   }
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }

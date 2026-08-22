@@ -247,7 +247,7 @@ html[data-theme=dark] .x, html[data-theme=dark] .qbtn, html[data-theme=dark] .sw
 .aplate{fill:rgba(11,147,164,.22); stroke:var(--accent); stroke-width:2.5}
 .acable{stroke:rgba(12,74,84,.55); stroke-width:2; fill:none}
 .aband{stroke:var(--bad); stroke-width:3; fill:none}
-.amusb{stroke:var(--accent2)} .amusb2{stroke:var(--accent2)} .amusfill{fill:var(--accent2)}
+.afill{fill:var(--fig); stroke:none} .afillm{fill:var(--accent2); stroke:none} .amusfill{fill:var(--accent2)}
 .atrace{stroke:rgba(11,147,164,.45); stroke-width:2; stroke-dasharray:4 4; fill:none}
 .atracehead{stroke:var(--accent); stroke-width:2.2; fill:none}
 html[data-theme=dark] .atrace{stroke:rgba(46,198,209,.4)}
@@ -639,6 +639,14 @@ function lerpPose2(A, B, t){
   }
   return out;
 }
+function polySeg(A, B, w1, w2, cls){
+  const dx = B[0]-A[0], dy = B[1]-A[1], L = Math.hypot(dx, dy) || 1;
+  const nx = -dy/L, ny = dx/L;
+  const P = (X, w, sgn) => `${(X[0]+nx*w*sgn).toFixed(1)} ${(X[1]+ny*w*sgn).toFixed(1)}`;
+  return `<path d="M${P(A,w1,1)}L${P(B,w2,1)}L${P(B,w2,-1)}L${P(A,w1,-1)}Z" class="${cls}"/>`
+       + `<circle cx="${A[0].toFixed(1)}" cy="${A[1].toFixed(1)}" r="${w1}" class="${cls}"/>`
+       + `<circle cx="${B[0].toFixed(1)}" cy="${B[1].toFixed(1)}" r="${w2}" class="${cls}"/>`;
+}
 function chain2(pts, w, cls){
   let d = `M${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
   for (let i = 1; i < pts.length; i++) d += `L${pts[i][0].toFixed(1)} ${pts[i][1].toFixed(1)}`;
@@ -657,6 +665,11 @@ function drawProps2(props, pose, layer, F){
     if (pr.t==='barline'){ const yEnd = pr.legs==='down' ? 176 : 18;
       h += `<line x1="${pr.x1||90}" y1="${pr.y}" x2="${pr.x2||230}" y2="${pr.y}" class="aline" stroke-width="5"/><line x1="${(pr.x1||90)+8}" y1="${pr.y}" x2="${(pr.x1||90)+8}" y2="${yEnd}" class="aline" stroke-width="4"/><line x1="${(pr.x2||230)-8}" y1="${pr.y}" x2="${(pr.x2||230)-8}" y2="${yEnd}" class="aline" stroke-width="4"/>`; }
     if (pr.t==='block') h += `<rect x="${pr.x-9}" y="${pr.y-9}" width="18" height="18" rx="3" class="aprop"/>`;
+    if (pr.t==='stack'){
+      h += `<line x1="${pr.x-9}" y1="42" x2="${pr.x-9}" y2="174" class="aline" stroke-width="3"/><line x1="${pr.x+9}" y1="42" x2="${pr.x+9}" y2="174" class="aline" stroke-width="3"/><line x1="${pr.x-13}" y1="40" x2="${pr.x+13}" y2="40" class="aline" stroke-width="4"/>`;
+      for (let i = 0; i < 5; i++) h += `<rect x="${pr.x-11}" y="${167-i*7}" width="22" height="6" rx="1.5" class="aprop"/>`;
+      h += `<circle cx="${pr.x}" cy="${pr.y}" r="4.5" class="aprop"/>`;
+    }
     if (pr.t==='seatback') h += `<rect x="${pr.x-4}" y="${pr.y-pr.h}" width="8" height="${pr.h}" rx="3" transform="rotate(${pr.rot||0} ${pr.x} ${pr.y})" class="aprop"/>`;
     if (pr.t==='backrest' && F){
       const dx = F.neck[0]-F.pelvis[0], dy = F.neck[1]-F.pelvis[1];
@@ -664,7 +677,9 @@ function drawProps2(props, pose, layer, F){
       const nx = -uy*(pr.off||13), ny = ux*(pr.off||13);
       const s1 = [F.pelvis[0]+nx-ux*(pr.ext0||14), F.pelvis[1]+ny-uy*(pr.ext0||14)];
       const s2 = [F.neck[0]+nx+ux*(pr.ext1||16), F.neck[1]+ny+uy*(pr.ext1||16)];
-      h += `<line x1="${s1[0].toFixed(1)}" y1="${s1[1].toFixed(1)}" x2="${s2[0].toFixed(1)}" y2="${s2[1].toFixed(1)}" class="aprop" stroke-width="13" stroke-linecap="round"/>`;
+      const bw = 6.5, bdx = s2[0]-s1[0], bdy = s2[1]-s1[1], bL = Math.hypot(bdx,bdy)||1;
+      const bnx = -bdy/bL*bw, bny = bdx/bL*bw;
+      h += `<path d="M${(s1[0]+bnx).toFixed(1)} ${(s1[1]+bny).toFixed(1)}L${(s2[0]+bnx).toFixed(1)} ${(s2[1]+bny).toFixed(1)}L${(s2[0]-bnx).toFixed(1)} ${(s2[1]-bny).toFixed(1)}L${(s1[0]-bnx).toFixed(1)} ${(s1[1]-bny).toFixed(1)}Z" class="aprop"/><circle cx="${s1[0].toFixed(1)}" cy="${s1[1].toFixed(1)}" r="${bw}" class="aprop"/><circle cx="${s2[0].toFixed(1)}" cy="${s2[1].toFixed(1)}" r="${bw}" class="aprop"/>`;
     }
     if (pr.t==='chair') h += `<rect x="${pr.x-22}" y="${pr.y}" width="44" height="7" rx="3" class="aprop"/><rect x="${pr.x-20}" y="${pr.y+7}" width="6" height="${176-pr.y-7}" class="aprop"/><rect x="${pr.x+14}" y="${pr.y+7}" width="6" height="${176-pr.y-7}" class="aprop"/>${pr.back===false?'':`<rect x="${pr.x-24}" y="${pr.y-40}" width="6" height="42" rx="2" class="aprop"/>`}`;
   }
@@ -748,39 +763,43 @@ function renderFrame2(anim, pose, tGlob){
   const armsDiffer = dist(F.a1.wr, F.a2.wr) > 11 || dist(F.a1.el, F.a2.el) > 11;
   const thighMus = has('quad') || has('ham') || has('adductor');
   const drawLeg = (L, far) => {
+    const k = far ? .88 : 1;
     let g = far ? '<g class="afar">' : '';
-    const wT = far ? 9.5 : 10.5, wS = far ? 8.5 : 9.5;
-    g += chain2([F.pelvis, L.kn], wT, 'abone' + (thighMus && !far ? ' amusb' : ''));
-    g += chain2([L.kn, L.an, L.toe], wS, 'abone' + (has('calf') && !far ? ' amusb' : ''));
+    g += polySeg(F.pelvis, L.kn, 8*k, 5.6*k, thighMus && !far ? 'afillm' : 'afill');
+    g += polySeg(L.kn, L.an, 5.2*k, 3.6*k, has('calf') && !far ? 'afillm' : 'afill');
+    g += polySeg(L.an, L.toe, 3.2*k, 2.6*k, 'afill');
     if (has('glute') && !far && !thighMus){
-      const gx = F.pelvis[0] + (L.kn[0]-F.pelvis[0])*0.16, gy = F.pelvis[1] + (L.kn[1]-F.pelvis[1])*0.16;
-      g += `<path d="M${F.pelvis[0].toFixed(1)} ${F.pelvis[1].toFixed(1)}L${gx.toFixed(1)} ${gy.toFixed(1)}" stroke-width="${wT}" class="amusb2" stroke-linecap="round" fill="none"/>`;
+      const gx = F.pelvis[0] + (L.kn[0]-F.pelvis[0])*0.13, gy = F.pelvis[1] + (L.kn[1]-F.pelvis[1])*0.13;
+      g += `<circle cx="${gx.toFixed(1)}" cy="${gy.toFixed(1)}" r="8" class="afillm"/>`;
     }
     if (far) g += '</g>';
     return g;
   };
   const drawArm = (A, far) => {
+    const k = far ? .88 : 1;
     let g = far ? '<g class="afar">' : '';
-    const w1 = far ? 8 : 9, w2 = far ? 7.5 : 8.5;
-    g += chain2([F.sh, A.el], w1, 'abone' + ((has('biceps')||has('triceps')) && !far ? ' amusb' : ''));
-    g += chain2([A.el, A.wr], w2, 'abone' + (has('forearm') && !far ? ' amusb' : ''));
+    g += polySeg(F.sh, A.el, 5.4*k, 4.2*k, (has('biceps')||has('triceps')) && !far ? 'afillm' : 'afill');
+    g += polySeg(A.el, A.wr, 4*k, 3*k, has('forearm') && !far ? 'afillm' : 'afill');
     if (has('delts') && !far)
-      g += `<circle cx="${F.sh[0].toFixed(1)}" cy="${F.sh[1].toFixed(1)}" r="7" class="amusfill"/>`;
+      g += `<circle cx="${F.sh[0].toFixed(1)}" cy="${F.sh[1].toFixed(1)}" r="7.5" class="afillm"/>`;
     if (far) g += '</g>';
     return g;
   };
-  const torsoSeg = (t0, t1, cls) => {
-    const P = t => [F.pelvis[0] + (F.neck[0]-F.pelvis[0])*t, F.pelvis[1] + (F.neck[1]-F.pelvis[1])*t];
-    return chain2([P(t0), P(t1)], 17, cls);
-  };
+  /* торс с формой: таз → талия → грудь → плечи */
+  const axis = t => [F.pelvis[0] + (F.neck[0]-F.pelvis[0])*t, F.pelvis[1] + (F.neck[1]-F.pelvis[1])*t];
+  const halfW = t => t < .45 ? 10.5 + (8-10.5)*(t/.45)
+                   : t < .8  ? 8 + (11.5-8)*((t-.45)/.35)
+                   : 11.5 + (10-11.5)*((t-.8)/.2);
+  const strip = (t0, t1, cls) => polySeg(axis(t0), axis(t1), halfW(t0), halfW(t1), cls);
   if (legsDiffer) h += drawLeg(F.l2, true);
   if (armsDiffer) h += drawArm(F.a2, true);
-  h += torsoSeg(0, 1, 'abone');
-  if (has('chest'))    h += torsoSeg(0.55, 0.97, 'abone amusb');
-  if (has('lats'))     h += torsoSeg(0.3, 0.8, 'abone amusb');
-  if (has('abs') || has('core')) h += torsoSeg(0.15, 0.6, 'abone amusb');
-  if (has('erectors')) h += torsoSeg(0.03, 0.45, 'abone amusb');
-  if (has('traps'))    h += torsoSeg(0.8, 1, 'abone amusb');
+  h += strip(0, .45, 'afill') + strip(.45, .8, 'afill') + strip(.8, 1, 'afill');
+  if (has('chest'))    h += strip(.55, .97, 'afillm');
+  if (has('lats'))     h += strip(.3, .8, 'afillm');
+  if (has('abs') || has('core')) h += strip(.15, .6, 'afillm');
+  if (has('erectors')) h += strip(.03, .45, 'afillm');
+  if (has('traps'))    h += strip(.8, 1, 'afillm');
+  h += polySeg(F.neck, [F.neck[0]+(F.headC[0]-F.neck[0])*.5, F.neck[1]+(F.headC[1]-F.neck[1])*.5], 4.2, 3.6, 'afill');
   h += `<circle cx="${F.headC[0].toFixed(1)}" cy="${F.headC[1].toFixed(1)}" r="${BODY.head}" class="ahead"/>`;
   h += drawLeg(F.l1, false);
   h += drawArm(F.a1, false);
@@ -872,7 +891,7 @@ donkeykick: {mus:['glute'], k1:-1, e1:-1, trace:'f1', props:[FLOOR], dur:1500,
   pins:{h1:'floor-hand'}, frames:[
   {pv:[136,138], to:-88, hd:14, h1:[95,174], h2:[91,174], f1:[118,168], f2:{a:[176,268]}, ft:250, ft2:270},
   {pv:[136,138], to:-88, hd:14, h1:[95,174], h2:[91,174], f1:[186,108], f2:{a:[176,268]}, ft:150, ft2:270}]},
-kickback: {mus:['glute'], cable:{x:52, y:160, at:'ankle'}, k1:-1, k2:1, e1:1, trace:'f1', props:[FLOOR, {t:'block', x:52, y:160, z:0}], dur:1500,
+kickback: {mus:['glute'], cable:{x:52, y:160, at:'ankle'}, k1:-1, k2:1, e1:1, trace:'f1', props:[FLOOR, {t:'stack', x:52, y:160, z:0}], dur:1500,
   pins:{f2:'floor'}, frames:[
   {pv:[158,110], to:16, f1:[148,172], ft:95, f2:[168,174], ft2:95, h1:{a:[105,55]}, h2:{a:[109,60]}},
   {pv:[158,110], to:22, f1:[112,150], ft:210, f2:[168,174], ft2:95, h1:{a:[105,55]}, h2:{a:[109,60]}}]},
@@ -908,7 +927,7 @@ reversefly: {mus:['delts','traps'], db:1, k1:1, e1:-1, e2:1, props:[FLOOR], dur:
   pins:{f1:'floor', f2:'floor'}, frames:[
   {pv:[150,112], to:56, hd:-8, f1:[160,174], f2:[144,174], h1:[188,140], h2:[182,141]},
   {pv:[150,112], to:56, hd:-8, f1:[160,174], f2:[144,174], h1:[228,102], h2:[142,80]}]},
-pushdown: {mus:['triceps'], cable:{x:236, y:26}, k1:1, e1:-1, e2:-1, trace:'h1', props:[FLOOR, {t:'block', x:236, y:26, z:0}], dur:1400,
+pushdown: {mus:['triceps'], cable:{x:236, y:26}, k1:1, e1:-1, e2:-1, trace:'h1', props:[FLOOR, {t:'stack', x:236, y:26, z:0}], dur:1400,
   pins:{f1:'floor', f2:'floor'}, frames:[
   {pv:[146,110], to:12, f1:[154,174], f2:[140,174], h1:[172,90], h2:[166,92]},
   {pv:[146,110], to:12, f1:[154,174], f2:[140,174], h1:[168,121], h2:[162,123]}]},
@@ -940,7 +959,7 @@ pushup_dec: {mus:['chest','delts'], k1:-1, k2:-1, e1:1, e2:1, trace:'pv', props:
   pins:{h1:'floor-hand', h2:'floor-hand', f1:'fix'}, frames:[
   {pv:[177,120], to:-92, hd:8, f1:[238,96], f2:[232,98], h1:[140,174], h2:[134,174]},
   {pv:[184,130], to:-88, hd:10, f1:[238,96], f2:[232,98], h1:[140,174], h2:[134,174]}]},
-pulldown: {mus:['lats','biceps'], grip:1, cable:{x:196, y:14}, k1:1, e1:-1, e2:-1, trace:'h1', props:[{t:'floor', y:176, z:0}, {t:'chair', x:146, y:146, z:0}, {t:'block', x:196, y:14, z:0}], dur:1500,
+pulldown: {mus:['lats','biceps'], grip:1, cable:{x:196, y:14}, k1:1, e1:-1, e2:-1, trace:'h1', props:[{t:'floor', y:176, z:0}, {t:'chair', x:146, y:146, z:0}, {t:'stack', x:196, y:14, z:0}], dur:1500,
   pins:{f1:'floor', f2:'floor'}, frames:[
   {pv:[150,142], to:-8, f1:[186,174], f2:[176,174], h1:[181,63], h2:[169,59]},
   {pv:[150,142], to:-14, f1:[186,174], f2:[176,174], h1:[176,103], h2:[164,99]}]},
@@ -952,7 +971,7 @@ kneeraise: {mus:['abs'], k1:1, e1:-1, e2:-1, trace:'f1', props:[{t:'barline', y:
   pins:{h1:'fix', h2:'fix'}, frames:[
   {pv:[158,120], to:-2, f1:{a:[184,196]}, f2:{a:[188,200]}, h1:[163,24], h2:[153,24]},
   {pv:[158,118], to:-8, f1:{a:[84,148]}, f2:{a:[88,152]}, h1:[163,24], h2:[153,24]}]},
-row_cable: {mus:['lats','biceps'], cable:{x:252, y:134}, k1:1, e1:-1, e2:-1, trace:'h1', props:[FLOOR, {t:'block', x:252, y:134, z:0}, {t:'box', x:112, y:141, w:36, h:35, z:0}, {t:'box', x:188, y:148, w:14, h:28, z:0}], dur:1500, frames:[
+row_cable: {mus:['lats','biceps'], cable:{x:252, y:134}, k1:1, e1:-1, e2:-1, trace:'h1', props:[FLOOR, {t:'stack', x:252, y:134, z:0}, {t:'box', x:112, y:141, w:36, h:35, z:0}, {t:'box', x:188, y:148, w:14, h:28, z:0}], dur:1500, frames:[
   {pv:[138,136], to:14, f1:[196,150], f2:[192,154], ft:60, ft2:60, h1:[192,126], h2:[188,128]},
   {pv:[138,136], to:-6, f1:[196,150], f2:[192,154], ft:60, ft2:60, h1:[164,124], h2:[160,126]}]},
 row_bent: {mus:['lats','erectors'], db:1, k1:1, e1:-1, e2:-1, trace:'h1', props:[FLOOR], dur:1500,
@@ -967,7 +986,7 @@ row_austr: {mus:['lats','biceps'], k1:1, e1:-1, e2:-1, trace:'pv', props:[FLOOR,
   pins:{h1:'fix', h2:'fix'}, frames:[
   {pv:[164,138], to:-62, hd:8, f1:[220,168], f2:[214,170], ft:118, h1:[163,78], h2:[155,78]},
   {pv:[168,130], to:-58, hd:10, f1:[220,168], f2:[214,170], ft:118, h1:[163,78], h2:[155,78]}]},
-facepull: {mus:['delts','traps'], cable:{x:250, y:58}, k1:1, e1:1, e2:1, trace:'h1', props:[FLOOR, {t:'block', x:250, y:58, z:0}], dur:1400,
+facepull: {mus:['delts','traps'], cable:{x:250, y:58}, k1:1, e1:1, e2:1, trace:'h1', props:[FLOOR, {t:'stack', x:250, y:58, z:0}], dur:1400,
   pins:{f1:'floor', f2:'floor'}, frames:[
   {pv:[144,110], to:6, f1:[152,174], f2:[138,174], h1:[197,70], h2:[193,74]},
   {pv:[144,110], to:2, f1:[152,174], f2:[138,174], h1:[168,60], h2:[162,64]}]},
@@ -986,7 +1005,7 @@ crunch_fl: {mus:['abs'], k1:1, e1:-1, props:[FLOOR], dur:1400,
   pins:{f1:'floor', f2:'floor'}, frames:[
   {pv:[152,160], to:-88, hd:16, f1:[188,174], f2:[178,174], h1:{a:[-40,140]}, h2:{a:[-36,144]}},
   {pv:[152,158], to:-60, hd:26, f1:[188,174], f2:[178,174], h1:{a:[-14,152]}, h2:{a:[-10,156]}}]},
-crunch_cab: {mus:['abs'], cable:{x:238, y:18}, e1:-1, e2:-1, trace:'h1', props:[FLOOR, {t:'block', x:238, y:18, z:0}], dur:1400,
+crunch_cab: {mus:['abs'], cable:{x:238, y:18}, e1:-1, e2:-1, trace:'h1', props:[FLOOR, {t:'stack', x:238, y:18, z:0}], dur:1400,
   pins:{}, frames:[
   {pv:[150,144], to:18, hd:12, f1:{a:[184,268]}, f2:{a:[188,272]}, ft:270, ft2:270, h1:{a:[52,238]}, h2:{a:[56,242]}},
   {pv:[150,144], to:58, hd:44, f1:{a:[184,268]}, f2:{a:[188,272]}, ft:270, ft2:270, h1:{a:[52,238]}, h2:{a:[56,242]}}]},
@@ -3895,7 +3914,7 @@ function vMore(){
       <div class="kv"><span>${PROF.place==='home' ? 'Дом · '+(['db','band','bar'].filter(k=>PROF.equip&&PROF.equip[k]).map(k=>({db:'гантели',band:'резинка',bar:'турник'})[k]).join(', ')||'вес тела') : 'Зал'} · ${PROF.split==='fb'?'Фулбади':'PPL'} · Старт ${PROF.startWeight} кг → ~${Math.round(TARGETS[WEEKS()])} кг к ${fmtD(PROG_END)} (${WEEKS()} нед.)</span></div>
       <button class="btn sec full" style="margin-top:10px" onclick="adjustDlg()">Настройка: уровень · травмы · разнообразие</button>
       <button class="btn sec full" style="margin-top:8px" onclick="if(confirm('Пересоздать программу заново через анкету? Вес, еда и шаги сохранятся, а журнал тренировок и замены очистятся.')){DB.profile=null;DB.sessions={};DB.swaps={};DB.skips={};DB.dateOv={};save();location.reload();}">Пересоздать программу (анкета)</button></div>`;
-    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 2.9.1 (мышцы окрашены в самом теле, спинки тренажёров под спиной, без двойных конечностей) · собрано для Егора и друзей · 19.08.2026. Анимации техники — собственный движок, силуэт без пола и возраста.</div>`;
+    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 3.0 (фигура с формой тела, грузовые стеки тренажёров, автообновление приложения) · собрано для Егора и друзей · 19.08.2026. Анимации техники — собственный движок, силуэт без пола и возраста.</div>`;
   }
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }
@@ -3943,7 +3962,16 @@ try{
   document.head.appendChild(l);
 }catch(e){}
 if ('serviceWorker' in navigator && location.protocol==='https:'){
-  navigator.serviceWorker.register('./sw.js').catch(()=>{});
+  navigator.serviceWorker.register('./sw.js').then(reg => {
+    try { reg.update(); } catch(e){}
+    setInterval(() => { try { reg.update(); } catch(e){} }, 60*60*1000);
+  }).catch(()=>{});
+  let reloaded = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (reloaded) return; reloaded = true;
+    toast('Обновляю до свежей версии…');
+    setTimeout(() => location.reload(), 600);
+  });
 }
 
 

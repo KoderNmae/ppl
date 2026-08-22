@@ -239,6 +239,13 @@ html[data-theme=dark] .mod{background:linear-gradient(180deg,rgba(255,255,255,.0
 html[data-theme=dark] .stepper button{background:var(--card2)}
 html[data-theme=dark] .x, html[data-theme=dark] .qbtn, html[data-theme=dark] .swapbtn{}
 .animbox{background:linear-gradient(180deg,rgba(10,162,180,.07),rgba(20,189,142,.05)); border:1px solid var(--border); border-radius:16px; margin:10px 0 4px; overflow:hidden}
+.vidbox{position:relative; margin:10px 0 0; border-radius:16px; overflow:hidden; aspect-ratio:16/9; background:#0c1517; cursor:pointer; border:1px solid var(--border)}
+.vidbox img{width:100%; height:100%; object-fit:cover; display:block; opacity:.88}
+.vidbox iframe{width:100%; height:100%; border:0; display:block}
+.vidbox.playing{cursor:default}
+.vidplay{position:absolute; inset:0; display:flex; align-items:center; justify-content:center}
+.vidplay span{width:58px; height:58px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:22px; color:#fff; background:rgba(10,162,180,.85); backdrop-filter:blur(6px); box-shadow:0 6px 24px rgba(0,0,0,.35); padding-left:5px}
+.vidcap{position:absolute; left:10px; bottom:8px; color:#fff; font-size:12px; font-weight:600; text-shadow:0 1px 6px rgba(0,0,0,.7)}
 .abone{stroke:var(--fig)} .ahead{fill:var(--fig)} .afar{opacity:.32}
 .aprop{fill:rgba(12,74,84,.20); stroke:none}
 .afloor{stroke:rgba(12,74,84,.30); stroke-width:2.5}
@@ -583,6 +590,7 @@ const GYM_ALTS = {
  ]
 };
 /* ============ ДВИЖОК ТЕХНИКИ v2: обратная кинематика от точек контакта ============ */
+/* ============ ДВИЖОК ТЕХНИКИ v2: обратная кинематика от точек контакта ============ */
 const BODY = {torso:46, sh:42.3, neck:7, head:11.5, uarm:29, farm:26, thigh:34, shin:31, foot:13};
 const FLOOR_Y = 176, ANKLE_Y = 174;
 function dirp(x, y, ang, len){
@@ -686,6 +694,7 @@ function drawProps2(props, pose, layer, F){
       h += `<path d="M${(s1[0]+bnx).toFixed(1)} ${(s1[1]+bny).toFixed(1)}L${(s2[0]+bnx).toFixed(1)} ${(s2[1]+bny).toFixed(1)}L${(s2[0]-bnx).toFixed(1)} ${(s2[1]-bny).toFixed(1)}L${(s1[0]-bnx).toFixed(1)} ${(s1[1]-bny).toFixed(1)}Z" class="aprop"/><circle cx="${s1[0].toFixed(1)}" cy="${s1[1].toFixed(1)}" r="${bw}" class="aprop"/><circle cx="${s2[0].toFixed(1)}" cy="${s2[1].toFixed(1)}" r="${bw}" class="aprop"/>`;
     }
     if (pr.t==='chair') h += `<rect x="${pr.x-22}" y="${pr.y}" width="44" height="7" rx="3" class="aprop"/><rect x="${pr.x-20}" y="${pr.y+7}" width="6" height="${176-pr.y-7}" class="aprop"/><rect x="${pr.x+14}" y="${pr.y+7}" width="6" height="${176-pr.y-7}" class="aprop"/>${pr.back===false?'':`<rect x="${pr.x-24}" y="${pr.y-40}" width="6" height="42" rx="2" class="aprop"/>`}`;
+    if (pr.t==='dipbar') h += `<rect x="${pr.x-20}" y="${pr.y-3}" width="40" height="6" rx="3" class="aprop"/><rect x="${pr.x-3}" y="${pr.y+3}" width="6" height="${176-pr.y-3}" class="aprop"/>`;
   }
   return h;
 }
@@ -695,10 +704,10 @@ function drawTools2(anim, F){
   if (anim.db){ for (const w of [wr2, wr]) h += `<g class="atool"><circle cx="${w[0].toFixed(1)}" cy="${w[1].toFixed(1)}" r="6.5"/><circle cx="${w[0].toFixed(1)}" cy="${w[1].toFixed(1)}" r="2.6" class="atool2"/></g>`; }
   if (anim.bar === 'wrist') h += `<circle cx="${wr[0].toFixed(1)}" cy="${wr[1].toFixed(1)}" r="10" class="aplate"/><circle cx="${wr[0].toFixed(1)}" cy="${wr[1].toFixed(1)}" r="2.4" class="atool2"/>`;
   if (anim.bar === 'hip') h += `<circle cx="${(F.pelvis[0]+7).toFixed(1)}" cy="${(F.pelvis[1]-5).toFixed(1)}" r="10" class="aplate"/><circle cx="${(F.pelvis[0]+7).toFixed(1)}" cy="${(F.pelvis[1]-5).toFixed(1)}" r="2.4" class="atool2"/>`;
-  if (anim.bar === 'shoulder') h += `<circle cx="${(F.sh[0]+2).toFixed(1)}" cy="${(F.sh[1]+3).toFixed(1)}" r="9" class="aplate"/>`;
+  if (anim.bar === 'shoulder') h += `<circle cx="${(F.sh[0]+2).toFixed(1)}" cy="${(F.sh[1]+3).toFixed(1)}" r="10" class="aplate"/><circle cx="${(F.sh[0]+2).toFixed(1)}" cy="${(F.sh[1]+3).toFixed(1)}" r="2.4" class="atool2"/>`;
   if (anim.cable){ const from = anim.cable.at==='ankle' ? F.l1.an : wr; h += `<path d="M${from[0].toFixed(1)} ${from[1].toFixed(1)}L${anim.cable.x} ${anim.cable.y}" class="acable"/><rect x="${anim.cable.x-8}" y="${anim.cable.y-8}" width="16" height="16" rx="3" class="aprop"/>`; }
   if (anim.band){ const from = anim.band.at==='ankle' ? F.l1.an : wr; h += `<path d="M${from[0].toFixed(1)} ${from[1].toFixed(1)} Q${((from[0]+anim.band.x)/2+6).toFixed(1)} ${((from[1]+anim.band.y)/2).toFixed(1)} ${anim.band.x} ${anim.band.y}" class="aband"/>`; }
-  if (anim.pad === 'ankle') h += `<circle cx="${F.l1.an[0].toFixed(1)}" cy="${F.l1.an[1].toFixed(1)}" r="6.5" class="aprop"/>`;
+  if (anim.pad === 'ankle') h += `<g class="atool"><circle cx="${F.l1.an[0].toFixed(1)}" cy="${F.l1.an[1].toFixed(1)}" r="7"/><circle cx="${F.l1.an[0].toFixed(1)}" cy="${F.l1.an[1].toFixed(1)}" r="2.6" class="atool2"/></g>`;
   if (anim.grip) h += `<line x1="${wr2[0].toFixed(1)}" y1="${wr2[1].toFixed(1)}" x2="${wr[0].toFixed(1)}" y2="${wr[1].toFixed(1)}" class="aprop" stroke-width="4"/>`;
   return h;
 }
@@ -830,7 +839,6 @@ function playAnim(anim, svgId){
   animRAF = requestAnimationFrame(loop);
 }
 function stopAnim(){ if (animRAF){ cancelAnimationFrame(animRAF); animRAF = null; } }
-
 /* ============ ПОЗЫ v3: эффекторы (точки контакта) + pins ============ */
 const FLOOR = {t:'floor', y:176, z:0};
 const ANIMS = {
@@ -840,20 +848,20 @@ squat: {mus:['quad','glute'], db:1, k1:1, e1:-1, trace:'pv', props:[FLOOR], dur:
   {pv:[146,138], to:34, hd:-6, f1:[162,174], f2:[140,174], h1:{a:[150,30]}, h2:{a:[154,35]}}]},
 squat_bar: {mus:['quad','glute','core'], bar:'shoulder', k1:1, e1:-1, trace:'pv', props:[FLOOR], dur:1600,
   pins:{f1:'floor', f2:'floor'}, frames:[
-  {pv:[150,110], to:5, f1:[162,174], f2:[140,174], h1:{a:[115,18]}, h2:{a:[119,22]}},
-  {pv:[146,138], to:30, hd:-6, f1:[162,174], f2:[140,174], h1:{a:[108,12]}, h2:{a:[112,16]}}]},
+  {pv:[150,110], to:5, f1:[162,174], f2:[140,174], h1:[159,74], h2:[156,76]},
+  {pv:[146,138], to:30, hd:-6, f1:[162,174], f2:[140,174], h1:[172,108], h2:[169,110]}]},
 squat_chair: {mus:['quad','glute'], k1:1, e1:1, trace:'pv', props:[FLOOR, {t:'chair', x:145, y:134, z:0}], dur:1700,
   pins:{f1:'floor', f2:'floor'}, frames:[
   {pv:[160,110], to:6, f1:[170,174], f2:[152,174], h1:{a:[120,35]}, h2:{a:[124,40]}},
   {pv:[146,132], to:30, hd:-4, f1:[170,174], f2:[152,174], h1:{a:[100,20]}, h2:{a:[104,24]}}]},
 lunge: {mus:['quad','glute'], db:1, k1:1, k2:-1, e1:-1, trace:'pv', props:[FLOOR], dur:1700,
   pins:{f1:'floor', f2:'floor'}, frames:[
-  {pv:[156,116], to:6, f1:[186,173], ft:92, f2:[118,170], ft2:118, h1:{a:[180,178]}, h2:{a:[182,180]}},
-  {pv:[158,130], to:8, f1:[186,173], ft:92, f2:[118,170], ft2:118, h1:{a:[180,178]}, h2:{a:[182,180]}}]},
+  {pv:[156,116], to:6, f1:[186,173], ft:92, f2:[118,170], ft2:118, h1:{a:[172,170]}, h2:{a:[189,187]}},
+  {pv:[158,130], to:8, f1:[186,173], ft:92, f2:[118,170], ft2:118, h1:{a:[172,170]}, h2:{a:[189,187]}}]},
 splitsquat: {mus:['quad','glute'], db:1, k1:1, k2:-1, e1:-1, trace:'pv', props:[FLOOR, {t:'box', x:66, y:134, w:44, h:42, z:0}], dur:1600,
   pins:{f1:'floor', f2:'fix'}, frames:[
-  {pv:[150,114], to:6, f1:[170,174], f2:[96,130], ft2:210, h1:{a:[180,178]}, h2:{a:[182,180]}},
-  {pv:[148,132], to:10, f1:[170,174], f2:[96,130], ft2:210, h1:{a:[180,178]}, h2:{a:[182,180]}}]},
+  {pv:[150,114], to:6, f1:[170,174], f2:[96,130], ft2:210, h1:{a:[172,170]}, h2:{a:[189,187]}},
+  {pv:[148,132], to:10, f1:[170,174], f2:[96,130], ft2:210, h1:{a:[172,170]}, h2:{a:[189,187]}}]},
 stepup: {mus:['glute','quad'], k1:1, k2:1, e1:-1, trace:'pv', props:[FLOOR, {t:'box', x:196, y:141, w:58, h:35, z:0}], dur:1900,
   pins:{f1:'fix'}, frames:[
   {pv:[146,112], to:10, f1:[212,139], f2:[140,174], h1:{a:[180,178]}},
@@ -872,7 +880,7 @@ goodmorning: {mus:['ham','erectors'], band:{x:150, y:174}, k1:1, e1:1, trace:'pv
   {pv:[144,114], to:62, hd:-12, f1:[158,174], f2:[146,174], h1:{a:[120,8]}, h2:{a:[124,12]}}]},
 calfraise: {mus:['calf'], k1:1, e1:-1, trace:'pv', props:[FLOOR, {t:'box', x:154, y:164, w:44, h:12, z:0}], dur:1300, frames:[
   {pv:[150,101], to:2, f1:[152,166], f2:[149,167], ft:95, ft2:95, h1:{a:[180,178]}},
-  {pv:[153,91], to:2, f1:[155,154], f2:[152,155], ft:128, ft2:128, h1:{a:[180,178]}}]},
+  {pv:[153,88], to:2, f1:[155,151], f2:[152,152], ft:132, ft2:132, h1:{a:[180,178]}}]},
 legpress: {mus:['quad','glute'], k1:-1, e1:-1, e2:-1, trace:'f1', props:[{t:'floor', y:176, z:0}, {t:'backrest', off:14, ext0:18, ext1:14, z:0}, {t:'box', x:98, y:144, w:54, h:32, z:0}, {t:'rail', z:0}, {t:'box', kx:'bx', x:166, y:56, w:14, h:76, z:1}], dur:1600, frames:[
   {pv:[122,136], to:-42, hd:6, f1:[162,100], f2:[161,102], ft:10, ft2:10, h1:[132,140], h2:[128,142], bx:168},
   {pv:[122,136], to:-42, hd:6, f1:[177,100], f2:[176,102], ft:10, ft2:10, h1:[132,140], h2:[128,142], bx:183}]},
@@ -895,10 +903,10 @@ donkeykick: {mus:['glute'], k1:-1, e1:-1, trace:'f1', props:[FLOOR], dur:1500,
   pins:{h1:'floor-hand'}, frames:[
   {pv:[136,138], to:-88, hd:14, h1:[95,174], h2:[91,174], f1:[118,168], f2:{a:[176,268]}, ft:250, ft2:270},
   {pv:[136,138], to:-88, hd:14, h1:[95,174], h2:[91,174], f1:[186,108], f2:{a:[176,268]}, ft:150, ft2:270}]},
-kickback: {mus:['glute'], cable:{x:52, y:160, at:'ankle'}, k1:-1, k2:1, e1:1, trace:'f1', props:[FLOOR, {t:'stack', x:52, y:160, z:0}], dur:1500,
-  pins:{f2:'floor'}, frames:[
-  {pv:[158,110], to:16, f1:[148,172], ft:95, f2:[168,174], ft2:95, h1:{a:[105,55]}, h2:{a:[109,60]}},
-  {pv:[158,110], to:22, f1:[112,150], ft:210, f2:[168,174], ft2:95, h1:{a:[105,55]}, h2:{a:[109,60]}}]},
+kickback: {mus:['glute'], cable:{x:52, y:160, at:'ankle'}, k1:-1, k2:-1, e1:-1, e2:-1, trace:'f1', props:[FLOOR, {t:'stack', x:52, y:160, z:0}], dur:1500,
+  pins:{f2:'floor', h1:'fix'}, frames:[
+  {pv:[105,114], to:-20, f1:[98,172], ft:265, f2:[112,174], ft2:268, h1:[62,108], h2:[59,112]},
+  {pv:[105,114], to:-24, f1:[150,146], ft:255, f2:[112,174], ft2:268, h1:[62,108], h2:[59,112]}]},
 benchpress: {mus:['chest','triceps'], bar:'wrist', k1:1, k2:-1, e1:1, e2:1, grip:1, trace:'h1', props:[{t:'floor', y:176, z:0}, {t:'bench', x:132, y:128, w:130, leg:40, z:0}], dur:1500,
   pins:{f1:'floor', f2:'floor'}, frames:[
   {pv:[140,122], to:-90, hd:2, f1:[184,174], f2:[132,174], h1:[102,67], h2:[98,69]},
@@ -930,7 +938,7 @@ latraise: {mus:['delts'], db:1, k1:1, e1:1, e2:-1, trace:'h1', props:[FLOOR], du
 reversefly: {mus:['delts','traps'], db:1, k1:1, e1:-1, e2:1, props:[FLOOR], dur:1500,
   pins:{f1:'floor', f2:'floor'}, frames:[
   {pv:[150,112], to:56, hd:-8, f1:[160,174], f2:[144,174], h1:[188,140], h2:[182,141]},
-  {pv:[150,112], to:56, hd:-8, f1:[160,174], f2:[144,174], h1:[228,102], h2:[142,80]}]},
+  {pv:[150,112], to:56, hd:-8, f1:[160,174], f2:[144,174], h1:[233,97], h2:[225,94]}]},
 pushdown: {mus:['triceps'], cable:{x:236, y:26}, k1:1, e1:-1, e2:-1, trace:'h1', props:[FLOOR, {t:'stack', x:236, y:26, z:0}], dur:1400,
   pins:{f1:'floor', f2:'floor'}, frames:[
   {pv:[146,110], to:12, f1:[154,174], f2:[140,174], h1:[172,90], h2:[166,92]},
@@ -939,18 +947,18 @@ frenchpress: {mus:['triceps'], db:1, k1:1, e1:-1, e2:-1, trace:'h1', props:[FLOO
   pins:{f1:'floor', f2:'floor'}, frames:[
   {pv:[150,110], to:6, f1:[158,174], f2:[146,174], h1:[139,58], h2:[133,60]},
   {pv:[150,110], to:6, f1:[158,174], f2:[146,174], h1:[161,15], h2:[155,17]}]},
-dips: {mus:['triceps','chest'], k1:1, e1:-1, e2:-1, trace:'pv', props:[FLOOR, {t:'box', x:150, y:95, w:8, h:81, z:0}], dur:1500,
+dips: {mus:['triceps','chest'], k1:1, e1:-1, e2:-1, trace:'pv', props:[FLOOR, {t:'dipbar', x:155, y:93, z:0}], dur:1500,
   pins:{h1:'fix', h2:'fix'}, frames:[
-  {pv:[152,84], to:10, f1:{a:[186,262]}, f2:{a:[190,266]}, h1:[157,94], h2:[153,95]},
-  {pv:[150,102], to:20, f1:{a:[190,258]}, f2:{a:[194,262]}, h1:[157,94], h2:[153,95]}]},
+  {pv:[152,84], to:10, f1:{a:[186,262]}, f2:{a:[190,266]}, h1:[159,90], h2:[152,91]},
+  {pv:[150,102], to:20, f1:{a:[190,258]}, f2:{a:[194,262]}, h1:[159,90], h2:[152,91]}]},
 pushup: {mus:['chest','triceps'], k1:-1, k2:-1, e1:1, e2:1, trace:'pv', props:[FLOOR], dur:1500,
   pins:{h1:'floor-hand', h2:'floor-hand', f1:'fix'}, frames:[
   {pv:[182,139], to:-59, hd:12, f1:[236,168], f2:[232,168], ft:135, h1:[149,174], h2:[145,174]},
   {pv:[176,154], to:-75, hd:14, f1:[236,168], f2:[232,168], ft:135, h1:[149,174], h2:[145,174]}]},
 pushup_knee: {mus:['chest','triceps'], e1:1, e2:1, trace:'pv', props:[FLOOR], dur:1500,
   pins:{h1:'floor-hand', h2:'floor-hand'}, frames:[
-  {pv:[176,140], to:-63, hd:12, f1:{a:[200,295]}, f2:{a:[204,299]}, h1:[142,176], h2:[138,176]},
-  {pv:[176,141], to:-75, hd:16, f1:{a:[200,295]}, f2:{a:[204,299]}, h1:[142,176], h2:[138,176]}]},
+  {pv:[178,149], to:-52, hd:8, f1:{a:[128,17]}, f2:{a:[132,21]}, h1:[142,176], h2:[138,176]},
+  {pv:[174,156], to:-65, hd:10, f1:{a:[114,17]}, f2:{a:[118,21]}, h1:[142,176], h2:[138,176]}]},
 pushup_wall: {mus:['chest','triceps'], k1:1, e1:-1, e2:-1, trace:'pv', props:[FLOOR, {t:'wall', x:219, z:0}], dur:1500,
   pins:{h1:'fix', h2:'fix', f1:'floor', f2:'floor'}, frames:[
   {pv:[150,112], to:14, f1:[158,174], f2:[144,174], h1:[216,76], h2:[216,82]},
@@ -1008,14 +1016,12 @@ plank: {mus:['abs'], e1:-1, trace:null, props:[FLOOR], dur:1800,
 crunch_fl: {mus:['abs'], k1:1, e1:-1, props:[FLOOR], dur:1400,
   pins:{f1:'floor', f2:'floor'}, frames:[
   {pv:[152,160], to:-88, hd:16, f1:[188,174], f2:[178,174], h1:{a:[-40,140]}, h2:{a:[-36,144]}},
-  {pv:[152,158], to:-60, hd:26, f1:[188,174], f2:[178,174], h1:{a:[-14,152]}, h2:{a:[-10,156]}}]},
+  {pv:[152,158], to:-70, hd:24, f1:[188,174], f2:[178,174], h1:{a:[-20,148]}, h2:{a:[-16,152]}}]},
 crunch_cab: {mus:['abs'], cable:{x:238, y:18}, e1:-1, e2:-1, trace:'h1', props:[FLOOR, {t:'stack', x:238, y:18, z:0}], dur:1400,
   pins:{}, frames:[
   {pv:[150,144], to:18, hd:12, f1:{a:[184,268]}, f2:{a:[188,272]}, ft:270, ft2:270, h1:{a:[52,238]}, h2:{a:[56,242]}},
   {pv:[150,144], to:58, hd:44, f1:{a:[184,268]}, f2:{a:[188,272]}, ft:270, ft2:270, h1:{a:[52,238]}, h2:{a:[56,242]}}]},
 };
-
-/* соответствие: имя упражнения → анимация */
 const ANIM_OF = {
  'Жим штанги лёжа':'benchpress','Жим в Смите лёжа':'benchpress','Жим лёжа узким хватом':'benchpress','Жим в тренажёре (грудь)':'benchpress',
  'Жим гантелей лёжа':'dbbench','Жим гантелей лёжа (пол)':'dbfloor','Разведения гантелей лёжа':'fly',
@@ -1825,6 +1831,136 @@ function sessRow(s, mark, hot, dim){
 window.setRPE = function(sid, ei, v){
   const st = DB.sessions[sid]; st.rpe[ei] = st.rpe[ei]===v ? null : v; save(); render();
 };
+/* ============ ВИДЕО ТЕХНИКИ: проверенные YouTube-ролики ============ */
+const VIDEO_OF = {
+'Жим штанги лёжа':'i4m99Lm7ekE',
+'Жим в Смите лёжа':'R0RyxO58XuM',
+'Жим лёжа узким хватом':'pcp8QHIfk4s',
+'Жим в тренажёре (грудь)':'pIJCfuXMS6E',
+'Жим гантелей лёжа':'EDEYzHWbn8c',
+'Жим гантелей лёжа (пол)':'DWn3hVj0W-4',
+'Разведения гантелей лёжа':'nbPovTH5lko',
+'Жим гантелей на наклонной 30°':'DjozXwpaJws',
+'Жим в Смите на наклонной':'uk4joxIbpIs',
+'Жим в тренажёре на наклонной':'gBYm9-sVxsE',
+'Жим гантелей сидя':'X5bgyaiWoJI',
+'Жим гантелей сидя/стоя':'V-_WtQzZgwM',
+'Жим штанги сидя':'Am5VMGQC81g',
+'Жим в тренажёре (плечи)':'mIVA-s0oUmU',
+'Жим Арнольда':'4TS4qt3E09o',
+'Жим Смита сидя (плечи)':'0eEBB6kMPnw',
+'Жим одной гантели от груди стоя':'Ody7zhKY728',
+'Разведения гантелей в стороны':'baR_rjv8DyQ',
+'Махи в кроссовере':'CsoQ17-f-rA',
+'Разведения в тренажёре':'NSk-rzNGRn4',
+'Разведения с резинкой в стороны':'jfRM6gQvF7g',
+'Подъёмы бутылок/гантелей в стороны':'8z0ORMf0qKA',
+'Подъёмы перед собой (гантели)':'RpfsK22xrG0',
+'Разгибания на блоке (канат)':'WF3Ms4qwfR8',
+'Разгибания из-за головы на блоке':'T8JTg6nrfxU',
+'Разгибания на блоке (прямая рукоять)':'j2SdiIUBPFY',
+'Кик-бэк с гантелью':'kmNnkgcG0JQ',
+'Французский жим с гантелью':'JoTWyGhTlhQ',
+'Брусья / гравитрон':'09KohqlIVNQ',
+'Отжимания на брусьях':'-j0HZUe-J94',
+'Отжимания от пола':'EM1QFXxgxbw',
+'Отжимания широкой постановкой':'nfCAWpJxm8s',
+'Отжимания узким хватом':'33bXrOCpKbQ',
+'Отжимания с колен':'ZYiKjbWeRKo',
+'Отжимания от стены':'92H7M1HErHE',
+'Отжимания от опоры':'7927-Bvl5WI',
+'Отжимания узким хватом от опоры':'i_joESLXNHQ',
+'Отжимания с ногами на возвышении':'YRPrZKdaulk',
+'Пиковые отжимания («домиком»)':'nGfa2IEMbtQ',
+'Тяга верхнего блока к груди':'-3B1gjQ78Kg',
+'Тяга верхнего блока обратным хватом':'C6yVFAv0BEI',
+'Тяга верхнего блока узким хватом':'QwMv0ljavqw',
+'Подтягивания в гравитроне':'iuuGsKEhonw',
+'Пуловер на верхнем блоке':'heQsU3xw-LU',
+'Подтягивания':'n-Oa_C3aVVc',
+'Подтягивания обратным хватом':'U3omIH0zXA0',
+'Подъём ног в упоре':'odnoxj0Hd4U',
+'Подъём ног в висе':'zAY_dFM6OC4',
+'Тяга горизонтального блока':'hUV6XDtNTLU',
+'Рычажная тяга в тренажёре':'SjT66NtvoeQ',
+'Тяга резинки сидя':'gKgkPdwf8o8',
+'Тяга нижнего блока одной рукой':'bU4Wk3U-6mA',
+'Тяга штанги в наклоне':'D3E6BEuROfM',
+'Тяга двух гантелей в наклоне':'XETQ1STcE9w',
+'Тяга Т-грифа':'tcjwEB77DWc',
+'Тяга бутылок в наклоне':'r7z82CPmUE8',
+'Тяга гири в наклоне':'BLUL2OezrfI',
+'Тяга резинки одной рукой':'ieWJ5hVnamA',
+'Тяга гантели одной рукой':'iljXkTDfYJg',
+'Рычажная тяга одной рукой':'iskOJZjD5II',
+'Австралийские подтягивания (стол)':'MN-oBsCSI1E',
+'Тяга каната к лицу (face pull)':'zDkAYa56ahg',
+'Тяга резинки к лицу':'lA-WNcwk0x8',
+'Обратные разведения':'LVRolN0TH5s',
+'Обратные разведения в тренажёре':'riZefHfau5k',
+'Обратные разведения с гантелями':'3y143mkfLkc',
+'Разведения в наклоне с гантелями':'bXJ9aM-NCpE',
+'Сгибания на бицепс (штанга/EZ)':'ztrd2rCc1hA',
+'Сгибания с гантелями':'H_JMAU1NKB8',
+'«Молотки» с гантелями':'VC48YYutr5Y',
+'Сгибания на блоке':'FBVoS_WQ_0w',
+'Сгибания в тренажёре':'NshlmP3t6M4',
+'Сгибания с резинкой':'SlIKkShRrL4',
+'Канат на блоке (нейтральный хват)':'AYiuPItAnAU',
+'Сгибания обратным хватом':'5LnanOz_FkM',
+'Сгибания Зоттмана':'ugrTP5235Ss',
+'Концентрированные сгибания':'okSVviH_JLg',
+'Супермен':'KpBTpF00ZBk',
+'Лодочка (супермен с вытяжением)':'O45VWmcWojA',
+'Жим ногами':'B_9Vh-GiAcQ',
+'Гакк-машина':'O-Rkdky-xFM',
+'Ягодичный мост со штангой':'tsjJZ7H7M5E',
+'Мост в Смите':'ac5e_Y3e-Bw',
+'Мост в тренажёре':'dI4qEslwkcc',
+'Ягодичный мост на полу':'_f1Fv1UkkZA',
+'Ягодичный мост на одной ноге':'YWI-jDBgHb8',
+'Ягодичные махи на четвереньках':'7Oqfh53lcLE',
+'Отведения в тренажёре':'75sxR6gM5Wo',
+'Махи в кроссовере назад':'JBiCgmOagL8',
+'Отведение ноги на блоке':'9voXV4-k3yw',
+'Румынская тяга со штангой':'bnuDUDfaUOM',
+'Румынская тяга с гантелями':'w8618QnyZi8',
+'Становая тяга (классика)':'6me_dMqwqCA',
+'Сумо-тяга':'rzW_kylHTJ4',
+'Наклоны с резинкой (доброе утро)':'XZnCCqwP9Ik',
+'Гиперэкстензия':'QLlthVYn4nM',
+'Гиперэкстензия с весом':'NMZouTidfJ8',
+'Сгибания ног лёжа':'BXXaYSW2Ozw',
+'Сгибания сидя':'MOE6nBmmpdU',
+'Сгибания стоя одной ногой':'tIu76xaNYTw',
+'Сгибания с резинкой сидя':'bFXRqX2I43U',
+'Разгибания ног':'8oRYVinqMdg',
+'Икры стоя в тренажёре':'-wzPs8HvQgc',
+'Икры в жиме ногами':'lCea8SL6RR4',
+'Икры сидя':'mVe69zfPkfs',
+'Икры стоя на возвышении':'tRdWzfKPCeg',
+'Скручивания на верхнем блоке':'Ww_VnEMbFoE',
+'Скручивания на полу с весом':'tx5ccQVErdU',
+'Скручивания на полу':'OXP7LIy3xYs',
+'Русские скручивания':'CRS8837Aq4I',
+'Планка':'R-dVprcVQc0',
+'Гоблет-присед':'3eP9ZkvnH5Y',
+'Гоблет-присед с гантелью':'A7WUfNw6yI0',
+'Плие-присед с гантелью':'ZYcPzj7EPfs',
+'Приседания с паузой':'vQdHMw0t3Js',
+'Присед на стул (ограниченная глубина)':'0AQ29sjYfQw',
+'Присед в Смите':'KGNdpaG7BvM',
+'Приседания со штангой':'pTzXWG91qdM',
+'Фронтальный присед':'FhAOGpl4ZT8',
+'Выпады':'zTYJKcyhszs',
+'Выпады с гантелями':'vNrkKOiksCs',
+'Ходьба выпадами':'8yN8EtDP2-c',
+'Болгарские сплит-приседы':'VDyPdfpOnw0',
+'Зашагивания на тумбу':'axsRoZoXMx0',
+'Зашагивания на низкую ступеньку':'rJZO1vnOJ0w',
+'Прыжки на тумбу':'4CCYCeKxqF4',
+};
+function videoFor(name){ return VIDEO_OF[name] || null; }
 /* --- техника упражнения --- */
 window.techDlg = function(sid, ei){
   const s = SESSIONS[sid];
@@ -1836,22 +1972,35 @@ window.techDlg = function(sid, ei){
   const animHtml = A ? `<div class="animbox"><svg id="anim-svg" viewBox="0 0 320 200" style="width:100%;display:block"></svg></div>
     <div class="card" style="margin:8px 0 0;padding:12px 10px 10px">${muscleMap(A.mus)}</div>` : '';
   const yt = 'https://www.youtube.com/results?search_query='+encodeURIComponent(v.n+' техника выполнения'+(fem?' для девушек':''));
+  const vid = videoFor(v.n);
+  const vidHtml = vid ? `<div class="vidbox" id="vidbox" onclick="playVideo('${vid}')">
+      <img src="https://i.ytimg.com/vi/${vid}/hqdefault.jpg" alt="" loading="lazy" onerror="this.style.opacity=0">
+      <div class="vidplay"><span>▶</span></div>
+      <div class="vidcap">Видео техники</div>
+    </div>` : '';
   let body;
   if (T){
-    body = `${animHtml}
+    body = `${animHtml}${vidHtml}
       <div class="section-t" style="margin-top:10px">Техника</div>
       <ol class="tech-steps">${T.s.map(x=>`<li>${esc(x)}</li>`).join('')}</ol>
       <div class="section-t">Частые ошибки</div>
       ${T.e.map(x=>`<div class="tech-err"><b>✗</b><span>${esc(x)}</span></div>`).join('')}
       ${T.note?`<div class="tech-note">${esc(T.note)}${T.baseName?' Остальное — как в базовом варианте («'+esc(T.baseName)+'»).':''}</div>`:''}`;
   } else {
-    body = `${animHtml}<div class="small" style="margin:10px 0">Разбор для этого упражнения ещё не добавлен — держи общий принцип: полная амплитуда, контроль на негативе 2 секунды, без рывков корпусом.</div>`;
+    body = `${animHtml}${vidHtml}<div class="small" style="margin:10px 0">Разбор для этого упражнения ещё не добавлен — держи общий принцип: полная амплитуда, контроль на негативе 2 секунды, без рывков корпусом.</div>`;
   }
   openModal(`<h2>${esc(v.n)}</h2><div class="small">${esc(grp)}</div>
     ${body}
-    <a class="btn sec full" style="margin-top:14px;text-decoration:none" href="${yt}" target="_blank" rel="noopener">${fem?'▶ Видео женской техники':'Видео-разборы на YouTube'}</a>
+    <a class="btn sec full" style="margin-top:14px;text-decoration:none" href="${yt}" target="_blank" rel="noopener">${vid?'Найти другие видео':(fem?'▶ Видео женской техники':'Видео-разборы на YouTube')}</a>
     <button class="btn full" style="margin-top:8px" onclick="closeModal()">Понятно</button>`);
   if (A) playAnim(A);
+};
+window.playVideo = function(id){
+  const b = document.getElementById('vidbox');
+  if (!b || b.classList.contains('playing')) return;
+  b.classList.add('playing');
+  b.onclick = null;
+  b.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&playsinline=1" title="Видео техники" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`;
 };
 /* --- замена упражнения на аналог --- */
 let swapSel = 0;
@@ -3918,7 +4067,7 @@ function vMore(){
       <div class="kv"><span>${PROF.place==='home' ? 'Дом · '+(['db','band','bar'].filter(k=>PROF.equip&&PROF.equip[k]).map(k=>({db:'гантели',band:'резинка',bar:'турник'})[k]).join(', ')||'вес тела') : 'Зал'} · ${PROF.split==='fb'?'Фулбади':'PPL'} · Старт ${PROF.startWeight} кг → ~${Math.round(TARGETS[WEEKS()])} кг к ${fmtD(PROG_END)} (${WEEKS()} нед.)</span></div>
       <button class="btn sec full" style="margin-top:10px" onclick="adjustDlg()">Настройка: уровень · травмы · разнообразие</button>
       <button class="btn sec full" style="margin-top:8px" onclick="if(confirm('Пересоздать программу заново через анкету? Вес, еда и шаги сохранятся, а журнал тренировок и замены очистятся.')){DB.profile=null;DB.sessions={};DB.swaps={};DB.skips={};DB.dateOv={};save();location.reload();}">Пересоздать программу (анкета)</button></div>`;
-    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 3.0.1 (руки на рукоятях, рама тренажёра, пропорции карты мышц) · собрано для Егора и друзей · 19.08.2026. Анимации техники — собственный движок, силуэт без пола и возраста.</div>`;
+    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 3.1 (видео техники в каждом упражнении, доработка 11 анимаций) · собрано для Егора и друзей · 22.08.2026. Анимации техники — собственный движок, силуэт без пола и возраста.</div>`;
   }
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }

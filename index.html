@@ -1185,7 +1185,23 @@ const MUS_OF = {
 'Отведение ноги лёжа на боку':['glute'], 'Боковая планка':['obliques','abs'], 'Велосипед (пресс)':['abs','obliques'],
 'Дэд-баг':['abs'], 'Скалолаз':['abs','quad'], 'Паллоф-пресс с резинкой':['obliques','abs'],
 };
-function musFor(name){ if (MUS_OF[name]) return MUS_OF[name]; const A = animFor(name); return (A && A.mus) || null; }
+let _encIdx = null;
+function encByName(n){
+  if (!_encIdx){ _encIdx = {}; ENC.forEach((e,i)=>{ _encIdx[e[0].toLowerCase()] = i; }); }
+  const i = _encIdx[(n||'').toLowerCase()];
+  return i == null ? null : i;
+}
+function musFor(name){
+  if (MUS_OF[name]) return MUS_OF[name];
+  const A = animFor(name);
+  if (A && A.mus) return A.mus;
+  const ei = encByName(name);
+  if (ei != null){
+    const t = (ENC[ei][2]+','+ENC[ei][3]).split(',').filter(Boolean);
+    if (t.length) return t;
+  }
+  return null;
+}
 /* ============ КАРТА МЫШЦ: перед и спина ============ */
 const MUS_RU = {chest:'Грудь', delts:'Плечи', shoulder:'Плечи', traps:'Трапеции', lats:'Широчайшие', back:'Спина',
   erectors:'Поясница', abs:'Пресс', core:'Кор', obliques:'Косые', biceps:'Бицепс', triceps:'Трицепс',
@@ -2262,7 +2278,17 @@ window.techDlg = function(sid, ei){
       ${T.e.map(x=>`<div class="tech-err"><b>✗</b><span>${esc(x)}</span></div>`).join('')}
       ${T.note?`<div class="tech-note">${esc(T.note)}${T.baseName?' Остальное — как в базовом варианте («'+esc(T.baseName)+'»).':''}</div>`:''}`;
   } else {
-    body = `${vidHtml}${mapHtml}<div class="small" style="margin:10px 0">Разбор для этого упражнения ещё не добавлен — держи общий принцип: полная амплитуда, контроль на негативе 2 секунды, без рывков корпусом.</div>`;
+    const encI = encByName(v.n);
+    if (encI != null){
+      const e = ENC[encI];
+      const photo = `<div class="enc-anim" style="margin-top:6px"><img src="${ENC_IMG}${e[1]}/0.jpg" alt="" onerror="this.parentNode.style.display='none'"><img class="f2" src="${ENC_IMG}${e[1]}/1.jpg" alt="" onerror="this.remove()"></div>`;
+      body = `${vidHtml}${photo}${mapHtml}
+        <div class="section-t" style="margin-top:10px">Техника</div>
+        <ol class="tech-steps">${e[7].split(';').map(x=>`<li>${esc(x.trim())}</li>`).join('')}</ol>
+        <div class="tiny" style="margin-top:6px">${LVLRU[e[4]]} · ${EQRU[e[5]]} · из Базы упражнений</div>`;
+    } else {
+      body = `${vidHtml}${mapHtml}<div class="small" style="margin:10px 0">Разбор для этого упражнения ещё не добавлен — держи общий принцип: полная амплитуда, контроль на негативе 2 секунды, без рывков корпусом.</div>`;
+    }
   }
   openModal(`<h2>${esc(v.n)}</h2><div class="small">${esc(grp)}</div>
     ${body}
@@ -2350,9 +2376,35 @@ window.catList = function(q){
     ? safe.filter(o => o.c.n.toLowerCase().includes(q) || (o.c.m||'').toLowerCase().includes(q)).slice(0,10)
     : safe.filter(o => (!gflt || o.c.g===gflt) && (!selN || o.c.n!==selN)).slice(0,5);
   if (!q && selN){ const cur = idxed.find(o=>o.c.n===selN); if (cur) rows = [cur, ...rows].slice(0,6); }
-  el.innerHTML = rows.map(o => `<button class="varrow ${selN===o.c.n?'on':''}" data-c="${o.i}" onclick="pickCat(${o.i})">
-    <b>${esc(o.c.n)}</b><span>${esc(o.c.m||'')}${o.c.bw?' · свой вес':' · шаг +'+o.c.inc+' кг'}</span></button>`).join('')
-    || `<div class="small" style="padding:6px 2px">Не нашлось. Попробуй короче: «жим», «тяга», «пресс».</div>`;
+  let html = rows.map(o => `<button class="varrow ${selN===o.c.n?'on':''}" data-c="${o.i}" onclick="pickCat(${o.i})">
+    <b>${esc(o.c.n)}</b><span>${esc(o.c.m||'')}${o.c.bw?' · свой вес':' · шаг +'+o.c.inc+' кг'}</span></button>`).join('');
+  // + результаты из Базы (873): всё, чего нет в основном каталоге
+  if (q.length >= 2){
+    const have = new Set(all.map(c=>c.n.toLowerCase()).concat(rows.map(o=>o.c.n.toLowerCase())));
+    const encRows = [];
+    for (let i = 0; i < ENC.length && encRows.length < 5; i++){
+      const e = ENC[i];
+      if (e[6] !== 's' && e[6] !== 'l' && e[6] !== 'o') continue; // только силовые в замены
+      if (!e[0].toLowerCase().includes(q)) continue;
+      if (have.has(e[0].toLowerCase())) continue;
+      if (!injOk(e[0])) continue;
+      encRows.push(i);
+    }
+    if (encRows.length){
+      html += `<div class="tiny" style="margin:8px 2px 2px">Из Базы упражнений (873):</div>` +
+        encRows.map(i => `<button class="varrow ${selN===ENC[i][0]?'on':''}" data-e="${i}" onclick="pickEnc(${i})">
+          <b>${esc(ENC[i][0])}</b><span>${ENC[i][2].split(',').filter(Boolean).map(m=>MUSRU[m]||m).join(', ')} · ${EQRU[ENC[i][5]]} · фото и техника есть</span></button>`).join('');
+    }
+  }
+  el.innerHTML = html || `<div class="small" style="padding:6px 2px">Не нашлось. Попробуй короче: «жим», «тяга», «пресс».</div>`;
+};
+window.pickEnc = function(i){
+  const e = ENC[i];
+  const inc = e[5]==='b' ? 2.5 : e[5]==='d' ? 2 : (e[5]==='m'||e[5]==='c') ? 5 : 2.5;
+  const bw = (e[5]==='w' || e[5]==='n') ? 1 : 0;
+  swapSel = {n: e[0], inc, bw};
+  document.querySelectorAll('#swap-list .varrow').forEach(b=>b.classList.remove('on'));
+  document.querySelectorAll('#cat-list .varrow').forEach(b=>b.classList.toggle('on', +b.dataset.e === i));
 };
 window.pickCat = function(i){
   const c = catalog()[i];
@@ -5474,7 +5526,7 @@ function vMore(){
       <div class="kv"><span>${PROF.place==='home' ? 'Дом · '+(['db','band','bar'].filter(k=>PROF.equip&&PROF.equip[k]).map(k=>({db:'гантели',band:'резинка',bar:'турник'})[k]).join(', ')||'вес тела') : 'Зал'} · ${PROF.split==='fb'?'Фулбади':'PPL'} · Старт ${PROF.startWeight} кг → ~${Math.round(TARGETS[WEEKS()])} кг к ${fmtD(PROG_END)} (${WEEKS()} нед.)</span></div>
       <button class="btn sec full" style="margin-top:10px" onclick="adjustDlg()">Настройка: уровень · травмы · разнообразие</button>
       <button class="btn sec full" style="margin-top:8px" onclick="if(confirm('Пересоздать программу заново через анкету? Вес, еда и шаги сохранятся, а журнал тренировок и замены очистятся.')){DB.profile=null;DB.sessions={};DB.swaps={};DB.skips={};DB.dateOv={};save();location.reload();}">Пересоздать программу (анкета)</button></div>`;
-    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 4.6 (уровни и задачи недели, прогнозы веса и силы, дайджест науки) · собрано для Егора и друзей · 22.08.2026. Фото упражнений — Free Exercise DB (public domain).</div>`;
+    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 4.6.1 (База подключена к программам: замены ищут по всем 873, техника и фото — в карточке) · собрано для Егора и друзей · 22.08.2026. Фото упражнений — Free Exercise DB (public domain).</div>`;
   }
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }

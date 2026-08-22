@@ -369,7 +369,7 @@ function checkpointsFor(p){
 /* ---- подстройка программы: травмы, пол, вес ---- */
 const INJ_MAP = {
  'Выпады':['knee'],'Выпады с гантелями':['knee'],'Болгарские сплит-приседы':['knee'],
- 'Зашагивания на тумбу':['knee'],'Гакк-машина':['knee'],'Присед в Смите':['knee'],
+ 'Зашагивания на тумбу':['knee'],'Зашагивания на низкую ступеньку':['knee'],'Гакк-машина':['knee'],'Присед в Смите':['knee'],
  'Гоблет-присед':['knee'],'Гоблет-присед с гантелью':['knee'],'Плие-присед с гантелью':['knee'],
  'Разгибания ног':['knee'],'Приседания с паузой':['knee'],
  'Румынская тяга со штангой':['back'],'Румынская тяга с гантелями':['back'],
@@ -380,7 +380,7 @@ const INJ_MAP = {
  'Разгибания из-за головы на блоке':['shoulder'],'Отжимания с ногами на возвышении':['shoulder'],
  'Пиковые отжимания («домиком»)':['shoulder'],
 };
-const EASY_SET = new Set(['Отжимания от опоры','Отжимания с колен','Австралийские подтягивания (стол)','Присед на стул (ограниченная глубина)']);
+const EASY_SET = new Set(['Отжимания от опоры','Отжимания с колен','Отжимания от стены','Австралийские подтягивания (стол)','Присед на стул (ограниченная глубина)','Подъёмы бутылок/гантелей в стороны','Отжимания узким хватом от опоры','Тяга бутылок в наклоне','Зашагивания на низкую ступеньку']);
 const HARD_SET = new Set(['Отжимания от пола','Отжимания с ногами на возвышении','Подтягивания','Пиковые отжимания («домиком»)']);
 function tuneProgram(ex, alts){
   const inj = PROF.inj || {};
@@ -406,6 +406,12 @@ function tuneProgram(ex, alts){
       na.push({m:(alts[t][i]&&alts[t][i].m)||'', a:cands.slice(1)});
     });
     ex[t] = nx; alts[t] = na;
+  }
+  if ((PROF.level||'some') === 'new'){
+    for (const t in ex) ex[t].forEach(e => {
+      for (const ph of ['p1','p2'])
+        if (e[ph] && e[ph][0] > 2) e[ph] = [e[ph][0]-1, e[ph][1], e[ph][2], e[ph][3]];
+    });
   }
 }
 function addFemaleSlots(ex, alts){
@@ -685,10 +691,12 @@ const HOME_SLOTS = {
     {n:'Жим гантелей лёжа (пол)', need:'db', inc:2, st:'hbench', p0:[2,'8–12',8,12], p1:[4,'6–10',6,10], p2:[4,'6–10 · топ-сет',6,10], rest:150},
     {n:'Отжимания от пола', bw:1, p0:[2,'8–15',8,15], p1:[4,'10–18',10,18], p2:[4,'10–18 · топ-сет',10,18], rest:120},
     {n:'Отжимания от опоры', bw:1, p0:[2,'8–15',8,15], p1:[4,'10–18',10,18], p2:[4,'10–18 · топ-сет',10,18], rest:120},
-    {n:'Отжимания с колен', bw:1, p0:[2,'8–15',8,15], p1:[4,'10–18',10,18], p2:[4,'10–18 · топ-сет',10,18], rest:120}]},
+    {n:'Отжимания с колен', bw:1, e:1, p0:[2,'8–15',8,15], p1:[4,'10–18',10,18], p2:[4,'10–18 · топ-сет',10,18], rest:120},
+    {n:'Отжимания от стены', bw:1, e:1, p0:[2,'10–15',10,15], p1:[4,'12–20',12,20], p2:[4,'12–20 · топ-сет',12,20], rest:90}]},
   {m:'Плечи', v:[
     {n:'Жим гантелей сидя/стоя', need:'db', inc:2, p0:[2,'10–12',10,12], p1:[3,'8–12',8,12], p2:[3,'8–12',8,12], rest:120},
-    {n:'Отжимания с ногами на возвышении', bw:1, p0:[2,'8–12',8,12], p1:[3,'8–15',8,15], p2:[3,'8–15',8,15], rest:120}]},
+    {n:'Отжимания с ногами на возвышении', bw:1, p0:[2,'8–12',8,12], p1:[3,'8–15',8,15], p2:[3,'8–15',8,15], rest:120},
+    {n:'Подъёмы бутылок/гантелей в стороны', bw:1, e:1, p0:[2,'12–18',12,18], p1:[3,'15–20',15,20], p2:[3,'15–20',15,20], rest:75}]},
   {m:'Грудь (объём)', v:[
     {n:'Разведения гантелей лёжа', need:'db', inc:2, p0:[2,'12–15',12,15], p1:[3,'10–15',10,15], p2:[3,'10–15',10,15], rest:90},
     {n:'Отжимания широкой постановкой', bw:1, p0:[2,'10–15',10,15], p1:[3,'10–18',10,18], p2:[3,'10–18',10,18], rest:90}]},
@@ -697,17 +705,19 @@ const HOME_SLOTS = {
     {n:'Разведения с резинкой в стороны', need:'band', bw:1, p0:[2,'12–15',12,15], p1:[3,'12–20',12,20], p2:[4,'12–20',12,20], rest:75}]},
   {m:'Трицепс', v:[
     {n:'Французский жим с гантелью', need:'db', inc:2, p0:[2,'12–15',12,15], p1:[3,'10–15',10,15], p2:[3,'10–15',10,15], rest:90},
-    {n:'Отжимания узким хватом', bw:1, p0:[2,'8–12',8,12], p1:[3,'8–15',8,15], p2:[3,'8–15',8,15], rest:90}]},
+    {n:'Отжимания узким хватом', bw:1, p0:[2,'8–12',8,12], p1:[3,'8–15',8,15], p2:[3,'8–15',8,15], rest:90},
+    {n:'Отжимания узким хватом от опоры', bw:1, e:1, p0:[2,'8–12',8,12], p1:[3,'10–15',10,15], p2:[3,'10–15',10,15], rest:90}]},
  ],
  Pull: [
   {m:'Спина · якорь', v:[
     {n:'Подтягивания', need:'bar', bw:1, p0:[2,'4–8',4,8], p1:[4,'5–10',5,10], p2:[4,'5–10 · топ-сет',5,10], rest:150},
     {n:'Тяга двух гантелей в наклоне', need:'db', inc:2, st:'hrow', p0:[2,'8–12',8,12], p1:[4,'8–12',8,12], p2:[4,'8–12 · топ-сет',8,12], rest:150},
-    {n:'Тяга резинки сидя', need:'band', bw:1, p0:[2,'12–15',12,15], p1:[4,'12–18',12,18], p2:[4,'12–18',12,18], rest:120},
-    {n:'Австралийские подтягивания (стол)', bw:1, p0:[2,'6–12',6,12], p1:[4,'8–15',8,15], p2:[4,'8–15 · топ-сет',8,15], rest:120}]},
+    {n:'Тяга резинки сидя', need:'band', bw:1, e:1, p0:[2,'12–15',12,15], p1:[4,'12–18',12,18], p2:[4,'12–18',12,18], rest:120},
+    {n:'Австралийские подтягивания (стол)', bw:1, p0:[2,'6–12',6,12], p1:[4,'8–15',8,15], p2:[4,'8–15 · топ-сет',8,15], rest:120},
+    {n:'Тяга бутылок в наклоне', bw:1, e:1, p0:[2,'12–15',12,15], p1:[4,'12–18',12,18], p2:[4,'12–18 · топ-сет',12,18], rest:110}]},
   {m:'Спина (одностор.)', v:[
     {n:'Тяга гантели одной рукой', need:'db', inc:2, p0:[2,'10–12',10,12], p1:[3,'8–12',8,12], p2:[3,'8–12',8,12], rest:100},
-    {n:'Тяга резинки одной рукой', need:'band', bw:1, p0:[2,'12–15',12,15], p1:[3,'12–18',12,18], p2:[3,'12–18',12,18], rest:90},
+    {n:'Тяга резинки одной рукой', need:'band', bw:1, e:1, p0:[2,'12–15',12,15], p1:[3,'12–18',12,18], p2:[3,'12–18',12,18], rest:90},
     {n:'Австралийские подтягивания (стол)', bw:1, p0:[2,'6–12',6,12], p1:[3,'8–15',8,15], p2:[3,'8–15',8,15], rest:110}]},
   {m:'Задняя дельта', v:[
     {n:'Тяга резинки к лицу', need:'band', bw:1, p0:[2,'15',13,17], p1:[3,'12–18',12,18], p2:[3,'12–18',12,18], rest:75},
@@ -715,7 +725,7 @@ const HOME_SLOTS = {
     {n:'Супермен', bw:1, p0:[2,'12–15',12,15], p1:[3,'12–18',12,18], p2:[3,'12–18',12,18], rest:60}]},
   {m:'Бицепс', v:[
     {n:'Сгибания с гантелями', need:'db', inc:2, p0:[2,'10–12',10,12], p1:[3,'8–12',8,12], p2:[3,'8–12',8,12], rest:90},
-    {n:'Сгибания с резинкой', need:'band', bw:1, p0:[2,'12–15',12,15], p1:[3,'12–18',12,18], p2:[3,'12–18',12,18], rest:75},
+    {n:'Сгибания с резинкой', need:'band', bw:1, e:1, p0:[2,'12–15',12,15], p1:[3,'12–18',12,18], p2:[3,'12–18',12,18], rest:75},
     {n:'Подтягивания обратным хватом', need:'bar', bw:1, p0:[2,'4–8',4,8], p1:[3,'4–8',4,8], p2:[3,'4–8',4,8], rest:120}]},
   {m:'Бицепс (доп.)', v:[
     {n:'«Молотки» с гантелями', need:'db', inc:2, p1:[2,'10–12',10,12], p2:[2,'10–12',10,12], rest:75}]},
@@ -727,7 +737,7 @@ const HOME_SLOTS = {
     {n:'Гоблет-присед с гантелью', need:'db', inc:2, p0:[2,'10–12',10,12], p1:[4,'8–12',8,12], p2:[4,'8–12 · топ-сет',8,12], rest:150},
     {n:'Приседания с паузой', bw:1, p0:[2,'12–15',12,15], p1:[4,'12–20',12,20], p2:[4,'12–20 · топ-сет',12,20], rest:120},
     {n:'Плие-присед с гантелью', need:'db', inc:2, p0:[2,'10–14',10,14], p1:[3,'10–15',10,15], p2:[3,'10–15',10,15], rest:120},
-    {n:'Присед на стул (ограниченная глубина)', bw:1, p0:[2,'10–14',10,14], p1:[4,'12–18',12,18], p2:[4,'12–18',12,18], rest:110}]},
+    {n:'Присед на стул (ограниченная глубина)', bw:1, e:1, p0:[2,'10–14',10,14], p1:[4,'12–18',12,18], p2:[4,'12–18',12,18], rest:110}]},
   {m:'Ягодицы', v:[
     {n:'Ягодичный мост на полу', need:'db', inc:2, p0:[2,'12–15',12,15], p1:[3,'10–15',10,15], p2:[3,'10–15',10,15], rest:110},
     {n:'Ягодичный мост на одной ноге', bw:1, p0:[2,'8–12',8,12], p1:[3,'10–15',10,15], p2:[3,'10–15',10,15], rest:90}]},
@@ -738,7 +748,8 @@ const HOME_SLOTS = {
   {m:'Ноги (одностор.)', v:[
     {n:'Выпады с гантелями', need:'db', inc:2, p0:[2,'10–12',10,12], p1:[3,'8–12',8,12], p2:[3,'8–12',8,12], rest:110},
     {n:'Выпады', bw:1, p0:[2,'10–14',10,14], p1:[3,'12–16',12,16], p2:[3,'12–16',12,16], rest:100},
-    {n:'Зашагивания на тумбу', need:'db', inc:2, p0:[2,'10–12',10,12], p1:[3,'10–14',10,14], p2:[3,'10–14',10,14], rest:100}]},
+    {n:'Зашагивания на тумбу', need:'db', inc:2, p0:[2,'10–12',10,12], p1:[3,'10–14',10,14], p2:[3,'10–14',10,14], rest:100},
+    {n:'Зашагивания на низкую ступеньку', bw:1, e:1, p0:[2,'10–14',10,14], p1:[3,'12–16',12,16], p2:[3,'12–16',12,16], rest:90}]},
   {m:'Ноги (сложные)', v:[
     {n:'Болгарские сплит-приседы', bw:1, p1:[3,'8–12',8,12], p2:[3,'8–12',8,12], rest:110}]},
   {m:'Икры', v:[
@@ -756,13 +767,16 @@ function buildHomeDB(eq, stx){
     for (const slot of HOME_SLOTS[t]){
       const ok = slot.v.filter(v => (!v.need || eq[v.need]) && !used.has(v.n));
       if (!ok.length) continue;
-      const c = ok[0]; used.add(c.n);
+      let c = ok[0];
+      if (PROF && (PROF.level||'some')==='new' && c.bw){ const ez = ok.find(v=>v.e); if (ez) c = ez; }
+      used.add(c.n);
+      const rest_ = ok.filter(v=>v!==c);
       const entry = {n:c.n, rest:c.rest, inc:c.inc||0, bw:c.bw?1:0,
         start: c.bw ? 'вес тела' : ((c.st && stx && stx[c.st]) ? stx[c.st] : 'подбор'),
-        sub: ok[1] ? ok[1].n : '—'};
+        sub: rest_[0] ? rest_[0].n : '—'};
       for (const ph of ['p0','p1','p2']) if (c[ph]) entry[ph] = c[ph];
       ex[t].push(entry);
-      alts[t].push({m:slot.m, a: ok.slice(1).map(v=>({n:v.n, inc:v.inc||0, bw:v.bw?1:0}))});
+      alts[t].push({m:slot.m, a: rest_.map(v=>({n:v.n, inc:v.inc||0, bw:v.bw?1:0}))});
     }
   }
   return {ex, alts};
@@ -830,13 +844,16 @@ function buildHomeFB(eq, stx){
       if (!slot) continue;
       const ok = slot.v.filter(v => (!v.need || eq[v.need]) && !used.has(v.n));
       if (!ok.length) continue;
-      const c = ok[0]; used.add(c.n);
+      let c = ok[0];
+      if (PROF && (PROF.level||'some')==='new' && c.bw){ const ez = ok.find(v=>v.e); if (ez) c = ez; }
+      used.add(c.n);
+      const rest_ = ok.filter(v=>v!==c);
       const entry = {n:c.n, rest:c.rest, inc:c.inc||0, bw:c.bw?1:0,
         start: c.bw ? 'вес тела' : ((c.st && stx && stx[c.st]) ? stx[c.st] : 'подбор'),
-        sub: ok[1] ? ok[1].n : '—'};
+        sub: rest_[0] ? rest_[0].n : '—'};
       for (const ph of ['p0','p1','p2']) if (c[ph]) entry[ph] = c[ph];
       ex[day].push(entry);
-      alts[day].push({m:slot.m, a: ok.slice(1).map(v=>({n:v.n, inc:v.inc||0, bw:v.bw?1:0}))});
+      alts[day].push({m:slot.m, a: rest_.map(v=>({n:v.n, inc:v.inc||0, bw:v.bw?1:0}))});
     }
   }
   return {ex, alts};
@@ -993,6 +1010,10 @@ function variantOf(sid, ei){
   const s = SESSIONS[sid];
   const perSess = DB.sessions[sid] && DB.sessions[sid].swapEx ? DB.sessions[sid].swapEx[ei] : undefined;
   const val = perSess != null ? perSess : (DB.swaps[s.type+':'+ei] != null ? DB.swaps[s.type+':'+ei] : 0);
+  if (val === 0 && perSess == null && (PROF.variety||'stable') === 'alt' && ei !== 0 && s.w % 2 === 0){
+    const a0 = ALTS[s.type][ei] && ALTS[s.type][ei].a[0];
+    if (a0) return {idx:1, n:a0.n, inc:a0.inc||0, bw:a0.bw||0};
+  }
   if (val && typeof val === 'object')
     return {idx:'x:'+val.n, n:val.n, inc:val.inc||2.5, bw:val.bw||0, cat:1};
   const idx = val;
@@ -1268,12 +1289,15 @@ window.setRPE = function(sid, ei, v){
   const st = DB.sessions[sid]; st.rpe[ei] = st.rpe[ei]===v ? null : v; save(); render();
 };
 /* --- техника упражнения --- */
+const FEM_NO_PHOTO = new Set(['Ягодичный мост со штангой','Ягодичный мост на полу','Ягодичный мост на одной ноге','Мост в Смите','Мост в тренажёре','Ягодичные махи на четвереньках','Отведения в тренажёре','Махи в кроссовере назад','Плие-присед с гантелью','Разведения ног в тренажёре','Сведения ног в тренажёре','Отведение ноги на блоке','Наклоны с резинкой (доброе утро)','Гиперэкстензия','Гиперэкстензия с весом']);
 window.techDlg = function(sid, ei){
   const s = SESSIONS[sid];
   const v = variantOf(sid, ei);
   const grp = ALTS[s.type][ei] ? ALTS[s.type][ei].m : '';
-  const T = techFor(v.n);
-  const yt = 'https://www.youtube.com/results?search_query='+encodeURIComponent(v.n+' техника выполнения');
+  let T = techFor(v.n);
+  const fem = PROF.sex === 'f';
+  if (fem && T && T.img && FEM_NO_PHOTO.has(v.n)) T = {...T, img: null};
+  const yt = 'https://www.youtube.com/results?search_query='+encodeURIComponent(v.n+' техника выполнения'+(fem?' для девушек':''));
   let body;
   if (T){
     body = `${T.img?`<div class="animbox photo">
@@ -1290,7 +1314,7 @@ window.techDlg = function(sid, ei){
   }
   openModal(`<h2>${esc(v.n)}</h2><div class="small">${esc(grp)}</div>
     ${body}
-    <a class="btn sec full" style="margin-top:14px;text-decoration:none" href="${yt}" target="_blank" rel="noopener">Видео-разборы на YouTube</a>
+    <a class="btn sec full" style="margin-top:14px;text-decoration:none" href="${yt}" target="_blank" rel="noopener">${fem?'▶ Видео женской техники':'Видео-разборы на YouTube'}</a>
     <button class="btn full" style="margin-top:8px" onclick="closeModal()">Понятно</button>`);
   if (T && T.img) playPhoto();
 };
@@ -2386,16 +2410,80 @@ window.psAdd = function(){
 /* ---- штрихкод: Open Food Facts ---- */
 window.barcodeDlg = function(mid){
   window._bcMeal = mid || null;
-  const camOk = 'BarcodeDetector' in window;
-  openModal(`<h2>Продукт по штрихкоду</h2>
-    <div class="small">Введи цифры с упаковки — найду товар в базе Open Food Facts (нужен интернет). Найденное сохранится в «мои продукты» и дальше работает офлайн.</div>
-    <input type="text" id="bc-in" inputmode="numeric" placeholder="4600682000000" style="margin-top:10px" onkeydown="if(event.key==='Enter')bcLookup()">
-    ${camOk?`<button class="btn sec full sm" style="margin-top:8px" onclick="bcScan()">📷 Сканировать камерой</button>`:''}
-    <div id="bc-video"></div>
-    <div id="bc-out"></div>
+  openModal(`<h2>📷 Штрихкод</h2>
+    <div id="bc-video"><div class="small" style="margin:8px 0">Запускаю камеру…</div></div>
     <div class="row" style="gap:8px;margin-top:10px">
-      <button class="btn sec" onclick="bcStop();modulesDlg('${mid||''}')">← Назад</button>
-      <button class="btn grow" style="flex:1" onclick="bcLookup()">Найти</button></div>`);
+      <input type="text" id="bc-in" inputmode="numeric" placeholder="или цифры с упаковки" class="grow" style="margin:0" onkeydown="if(event.key==='Enter')bcLookup()">
+      <button class="btn sec sm" style="flex:none;min-height:48px" onclick="bcLookup()">Найти</button></div>
+    <label class="btn ghost full sm" style="margin-top:4px;cursor:pointer">Не ловит? Сфотографируй штрихкод
+      <input type="file" accept="image/*" capture="environment" style="display:none" onchange="bcFromPhoto(this)"></label>
+    <div id="bc-out"></div>
+    <button class="btn sec full" style="margin-top:10px" onclick="bcStop();modulesDlg('${mid||''}')">← Назад</button>`);
+  bcScan();
+};
+window.barcodeQuick = function(){
+  let mid = 'l';
+  try { const ni = nextMealInfo(foodDate); if (ni && ni.m && ni.m.id) mid = ni.m.id; } catch(e){}
+  barcodeDlg(mid);
+};
+function bcHit(code){
+  code = String(code||'').replace(/\D/g,'');
+  if (!code || code.length < 8) return;
+  const now = Date.now();
+  if (window._bcLast === code && now - (window._bcLastT||0) < 4000) return;
+  window._bcLast = code; window._bcLastT = now;
+  try { if (navigator.vibrate) navigator.vibrate(80); } catch(e){}
+  if ($('#bc-in')) $('#bc-in').value = code;
+  bcStop();
+  bcLookup(code);
+}
+window.bcTorch = async function(){
+  try {
+    window._bcTorchOn = !window._bcTorchOn;
+    await window._bcTrack.applyConstraints({advanced:[{torch: window._bcTorchOn}]});
+  } catch(e){ toast('Фонарик не поддерживается на этом устройстве'); }
+};
+async function bcLoadZXing(){
+  if (window.ZXing || window._bcZxTried) return;
+  window._bcZxTried = 1;
+  await new Promise(res => {
+    const sc = document.createElement('script');
+    sc.src = 'https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js';
+    sc.onload = res; sc.onerror = res;
+    document.head.appendChild(sc);
+    setTimeout(res, 7000);
+  });
+}
+window.bcFromPhoto = async function(inp){
+  const f = inp.files && inp.files[0]; if (!f) return;
+  const out = $('#bc-out'); if (out) out.innerHTML = '<div class="small" style="margin-top:8px">Распознаю фото…</div>';
+  try {
+    const bmp = await createImageBitmap(f);
+    let code = null;
+    if ('BarcodeDetector' in window){
+      try {
+        const det = new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','code_128']});
+        const codes = await det.detect(bmp);
+        if (codes.length) code = codes[0].rawValue;
+      } catch(e){}
+    }
+    if (!code){
+      await bcLoadZXing();
+      if (window.ZXing){
+        const cv = document.createElement('canvas'); cv.width = bmp.width; cv.height = bmp.height;
+        cv.getContext('2d').drawImage(bmp, 0, 0);
+        try {
+          const reader = new window.ZXing.BrowserMultiFormatReader();
+          const res = await reader.decodeFromImageUrl(cv.toDataURL('image/jpeg', .92));
+          if (res) code = res.getText();
+        } catch(e){}
+      }
+    }
+    if (code) bcHit(code);
+    else if (out) out.innerHTML = '<div class="insight warn" style="margin-top:8px"><p style="margin:0">Не разглядел штрихкод. Сними ближе, ровнее и при свете — или введи цифры.</p></div>';
+  } catch(e){
+    if (out) out.innerHTML = '<div class="insight warn" style="margin-top:8px"><p style="margin:0">Не смог обработать фото — введи цифры вручную.</p></div>';
+  }
 };
 /* КБЖУ из OFF: сначала на 100 г, иначе пересчёт из порции */
 function bcNutr(nu, servG){
@@ -2469,27 +2557,54 @@ window.bcSave = function(){
   psPick(x.id, window._bcMeal);
 };
 window.bcScan = async function(){
+  const box = $('#bc-video'); if (!box) return;
   try {
-    const det = new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','code_128']});
-    const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+    const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment', width:{ideal:1280}, height:{ideal:720}}});
     window._bcStream = stream;
-    const box = $('#bc-video');
-    box.innerHTML = '<video id="bc-v" autoplay playsinline muted style="width:100%;border-radius:14px;margin-top:8px"></video><div class="tiny" style="margin-top:4px">Наведи камеру на штрихкод…</div>';
+    box.innerHTML = `<div style="position:relative;border-radius:16px;overflow:hidden;margin-top:4px;background:#000">
+      <video id="bc-v" autoplay playsinline muted style="width:100%;display:block;max-height:44dvh;object-fit:cover"></video>
+      <div style="position:absolute;inset:0;pointer-events:none">
+        <div style="position:absolute;left:7%;right:7%;top:28%;bottom:28%;border:2.5px solid rgba(255,255,255,.9);border-radius:14px;box-shadow:0 0 0 999px rgba(0,0,0,.3)"></div>
+        <div style="position:absolute;left:10%;right:10%;top:50%;height:2px;background:#e66767;opacity:.85"></div></div>
+      <button id="bc-torch" class="btn sec sm" style="position:absolute;right:8px;bottom:8px;display:none;min-height:40px" onclick="bcTorch()">🔦</button>
+      <div class="tiny" style="position:absolute;left:12px;bottom:12px;color:#fff;text-shadow:0 1px 3px #000">наведи рамку на штрихкод</div></div>`;
     const v = $('#bc-v'); v.srcObject = stream;
-    const loop = async () => {
-      if (!v.isConnected){ bcStop(); return; }
-      try {
-        const codes = await det.detect(v);
-        if (codes.length){ const c = codes[0].rawValue; if ($('#bc-in')) $('#bc-in').value = c; bcStop(); bcLookup(c); return; }
-      } catch(e){}
-      window._bcTmr = setTimeout(loop, 300);
-    };
-    v.onloadedmetadata = loop;
-  } catch(e){ toast('Камера недоступна — введи цифры вручную'); }
+    const track = stream.getVideoTracks()[0];
+    window._bcTrack = track; window._bcTorchOn = false;
+    try { if (track.getCapabilities && track.getCapabilities().torch){ const tb = $('#bc-torch'); if (tb) tb.style.display = ''; } } catch(e){}
+    if ('BarcodeDetector' in window){
+      const det = new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','code_128']});
+      const loop = async () => {
+        if (!v.isConnected){ bcStop(); return; }
+        try { const codes = await det.detect(v); if (codes.length) return bcHit(codes[0].rawValue); } catch(e){}
+        window._bcTmr = setTimeout(loop, 260);
+      };
+      v.onloadedmetadata = loop;
+    } else {
+      await bcLoadZXing();
+      if (!v.isConnected) return;
+      if (window.ZXing && window.ZXing.BrowserMultiFormatReader){
+        try {
+          const reader = new window.ZXing.BrowserMultiFormatReader();
+          window._bcReader = reader;
+          reader.decodeFromStream(stream, v, res => { if (res) bcHit(res.getText()); });
+        } catch(e){
+          box.insertAdjacentHTML('beforeend', '<div class="tiny" style="margin-top:6px">Автораспознавание не завелось — сфотографируй штрихкод или введи цифры.</div>');
+        }
+      } else {
+        box.insertAdjacentHTML('beforeend', '<div class="tiny" style="margin-top:6px">В этом браузере нет автораспознавания — сфотографируй штрихкод (кнопка ниже) или введи цифры.</div>');
+      }
+    }
+  } catch(e){
+    box.innerHTML = '<div class="small" style="margin:8px 0">Камера недоступна (разреши доступ в настройках браузера) — введи цифры или сфотографируй штрихкод.</div>';
+  }
 };
 window.bcStop = function(){
   clearTimeout(window._bcTmr);
+  try { if (window._bcReader) window._bcReader.reset(); } catch(e){}
+  window._bcReader = null;
   if (window._bcStream){ window._bcStream.getTracks().forEach(t=>t.stop()); window._bcStream = null; }
+  window._bcTrack = null;
   const bv = $('#bc-video'); if (bv) bv.innerHTML = '';
 };
 
@@ -2925,7 +3040,8 @@ function vFood(){
   h += `<div class="insight ${focus.mode==='balance'||focus.mode==='done'?'good':'warn'}" style="margin-top:4px"><p style="margin:0">${esc(focus.txt)}</p></div>`;
   h += `<div class="row" style="gap:8px;margin:10px 0 2px">
     <button class="btn sec grow sm" onclick="pantryDlg()">Продукты${DB.pantry&&Object.keys(DB.pantry).length?' ('+Object.keys(DB.pantry).length+')':''}</button>
-    <button class="btn sec grow sm" onclick="shopDlg()">Покупки${DB.shopPlan&&DB.shopPlan.length?' ('+DB.shopPlan.length+')':''}</button></div>
+    <button class="btn sec grow sm" onclick="shopDlg()">Покупки${DB.shopPlan&&DB.shopPlan.length?' ('+DB.shopPlan.length+')':''}</button>
+    <button class="btn sec sm" style="flex:none;min-width:52px" onclick="barcodeQuick()">📷</button></div>
   <div class="row" style="gap:8px;margin:8px 0 2px">
     <button class="btn sec grow sm" onclick="weekMenuDlg()">Меню недели</button>
     <button class="btn sec grow sm" onclick="mealPlanDlg()">Мой план</button></div>`;
@@ -3265,9 +3381,9 @@ function vMore(){
     h += `<div class="card"><h3>Профиль</h3>
       <div class="kv"><span>${esc(PROF.name)} · ${PROF.sex==='m'?'муж':'жен'} · ${PROF.age} лет · ${PROF.height} см</span></div>
       <div class="kv"><span>${PROF.place==='home' ? 'Дом · '+(['db','band','bar'].filter(k=>PROF.equip&&PROF.equip[k]).map(k=>({db:'гантели',band:'резинка',bar:'турник'})[k]).join(', ')||'вес тела') : 'Зал'} · ${PROF.split==='fb'?'Фулбади':'PPL'} · Старт ${PROF.startWeight} кг → ~${Math.round(TARGETS[WEEKS()])} кг к ${fmtD(PROG_END)} (${WEEKS()} нед.)</span></div>
-      <button class="btn sec full" style="margin-top:10px" onclick="adjustDlg()">Травмы и активность</button>
+      <button class="btn sec full" style="margin-top:10px" onclick="adjustDlg()">Настройка: уровень · травмы · разнообразие</button>
       <button class="btn sec full" style="margin-top:8px" onclick="if(confirm('Пересоздать программу заново через анкету? Вес, еда и шаги сохранятся, а журнал тренировок и замены очистятся.')){DB.profile=null;DB.sessions={};DB.swaps={};DB.skips={};DB.dateOv={};save();location.reload();}">Пересоздать программу (анкета)</button></div>`;
-    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 2.6 (онлайн-поиск любых магазинных продуктов по названию, с фото — Open Food Facts) · собрано для Егора и друзей · 19.08.2026. Фото упражнений: free-exercise-db, Public Domain.</div>`;
+    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 2.7 (уровень подготовки и щадящая программа для новичков, чередование упражнений, женская техника, новый сканер штрихкодов) · собрано для Егора и друзей · 19.08.2026. Фото упражнений: free-exercise-db, Public Domain.</div>`;
   }
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }
@@ -3423,9 +3539,21 @@ window.goalClear = function(){
 };
 window.adjustDlg = function(){
   const inj = PROF.inj || {};
-  openModal(`<h2>Травмы и активность</h2>
-    <div class="small">Применится сразу: программа заменит рискованные упражнения, а калории и шаги пересчитаются под активность. Журнал не пострадает.</div>
-    <div class="wlab" style="margin-top:12px">Ограничения</div>
+  const lvl = PROF.level || 'some';
+  openModal(`<h2>Настройка программы</h2>
+    <div class="small">Применится сразу: упражнения, подходы, калории и шаги подстроятся. Журнал не пострадает.</div>
+    <div class="wlab" style="margin-top:12px">Уровень подготовки</div>
+    <div class="seg" id="adj-lvl">
+      <button data-l="new" class="${lvl==='new'?'on':''}" onclick="adjSeg(this,'adj-lvl')">С нуля</button>
+      <button data-l="some" class="${lvl==='some'?'on':''}" onclick="adjSeg(this,'adj-lvl')">Средний</button>
+      <button data-l="fit" class="${lvl==='fit'?'on':''}" onclick="adjSeg(this,'adj-lvl')">Опытный</button></div>
+    <div class="tiny">«С нуля» — щадящие варианты (отжимания от стены/с колен вместо полных) и на подход меньше в тяжёлых фазах.</div>
+    <div class="wlab" style="margin-top:10px">Разнообразие</div>
+    <div class="seg" id="adj-var">
+      <button data-v="stable" class="${(PROF.variety||'stable')==='stable'?'on':''}" onclick="adjSeg(this,'adj-var')">Стабильная</button>
+      <button data-v="alt" class="${PROF.variety==='alt'?'on':''}" onclick="adjSeg(this,'adj-var')">Чередование</button></div>
+    <div class="tiny">Чередование: по чётным неделям вспомогательные упражнения меняются на аналоги — базовое (первое) остаётся для прогресса. История весов у каждого варианта своя.</div>
+    <div class="wlab" style="margin-top:10px">Ограничения</div>
     <div class="seg" id="adj-inj">
       <button data-i="knee" class="${inj.knee?'on':''}" onclick="this.classList.toggle('on')">Колени</button>
       <button data-i="back" class="${inj.back?'on':''}" onclick="this.classList.toggle('on')">Поясница</button>
@@ -3441,12 +3569,18 @@ window.adjAct = function(el){
   document.querySelectorAll('#adj-act button').forEach(b=>b.classList.remove('on'));
   el.classList.add('on');
 };
+window.adjSeg = function(el, id){
+  document.querySelectorAll('#'+id+' button').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on');
+};
 window.adjustSave = function(){
   const inj = {};
   document.querySelectorAll('#adj-inj button').forEach(b => inj[b.dataset.i] = b.classList.contains('on'));
   const act = document.querySelector('#adj-act button.on')?.dataset.a || 'mid';
   const actChanged = act !== (PROF.activity||'mid');
   PROF.inj = inj; PROF.activity = act;
+  PROF.level = document.querySelector('#adj-lvl button.on')?.dataset.l || PROF.level || 'some';
+  PROF.variety = document.querySelector('#adj-var button.on')?.dataset.v || PROF.variety || 'stable';
   if (actChanged){
     const w = lastWeight() ? lastWeight().v : PROF.startWeight;
     const c = calcPlan({...PROF, startWeight:w});
@@ -3528,7 +3662,7 @@ window.applyDayPlan = function(){
   save(); closeModal(); render(); toast('Пример дня записан — правь под себя');
 };
 /* ============ 14. АНКЕТА ПЕРВОГО ЗАПУСКА ============ */
-let wzSex = 'm', wzWeeks = 12, wzPlace = 'gym', wzEq = {db:false, band:false, bar:false}, wzSplit = 'ppl';
+let wzSex = 'm', wzWeeks = 12, wzPlace = 'gym', wzEq = {db:false, band:false, bar:false}, wzSplit = 'ppl', wzLvl = 'some';
 let wzDays = [0,1,3,5], wzInj = {knee:false, back:false, shoulder:false}, wzAct = 'mid';
 const DAY_N = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
 window.wzToggleDay = function(d){
@@ -3575,6 +3709,7 @@ function wzEqVis(){
   $('#wz-anch-home').style.display = (wzPlace==='home' && wzEq.db) ? '' : 'none';
 }
 window.wzSetSex = function(s){ wzSex = s; document.querySelectorAll('#wz-sex button').forEach(b=>b.classList.toggle('on', b.dataset.s===s)); };
+window.wzSetLvl = function(l){ wzLvl = l; document.querySelectorAll('#wz-lvl button').forEach(b=>b.classList.toggle('on', b.dataset.l===l)); };
 window.wzSetWeeks = function(n){ wzWeeks = n; document.querySelectorAll('#wz-weeks button').forEach(b=>b.classList.toggle('on', +b.dataset.w===n)); };
 function wizard(){
   header('PPL трекер', 'настройка программы под тебя · ~1 минута');
@@ -3610,6 +3745,12 @@ function wizard(){
     <div class="card"><h3>Дни тренировок</h3>
       <div class="sets" id="wz-days" style="margin-top:2px"></div>
       <div class="tiny" id="wz-days-note" style="margin-top:8px"></div></div>
+    <div class="card"><h3>Опыт тренировок</h3>
+      <div class="seg" id="wz-lvl">
+        <button data-l="new" onclick="wzSetLvl('new')">С нуля</button>
+        <button data-l="some" class="on" onclick="wzSetLvl('some')">Средний</button>
+        <button data-l="fit" onclick="wzSetLvl('fit')">Опытный</button></div>
+      <div class="tiny">«С нуля» — щадящие варианты (отжимания от стены и с колен вместо полных, меньше подходов) и плавный разгон. Поменять можно в любой момент.</div></div>
     <div class="card"><h3>Активность вне тренировок</h3>
       <div class="seg" id="wz-act">
         <button data-a="low" onclick="wzSetAct('low')">Сидячая</button>
@@ -3662,7 +3803,7 @@ window.wizardCalc = function(){
     : {bench:num('#wz-b'), pull:num('#wz-p'), leg:num('#wz-l'), thrust:num('#wz-t')};
   if (wzDays.length !== wzDaysNeed()) return toast('Выбери ровно '+wzDaysNeed()+' дня тренировок');
   const p = {name, sex:wzSex, age, height:h, startWeight:Math.round(w*10)/10, starts, weeks:wzWeeks,
-    place:wzPlace, equip:{...wzEq}, split:wzSplit, days:[...wzDays], inj:{...wzInj}, activity:wzAct};
+    place:wzPlace, equip:{...wzEq}, split:wzSplit, days:[...wzDays], inj:{...wzInj}, activity:wzAct, level:wzLvl};
   const c = calcPlan(p);
   const t = today(); const dow = (t.getDay()+6)%7;
   const monday = new Date(t.getTime() + ((7-dow)%7)*864e5);
@@ -3694,7 +3835,7 @@ window.wizardGo = function(){
   PROF = { name:p.name, sex:p.sex, age:p.age, height:p.height, startWeight:p.startWeight,
     w1:window._wzW1, legacyWeek0:false, weeks:p.weeks, starts:p.starts,
     place:p.place, equip:p.equip, split:p.split,
-    days:p.days, inj:p.inj, activity:p.activity,
+    days:p.days, inj:p.inj, activity:p.activity, level:p.level||'some',
     startsText: Object.keys(stx).length?stx:null, targets:c.targets };
   DB.profile = PROF; DB.kcalTarget = c.kcal; DB.protTarget = c.prot;
   DB.weights[key(today())] = p.startWeight;

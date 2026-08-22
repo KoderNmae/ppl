@@ -247,7 +247,7 @@ html[data-theme=dark] .x, html[data-theme=dark] .qbtn, html[data-theme=dark] .sw
 .aplate{fill:rgba(11,147,164,.22); stroke:var(--accent); stroke-width:2.5}
 .acable{stroke:rgba(12,74,84,.55); stroke-width:2; fill:none}
 .aband{stroke:var(--bad); stroke-width:3; fill:none}
-.amusg{stroke:rgba(20,189,142,.28)} .amuss{stroke:var(--accent2); opacity:.9}
+.amusb{stroke:var(--accent2)} .amusb2{stroke:var(--accent2)} .amusfill{fill:var(--accent2)}
 .atrace{stroke:rgba(11,147,164,.45); stroke-width:2; stroke-dasharray:4 4; fill:none}
 .atracehead{stroke:var(--accent); stroke-width:2.2; fill:none}
 html[data-theme=dark] .atrace{stroke:rgba(46,198,209,.4)}
@@ -644,7 +644,7 @@ function chain2(pts, w, cls){
   for (let i = 1; i < pts.length; i++) d += `L${pts[i][0].toFixed(1)} ${pts[i][1].toFixed(1)}`;
   return `<path d="${d}" stroke-width="${w}" class="${cls}" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`;
 }
-function drawProps2(props, pose, layer){
+function drawProps2(props, pose, layer, F){
   if (!props) return '';
   let h = '';
   for (const pr of props){
@@ -658,6 +658,14 @@ function drawProps2(props, pose, layer){
       h += `<line x1="${pr.x1||90}" y1="${pr.y}" x2="${pr.x2||230}" y2="${pr.y}" class="aline" stroke-width="5"/><line x1="${(pr.x1||90)+8}" y1="${pr.y}" x2="${(pr.x1||90)+8}" y2="${yEnd}" class="aline" stroke-width="4"/><line x1="${(pr.x2||230)-8}" y1="${pr.y}" x2="${(pr.x2||230)-8}" y2="${yEnd}" class="aline" stroke-width="4"/>`; }
     if (pr.t==='block') h += `<rect x="${pr.x-9}" y="${pr.y-9}" width="18" height="18" rx="3" class="aprop"/>`;
     if (pr.t==='seatback') h += `<rect x="${pr.x-4}" y="${pr.y-pr.h}" width="8" height="${pr.h}" rx="3" transform="rotate(${pr.rot||0} ${pr.x} ${pr.y})" class="aprop"/>`;
+    if (pr.t==='backrest' && F){
+      const dx = F.neck[0]-F.pelvis[0], dy = F.neck[1]-F.pelvis[1];
+      const L = Math.hypot(dx,dy)||1, ux = dx/L, uy = dy/L;
+      const nx = -uy*(pr.off||13), ny = ux*(pr.off||13);
+      const s1 = [F.pelvis[0]+nx-ux*(pr.ext0||14), F.pelvis[1]+ny-uy*(pr.ext0||14)];
+      const s2 = [F.neck[0]+nx+ux*(pr.ext1||16), F.neck[1]+ny+uy*(pr.ext1||16)];
+      h += `<line x1="${s1[0].toFixed(1)}" y1="${s1[1].toFixed(1)}" x2="${s2[0].toFixed(1)}" y2="${s2[1].toFixed(1)}" class="aprop" stroke-width="13" stroke-linecap="round"/>`;
+    }
     if (pr.t==='chair') h += `<rect x="${pr.x-22}" y="${pr.y}" width="44" height="7" rx="3" class="aprop"/><rect x="${pr.x-20}" y="${pr.y+7}" width="6" height="${176-pr.y-7}" class="aprop"/><rect x="${pr.x+14}" y="${pr.y+7}" width="6" height="${176-pr.y-7}" class="aprop"/>${pr.back===false?'':`<rect x="${pr.x-24}" y="${pr.y-40}" width="6" height="42" rx="2" class="aprop"/>`}`;
   }
   return h;
@@ -731,17 +739,53 @@ function tracePath(anim){
 }
 function renderFrame2(anim, pose, tGlob){
   const F = fk2(anim, pose);
-  let h = drawProps2(anim.props, pose, 0);
+  let h = drawProps2(anim.props, pose, 0, F);
   h += tracePath(anim);
-  h += `<g class="afar">` + chain2([F.sh, F.a2.el, F.a2.wr], 8, 'abone')
-     + chain2([F.pelvis, F.l2.kn, F.l2.an, F.l2.toe], 9.5, 'abone') + `</g>`;
-  h += chain2([F.pelvis, F.neck], 17, 'abone');
+  const tags = anim.mus ? (Array.isArray(anim.mus) ? anim.mus : [anim.mus]) : [];
+  const has = t => tags.includes(t);
+  const dist = (a,b) => Math.hypot(a[0]-b[0], a[1]-b[1]);
+  const legsDiffer = dist(F.l1.an, F.l2.an) > 12 || dist(F.l1.kn, F.l2.kn) > 12;
+  const armsDiffer = dist(F.a1.wr, F.a2.wr) > 11 || dist(F.a1.el, F.a2.el) > 11;
+  const thighMus = has('quad') || has('ham') || has('adductor');
+  const drawLeg = (L, far) => {
+    let g = far ? '<g class="afar">' : '';
+    const wT = far ? 9.5 : 10.5, wS = far ? 8.5 : 9.5;
+    g += chain2([F.pelvis, L.kn], wT, 'abone' + (thighMus && !far ? ' amusb' : ''));
+    g += chain2([L.kn, L.an, L.toe], wS, 'abone' + (has('calf') && !far ? ' amusb' : ''));
+    if (has('glute') && !far && !thighMus){
+      const gx = F.pelvis[0] + (L.kn[0]-F.pelvis[0])*0.16, gy = F.pelvis[1] + (L.kn[1]-F.pelvis[1])*0.16;
+      g += `<path d="M${F.pelvis[0].toFixed(1)} ${F.pelvis[1].toFixed(1)}L${gx.toFixed(1)} ${gy.toFixed(1)}" stroke-width="${wT}" class="amusb2" stroke-linecap="round" fill="none"/>`;
+    }
+    if (far) g += '</g>';
+    return g;
+  };
+  const drawArm = (A, far) => {
+    let g = far ? '<g class="afar">' : '';
+    const w1 = far ? 8 : 9, w2 = far ? 7.5 : 8.5;
+    g += chain2([F.sh, A.el], w1, 'abone' + ((has('biceps')||has('triceps')) && !far ? ' amusb' : ''));
+    g += chain2([A.el, A.wr], w2, 'abone' + (has('forearm') && !far ? ' amusb' : ''));
+    if (has('delts') && !far)
+      g += `<circle cx="${F.sh[0].toFixed(1)}" cy="${F.sh[1].toFixed(1)}" r="7" class="amusfill"/>`;
+    if (far) g += '</g>';
+    return g;
+  };
+  const torsoSeg = (t0, t1, cls) => {
+    const P = t => [F.pelvis[0] + (F.neck[0]-F.pelvis[0])*t, F.pelvis[1] + (F.neck[1]-F.pelvis[1])*t];
+    return chain2([P(t0), P(t1)], 17, cls);
+  };
+  if (legsDiffer) h += drawLeg(F.l2, true);
+  if (armsDiffer) h += drawArm(F.a2, true);
+  h += torsoSeg(0, 1, 'abone');
+  if (has('chest'))    h += torsoSeg(0.55, 0.97, 'abone amusb');
+  if (has('lats'))     h += torsoSeg(0.3, 0.8, 'abone amusb');
+  if (has('abs') || has('core')) h += torsoSeg(0.15, 0.6, 'abone amusb');
+  if (has('erectors')) h += torsoSeg(0.03, 0.45, 'abone amusb');
+  if (has('traps'))    h += torsoSeg(0.8, 1, 'abone amusb');
   h += `<circle cx="${F.headC[0].toFixed(1)}" cy="${F.headC[1].toFixed(1)}" r="${BODY.head}" class="ahead"/>`;
-  h += chain2([F.pelvis, F.l1.kn, F.l1.an, F.l1.toe], 10.5, 'abone');
-  h += chain2([F.sh, F.a1.el, F.a1.wr], 9, 'abone');
+  h += drawLeg(F.l1, false);
+  h += drawArm(F.a1, false);
   h += drawTools2(anim, F);
-  h += drawProps2(anim.props, pose, 1);
-  h += musHighlight2(anim, F);
+  h += drawProps2(anim.props, pose, 1, F);
   return h;
 }
 let animRAF = null;
@@ -806,9 +850,9 @@ goodmorning: {mus:['ham','erectors'], band:{x:150, y:174}, k1:1, e1:1, trace:'pv
 calfraise: {mus:['calf'], k1:1, e1:-1, trace:'pv', props:[FLOOR, {t:'box', x:154, y:164, w:44, h:12, z:0}], dur:1300, frames:[
   {pv:[150,101], to:2, f1:[152,166], f2:[149,167], ft:95, ft2:95, h1:{a:[180,178]}},
   {pv:[153,91], to:2, f1:[155,154], f2:[152,155], ft:128, ft2:128, h1:{a:[180,178]}}]},
-legpress: {mus:['quad','glute'], k1:-1, e1:-1, trace:'f1', props:[{t:'floor', y:176, z:0}, {t:'seatback', x:102, y:168, h:78, rot:-44, z:0}, {t:'box', x:96, y:148, w:52, h:28, z:0}, {t:'box', kx:'bx', x:166, y:56, w:14, h:76, z:1}], dur:1600, frames:[
-  {pv:[120,136], to:-42, hd:6, f1:[161,97], f2:[161,111], ft:10, ft2:10, h1:{a:[168,115]}, bx:167},
-  {pv:[120,136], to:-42, hd:6, f1:[176,97], f2:[176,111], ft:10, ft2:10, h1:{a:[168,115]}, bx:182}]},
+legpress: {mus:['quad','glute'], k1:-1, e1:-1, trace:'f1', props:[{t:'floor', y:176, z:0}, {t:'backrest', off:14, ext0:18, ext1:14, z:0}, {t:'box', x:98, y:144, w:54, h:32, z:0}, {t:'box', kx:'bx', x:166, y:56, w:14, h:76, z:1}], dur:1600, frames:[
+  {pv:[122,136], to:-42, hd:6, f1:[162,100], f2:[161,102], ft:10, ft2:10, h1:{a:[168,115]}, bx:168},
+  {pv:[122,136], to:-42, hd:6, f1:[177,100], f2:[176,102], ft:10, ft2:10, h1:{a:[168,115]}, bx:183}]},
 legext: {mus:['quad'], pad:'ankle', k1:1, e1:-1, trace:'f1', props:[{t:'floor', y:176, z:0}, {t:'chair', x:134, y:120, z:0}], dur:1400,
   pins:{}, frames:[
   {pv:[138,116], to:-6, f1:[166,148], f2:[163,151], h1:[150,124], h2:[144,126]},
@@ -848,7 +892,7 @@ fly: {mus:['chest'], db:1, k1:1, k2:1, e1:1, e2:-1, props:[FLOOR], dur:1600,
   pins:{f1:'floor', f2:'floor'}, frames:[
   {pv:[130,164], to:-90, hd:2, f1:[174,174], f2:[162,174], h1:[92,110], h2:[84,112]},
   {pv:[130,164], to:-90, hd:2, f1:[174,174], f2:[162,174], h1:[130,146], h2:[44,146]}]},
-incline: {mus:['chest','delts'], db:1, k1:1, e1:1, e2:1, trace:'h1', props:[FLOOR, {t:'seatback', x:124, y:142, h:82, rot:-45, z:0}, {t:'box', x:116, y:142, w:44, h:34, z:0}], dur:1500,
+incline: {mus:['chest','delts'], db:1, k1:1, e1:1, e2:1, trace:'h1', props:[FLOOR, {t:'backrest', off:13, ext0:12, ext1:18, z:0}, {t:'box', x:118, y:144, w:44, h:32, z:0}], dur:1500,
   pins:{f1:'floor', f2:'floor'}, frames:[
   {pv:[140,132], to:-45, hd:8, f1:[178,174], f2:[164,174], h1:[130,80], h2:[124,84]},
   {pv:[140,132], to:-45, hd:8, f1:[178,174], f2:[164,174], h1:[148,63], h2:[142,67]}]},
@@ -3851,7 +3895,7 @@ function vMore(){
       <div class="kv"><span>${PROF.place==='home' ? 'Дом · '+(['db','band','bar'].filter(k=>PROF.equip&&PROF.equip[k]).map(k=>({db:'гантели',band:'резинка',bar:'турник'})[k]).join(', ')||'вес тела') : 'Зал'} · ${PROF.split==='fb'?'Фулбади':'PPL'} · Старт ${PROF.startWeight} кг → ~${Math.round(TARGETS[WEEKS()])} кг к ${fmtD(PROG_END)} (${WEEKS()} нед.)</span></div>
       <button class="btn sec full" style="margin-top:10px" onclick="adjustDlg()">Настройка: уровень · травмы · разнообразие</button>
       <button class="btn sec full" style="margin-top:8px" onclick="if(confirm('Пересоздать программу заново через анкету? Вес, еда и шаги сохранятся, а журнал тренировок и замены очистятся.')){DB.profile=null;DB.sessions={};DB.swaps={};DB.skips={};DB.dateOv={};save();location.reload();}">Пересоздать программу (анкета)</button></div>`;
-    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 2.9 (движок техники v2: обратная кинематика от точек контакта, траектория движения, проверка всех фаз) · собрано для Егора и друзей · 19.08.2026. Анимации техники — собственный движок, силуэт без пола и возраста.</div>`;
+    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 2.9.1 (мышцы окрашены в самом теле, спинки тренажёров под спиной, без двойных конечностей) · собрано для Егора и друзей · 19.08.2026. Анимации техники — собственный движок, силуэт без пола и возраста.</div>`;
   }
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }

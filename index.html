@@ -247,6 +247,7 @@ html[data-theme=dark] .x, html[data-theme=dark] .qbtn, html[data-theme=dark] .sw
 .vidplay span{width:58px; height:58px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:22px; color:#fff; background:rgba(10,162,180,.85); backdrop-filter:blur(6px); box-shadow:0 6px 24px rgba(0,0,0,.35); padding-left:5px}
 .vidcap{position:absolute; left:10px; bottom:8px; color:#fff; font-size:12px; font-weight:600; text-shadow:0 1px 6px rgba(0,0,0,.7)}
 .vidext{display:block; text-align:center; margin:6px 0 0; font-size:12.5px; font-weight:600; color:var(--accent); text-decoration:none}
+.pl{display:inline-block; background:var(--accent2); color:#fff; border-radius:7px; padding:2.5px 8px; font-weight:800; font-size:12.5px; margin:2px 3px 2px 0}
 .abone{stroke:var(--fig)} .ahead{fill:var(--fig)} .afar{opacity:.32}
 .aprop{fill:rgba(12,74,84,.20); stroke:none}
 .afloor{stroke:rgba(12,74,84,.30); stroke-width:2.5}
@@ -1770,8 +1771,10 @@ function vTrain(){
         ${v.idx!==0?`<div class="exhist">аналог вместо: ${esc(ex.n)}</div>`:''}
       </div><div class="row" style="gap:6px;flex:none">
         <button class="qbtn" onclick="techDlg(${s.id},${ex.ei})">?</button>
+        <button class="qbtn" onclick="exStatsDlg(${s.id},${ex.ei})">📈</button>
         <button class="swapbtn" onclick="swapDlg(${s.id},${ex.ei})">⇄</button></div></div>
       ${sg.txt?`<div class="${sg.up?'exhint':'exhist'}">${esc(sg.txt)}</div>`:''}
+      ${xi===0 && sg.w && !v.bw ? warmupHtml(sg.w) : ''}
       <div class="sets">` +
       Array.from({length: Math.max(ex.sets, (st.sets[ex.ei]||[]).length)}, (_,si) => {
         const v = (st.sets[ex.ei]||[])[si];
@@ -2118,8 +2121,10 @@ window.logSet = function(sid, ei, si, rest, sugW){
   const r0 = prev ? prev.r : ex.hi;
   openModal(`<h2>${esc(v.n)}</h2><div class="small">Подход ${si+1} · цель ${ex.reps}${v.bw?' · вес тела':''}</div>
     ${v.bw ? '' : `<div class="stepper"><span class="lbl">Вес, кг</span><button onclick="stepNum('set-w',-${v.inc||2.5})">−</button>
-      <input id="set-w" type="number" step="0.5" inputmode="decimal" value="${w0}">
-      <button onclick="stepNum('set-w',${v.inc||2.5})">+</button></div>`}
+      <input id="set-w" type="number" step="0.5" inputmode="decimal" value="${w0}" oninput="updPlates()">
+      <button onclick="stepNum('set-w',${v.inc||2.5})">+</button></div>
+    <button class="btn ghost sm" style="margin:-2px 0 6px" onclick="togglePlates()">⚖ Разложить на гриф</button>
+    <div id="plates" style="display:none"></div>`}
     <div class="stepper"><span class="lbl">Повторы</span><button onclick="stepNum('set-r',-1)">−</button>
       <input id="set-r" type="number" step="1" inputmode="numeric" value="${r0}">
       <button onclick="stepNum('set-r',1)">+</button></div>
@@ -2145,6 +2150,15 @@ window.saveSet = function(sid, ei, si, rest){
   save(); closeModal(); render();
   const s = SESSIONS[sid];
   const ex = s.exs.find(e=>e.ei===ei);
+  if (w != null && isFinite(w)){
+    const v2 = variantOf(sid, ei);
+    const e1 = w*(1+r/30);
+    let best = 0;
+    for (const h of exHistory(s.type, ei, 999, v2.idx))
+      for (const x of h.sets) if (x.w!=null) best = Math.max(best, x.w*(1+x.r/30));
+    (st.sets[ei]||[]).forEach((x,idx)=>{ if(x && idx!==si && x.w!=null) best = Math.max(best, x.w*(1+x.r/30)); });
+    if (best > 0 && e1 > best + 1e-9) setTimeout(()=>toast('🎉 Личный рекорд: '+w+' кг × '+r), 700);
+  }
   const nDone = st.sets[ei].filter(Boolean).length;
   if (nDone < ex.sets) startTimer(rest, esc(ex.n)+' · подход '+(nDone+1)+' из '+ex.sets);
   else startTimer(Math.min(rest, 120), esc(ex.n)+' — сделано · отдохни перед следующим');
@@ -2159,6 +2173,92 @@ window.finishSession = function(sid){
   trainSelected = null; render();
   toast(typeLabel(s.type)+' готово: '+total+' подходов'+(tonnage>0?', тоннаж '+Math.round(tonnage).toLocaleString('ru-RU')+' кг':''));
 };
+/* --- разминка, блины, прогресс упражнения --- */
+const r25 = x => Math.round(x/2.5)*2.5;
+function warmupHtml(w){
+  if (!w || w < 30) return '';
+  const steps = [['гриф', 10], [r25(w*0.5)+' кг', 6], [r25(w*0.75)+' кг', 3]];
+  if (w >= 60) steps.push([r25(w*0.9)+' кг', 1]);
+  return `<div class="exhist">Разминка: ${steps.map(s=>s[0]+' ×'+s[1]).join(' → ')} → рабочие</div>`;
+}
+let plateBar = 20;
+window.togglePlates = function(){
+  const el = $('#plates'); if (!el) return;
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+  updPlates();
+};
+window.setPlateBar = function(b){ plateBar = b; updPlates(); };
+window.updPlates = function(){
+  const el = $('#plates'); if (!el || el.style.display === 'none') return;
+  const w = parseFloat(($('#set-w')||{}).value);
+  if (!isFinite(w)){ el.innerHTML = ''; return; }
+  const bars = [20,15,10].map(b=>`<button class="chip ${plateBar===b?'done':''}" onclick="setPlateBar(${b})">гриф ${b}</button>`).join('');
+  if (w < plateBar - 1e-9){
+    el.innerHTML = `<div class="sets" style="margin-top:2px">${bars}</div><div class="tiny" style="margin-top:6px">Вес меньше грифа (${plateBar} кг) — бери гриф легче или гантели</div>`;
+    return;
+  }
+  let rem = (w - plateBar)/2; const plates = [];
+  for (const d of [25,20,15,10,5,2.5,1.25]) while (rem >= d - 1e-9){ plates.push(d); rem -= d; }
+  rem = Math.round(rem*100)/100;
+  el.innerHTML = `<div class="sets" style="margin-top:2px">${bars}</div>
+    <div class="small" style="margin-top:8px"><b>На каждую сторону:</b> ${plates.length ? plates.map(p=>`<span class="pl">${p}</span>`).join('') : 'пустой гриф'}${rem>0?` <span class="tiny">(остаток ${rem} — не разложить по 1.25)</span>`:''}</div>`;
+};
+window.exStatsDlg = function(sid, ei){
+  const s = SESSIONS[sid];
+  const v = variantOf(sid, ei);
+  DB.exNotes = DB.exNotes || {};
+  const noteKey = s.type+':'+ei+':'+v.idx;
+  const hist = exHistory(s.type, ei, 999, v.idx).reverse();
+  const pts = [];
+  for (const h of hist){
+    const ws = h.sets.filter(x=>x.w!=null);
+    if (ws.length){
+      pts.push({d:h.date, top:Math.max(...ws.map(x=>x.w)), e1:Math.max(...ws.map(x=>x.w*(1+x.r/30))), bw:false});
+    } else if (h.sets.length){
+      const rr = Math.max(...h.sets.map(x=>x.r||0));
+      pts.push({d:h.date, top:rr, e1:rr, bw:true});
+    }
+  }
+  let chart, recs = '';
+  if (pts.length >= 2) chart = exChart(pts.map(p=>p.top), pts.map(p=>p.d), pts[0].bw);
+  else if (pts.length === 1) chart = `<div class="small" style="margin:10px 0">Одна тренировка в истории — график появится после второй.</div>`;
+  else chart = `<div class="small" style="margin:10px 0">Пока нет завершённых тренировок с этим упражнением — запиши подходы и заверши тренировку.</div>`;
+  if (pts.length){
+    if (pts[0].bw){
+      const bestR = Math.max(...pts.map(p=>p.top));
+      recs = `<div class="section-t">Рекорды</div>
+        <div class="small">Макс повторов за подход: <b>${bestR}</b> · ${fmtD(fromKey(pts.find(p=>p.top===bestR).d))}</div>`;
+    } else {
+      const bestW = Math.max(...pts.map(p=>p.top));
+      const bestE = Math.max(...pts.map(p=>p.e1));
+      recs = `<div class="section-t">Рекорды</div>
+        <div class="small">Макс вес в подходе: <b>${bestW} кг</b> · ${fmtD(fromKey(pts.find(p=>p.top===bestW).d))}</div>
+        <div class="small">Расчётный 1ПМ (Эпли): <b>${r1(bestE)} кг</b> · ${fmtD(fromKey(pts.find(p=>p.e1===bestE).d))}</div>`;
+    }
+  }
+  openModal(`<h2>${esc(v.n)}</h2><div class="small">прогресс · тренировок в истории: ${pts.length}</div>
+    ${chart}${recs}
+    <div class="section-t">Заметка к упражнению</div>
+    <input type="text" value="${esc(DB.exNotes[noteKey]||'')}" placeholder="настройки тренажёра, хват, нюансы…"
+      onchange="(DB.exNotes=DB.exNotes||{})['${noteKey}']=this.value;save()">
+    <button class="btn full" style="margin-top:12px" onclick="closeModal()">Понятно</button>`);
+};
+function exChart(vals, dates, bw){
+  const W=300, H=112, p=16;
+  const mn = Math.min(...vals), mx = Math.max(...vals);
+  const span = (mx - mn) || 1;
+  const X = i => p + (W-2*p) * (vals.length===1 ? .5 : i/(vals.length-1));
+  const Y = v => H - p - (H-2*p) * ((v-mn)/span);
+  const line = vals.map((v,i)=>`${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(' ');
+  const dots = vals.map((v,i)=>`<circle cx="${X(i).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="3.2" fill="#0b93a4"/>`).join('');
+  return `<div class="card" style="padding:12px 8px 6px;margin:10px 0"><svg viewBox="0 0 ${W} ${H}" style="width:100%;display:block">
+    <polyline points="${line}" fill="none" stroke="#0b93a4" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>
+    ${dots}
+    <text x="${(X(vals.indexOf(mx))+ (vals.indexOf(mx)>vals.length/2 ? -8 : 8)).toFixed(1)}" y="${(Y(mx)<24?Y(mx)+16:Y(mx)-8).toFixed(1)}" font-size="10.5" font-weight="700" text-anchor="middle" fill="#0b93a4">${mx}${bw?'':' кг'}</text>
+    <text x="${p}" y="${H-3}" font-size="9" fill="#7a9aa0">${fmtD(fromKey(dates[0]))}</text>
+    <text x="${W-p}" y="${H-3}" font-size="9" text-anchor="end" fill="#7a9aa0">${fmtD(fromKey(dates[dates.length-1]))}</text>
+  </svg><div class="tiny" style="text-align:center;margin-top:2px">${bw?'макс повторы за подход':'лучший вес подхода'} по тренировкам</div></div>`;
+}
 /* ============ 8. ТАЙМЕР ОТДЫХА ============ */
 let timerEnd = null, timerTick = null, timerTotal = 0;
 function startTimer(sec, label){
@@ -4055,7 +4155,7 @@ function vMore(){
       <div class="kv"><span>${PROF.place==='home' ? 'Дом · '+(['db','band','bar'].filter(k=>PROF.equip&&PROF.equip[k]).map(k=>({db:'гантели',band:'резинка',bar:'турник'})[k]).join(', ')||'вес тела') : 'Зал'} · ${PROF.split==='fb'?'Фулбади':'PPL'} · Старт ${PROF.startWeight} кг → ~${Math.round(TARGETS[WEEKS()])} кг к ${fmtD(PROG_END)} (${WEEKS()} нед.)</span></div>
       <button class="btn sec full" style="margin-top:10px" onclick="adjustDlg()">Настройка: уровень · травмы · разнообразие</button>
       <button class="btn sec full" style="margin-top:8px" onclick="if(confirm('Пересоздать программу заново через анкету? Вес, еда и шаги сохранятся, а журнал тренировок и замены очистятся.')){DB.profile=null;DB.sessions={};DB.swaps={};DB.skips={};DB.dateOv={};save();location.reload();}">Пересоздать программу (анкета)</button></div>`;
-    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 3.5.1 (мускульный силуэт: цельный контур, органические формы) · собрано для Егора и друзей · 22.08.2026. Анимации техники — собственный движок, силуэт без пола и возраста.</div>`;
+    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 3.6 (калькулятор блинов, разминочные подходы, графики и рекорды) · собрано для Егора и друзей · 22.08.2026. Анимации техники — собственный движок, силуэт без пола и возраста.</div>`;
   }
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }

@@ -343,6 +343,45 @@ html[data-theme=dark] .modal::before{background:rgba(255,255,255,.18)}
 @keyframes cpulse{0%{opacity:.7; transform:scale(1)} 70%{opacity:0; transform:scale(2.6)} 100%{opacity:0; transform:scale(2.6)}}
 .cpulse{transform-box:fill-box; transform-origin:center; animation:cpulse 2.2s ease-out infinite}
 a{color:#6da7ec}
+/* — тренировка 2.0 — */
+#excar{position:sticky; top:0; z-index:40; display:flex; gap:10px; overflow-x:auto; padding:10px 4px 12px;
+  margin:0 -4px; background:linear-gradient(var(--bg) 82%, transparent); scrollbar-width:none}
+#excar::-webkit-scrollbar{display:none}
+.excir{flex:none; width:52px; text-align:center; background:none; border:none; padding:0; cursor:pointer}
+.excir .imgw{display:block; width:48px; height:48px; margin:0 auto; border-radius:50%; border:2.5px solid var(--border2);
+  background:var(--card) center/cover no-repeat; position:relative; transition:border-color .2s}
+.excir .n{display:block}
+.excir.on .imgw{border-color:var(--accent)}
+.excir.full .imgw{border-color:var(--good)}
+.excir.full .imgw::after{content:"✓"; position:absolute; right:-4px; bottom:-4px; width:17px; height:17px;
+  border-radius:50%; background:var(--good); color:#fff; font:800 11px/17px system-ui; text-align:center}
+.excir .n{font-size:9.5px; color:var(--muted); margin-top:3px; line-height:1.15; height:22px; overflow:hidden; font-weight:600}
+.excir .imgw b{font:800 15px/44px system-ui; color:var(--text2)}
+.exprev{font-size:12.5px; color:var(--muted); margin:7px 2px 0; cursor:pointer}
+.exprev b{color:var(--text2); font-weight:700}
+#sess-live{display:flex; align-items:center; gap:8px; font-weight:700; font-size:13.5px; color:var(--accent2);
+  margin:2px 2px 8px}
+#sess-live .dot{width:8px; height:8px; border-radius:50%; background:var(--accent); animation:cpulse 1.6s ease-out infinite}
+/* фуллскрин-таймер */
+#rest-full{position:fixed; inset:0; z-index:120; background:var(--bg); display:none; flex-direction:column;
+  align-items:center; justify-content:center; gap:26px; padding:24px}
+#rest-full.show{display:flex}
+#rest-full .rlab{font-size:14px; color:var(--muted); font-weight:600; text-align:center; max-width:80%}
+#rest-ring{position:relative; width:min(72vw,300px); aspect-ratio:1}
+#rest-ring svg{width:100%; height:100%; transform:rotate(-90deg)}
+#rest-ring .bgc{fill:none; stroke:var(--border2); stroke-width:14}
+#rest-ring .fgc{fill:none; stroke:url(#restgrad); stroke-width:14; stroke-linecap:round; transition:stroke-dashoffset .25s linear}
+#rest-ring .tt{position:absolute; inset:0; display:grid; place-items:center;
+  font-size:clamp(44px,16vw,64px); font-weight:800; font-variant-numeric:tabular-nums; letter-spacing:-1px}
+#rest-full .rrow{display:flex; gap:10px}
+#rest-full .rbtn{min-width:86px; padding:14px 18px; border-radius:16px; border:1.5px solid var(--border2);
+  background:var(--card); color:var(--text); font-weight:700; font-size:15px; cursor:pointer}
+#rest-full .rbtn.main{background:var(--grad); color:#fff; border:none}
+#rest-close{position:absolute; top:calc(14px + env(safe-area-inset-top)); right:16px; width:42px; height:42px;
+  border-radius:50%; border:1.5px solid var(--border2); background:var(--card); color:var(--text); font-size:19px; cursor:pointer}
+/* чипы травм в замене */
+.injrow{display:flex; gap:8px; margin:2px 0 10px}
+.injrow .chip.done{background:var(--grad); color:#fff}
 /* — база упражнений — */
 .enc-row{display:flex; align-items:center; gap:12px; padding:10px 12px; cursor:pointer}
 .enc-row img{width:58px; height:58px; border-radius:12px; object-fit:cover; background:#fff; flex:none}
@@ -365,11 +404,29 @@ a{color:#6da7ec}
   <nav id="tabs"></nav>
 </div>
 <div id="timerbar">
-  <div class="t" id="timer-t">0:00</div>
-  <div class="grow small" id="timer-l">отдых</div>
+  <div class="t" id="timer-t" onclick="openRestFull()" style="cursor:pointer">0:00</div>
+  <div class="grow small" id="timer-l" onclick="openRestFull()" style="cursor:pointer">отдых</div>
   <button class="btn sec sm" id="timer-plus">+30 c</button>
   <button class="btn sec sm" id="timer-x">Стоп</button>
   <div id="timer-line"><i id="timer-fill"></i></div>
+</div>
+<div id="rest-full">
+  <button id="rest-close" onclick="closeRestFull()">⌄</button>
+  <div class="rlab" id="rest-full-l">отдых</div>
+  <div id="rest-ring">
+    <svg viewBox="0 0 200 200">
+      <defs><linearGradient id="restgrad" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#0b93a4"/><stop offset="1" stop-color="#2ec6d1"/></linearGradient></defs>
+      <circle class="bgc" cx="100" cy="100" r="88"/>
+      <circle class="fgc" id="rest-arc" cx="100" cy="100" r="88" stroke-dasharray="552.9" stroke-dashoffset="0"/>
+    </svg>
+    <div class="tt" id="rest-full-t">0:00</div>
+  </div>
+  <div class="rrow">
+    <button class="rbtn" onclick="nudgeTimer(-15)">−15 c</button>
+    <button class="rbtn main" onclick="stopTimer();closeRestFull()">Стоп</button>
+    <button class="rbtn" onclick="nudgeTimer(15)">+15 c</button>
+  </div>
 </div>
 <div id="toast"></div>
 <div class="modal-wrap" id="modal-wrap"><div class="modal" id="modal"></div></div>
@@ -1900,6 +1957,19 @@ function vTrain(){
       <button class="btn sec sm grow" style="flex:1" onclick="skipDlg(${s.id})">Пропустить</button></div>`;
   if (s.phase==='deload')
     h += `<div class="insight warn"><b>Разгрузочная неделя</b><p>−30% от рабочих весов, по 2 подхода, RPE ≤ 6. Это часть плана: суставы и нервная система скажут спасибо на неделе 8.</p></div>`;
+  if (st.t0 && !st.done)
+    h += `<div id="sess-live"><span class="dot"></span>Тренировка идёт · <span id="sess-timer">${sessDurTxt(st.t0)}</span></div>`;
+  // карусель упражнений: прыжок к любому, галки на выполненных
+  h += `<div id="excar">` + s.exs.map((ex, xi) => {
+    if (st.skipEx && st.skipEx[ex.ei]) return '';
+    const v = variantOf(s.id, ex.ei);
+    const cnt = (st.sets[ex.ei]||[]).filter(Boolean).length;
+    const vid = (typeof VIDEO_OF !== 'undefined') && (VIDEO_OF[v.n] || VIDEO_OF[ex.n]);
+    const th = vid && vid.th ? `style="background-image:url('${vid.th}')"` : '';
+    return `<button class="excir ${cnt>=ex.sets?'full':''}" onclick="scrollToEx(${ex.ei})">
+      <span class="imgw" ${th}>${th?'':`<b>${xi+1}</b>`}</span>
+      <span class="n">${esc(v.n.split(' ').slice(0,2).join(' '))}</span></button>`;
+  }).join('') + `</div>`;
   h += `<div class="card tiny">${REST_BASE}</div>`;
   s.exs.forEach((ex, xi) => {
     if (st.skipEx && st.skipEx[ex.ei]){
@@ -1913,7 +1983,9 @@ function vTrain(){
     const v = variantOf(s.id, ex.ei);
     const sg = exSuggest(s, ex);
     const grp = ALTS[s.type][ex.ei] ? ALTS[s.type][ex.ei].m : '';
-    h += `<div class="card ${done.length>=ex.sets?'exdone':''}">
+    const prevH = exHistory(s.type, ex.ei, 1, v.idx)[0];
+    const prevLine = prevH ? `<div class="exprev" onclick="exStatsDlg(${s.id},${ex.ei})">Прошлый раз (${fmtD(fromKey(prevH.date))}${prevH.deload?' · разгр.':''}): <b>${prevH.sets.map(x=>x.w!=null?x.w+'×'+x.r:x.r+' повт').join(' · ')}</b> ›</div>` : '';
+    h += `<div class="card ${done.length>=ex.sets?'exdone':''}" id="ex-${ex.ei}" style="scroll-margin-top:86px">
       <div class="row"><div class="grow">
         <div class="exname">${xi+1}. ${esc(v.n)}</div>
         <div class="exmeta">${grp?esc(grp)+' · ':''}${ex.sets}×${ex.reps} · отдых ${Math.floor(ex.rest/60)}:${pad(ex.rest%60)}</div>
@@ -1924,6 +1996,7 @@ function vTrain(){
         <button class="swapbtn" onclick="swapDlg(${s.id},${ex.ei})">⇄</button></div></div>
       ${sg.txt?`<div class="${sg.up?'exhint':'exhist'}">${esc(sg.txt)}</div>`:''}
       ${xi===0 && sg.w && !v.bw ? warmupHtml(sg.w) : ''}
+      ${prevLine}
       <div class="sets">` +
       Array.from({length: Math.max(ex.sets, (st.sets[ex.ei]||[]).length)}, (_,si) => {
         const v = (st.sets[ex.ei]||[])[si];
@@ -1958,7 +2031,10 @@ function trainList(){
   if (done.length){
     const last3 = done.slice(-3).reverse();
     h += `<div class="section-t">Выполнено (${done.length})</div>`;
-    h += last3.map(s=>sessRow(s,'✓ '+fmtD(fromKey(DB.sessions[s.id].done)))).join('');
+    h += last3.map(s=>{
+      const st = DB.sessions[s.id];
+      return sessRow(s,'✓ '+fmtD(fromKey(st.done))+(st.dur?' · '+durTxt(st.dur):''));
+    }).join('');
   }
   h += `<div class="section-t">Дальше</div>`;
   const left = SESSIONS.filter(x=>!DB.sessions[x.id]?.done && !DB.skips[x.id]).length;
@@ -1983,6 +2059,23 @@ function sessRow(s, mark, hot, dim){
 window.setRPE = function(sid, ei, v){
   const st = DB.sessions[sid]; st.rpe[ei] = st.rpe[ei]===v ? null : v; save(); render();
 };
+window.scrollToEx = function(ei){
+  const el = document.getElementById('ex-'+ei);
+  if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
+};
+/* — секундомер тренировки — */
+function sessDurTxt(t0, end){
+  const m = Math.max(0, Math.floor(((end||Date.now()) - t0)/60000));
+  const sN = Math.floor(((end||Date.now()) - t0)/1000)%60;
+  return m >= 60 ? Math.floor(m/60)+'ч '+pad(m%60)+'м' : m+':'+pad(sN);
+}
+function durTxt(mins){ return mins >= 60 ? Math.floor(mins/60)+' ч '+pad(mins%60)+' мин' : mins+' мин'; }
+setInterval(() => {
+  const el = document.getElementById('sess-timer');
+  if (!el || trainSelected == null) return;
+  const st = DB.sessions[trainSelected];
+  if (st && st.t0 && !st.done) el.textContent = sessDurTxt(st.t0);
+}, 1000);
 /* ============ ВИДЕО ТЕХНИКИ: проверенные ролики RUTUBE (работает в РФ) ============ */
 const VIDEO_OF = {
 'Жим штанги лёжа':{id:'eaa78a57d31e5a6d2de17af63baaf9a3',th:'https://pic.rtbcdn.ru/video/09/e2/09e29d96065d532a8e0e46dfdc95059c.jpg?size=l'},
@@ -2188,20 +2281,49 @@ window.unskipEx = function(sid, ei){
   if (st && st.skipEx) delete st.skipEx[ei];
   save(); render();
 };
+/* небезопасные паттерны: осевая нагрузка на колени / позвоночник */
+const INJ_KNEE = /присед|выпад|зашагив|жим ногами|разгибани[ея] ног|разгибания одной ногой|гакк|пистолет|сисси|болгар|плие|прыж|запрыг|выпрыг|скалолаз/i;
+const INJ_SPINE = /станов|румынск|мёртв|наклон|доброе утро|в наклоне|гиперэкстенз|шраги со штангой|армейский|жим штанги стоя|присед со штангой|приседания со штангой|фронтальн\w* присед|гоблет|сумо|тяга штанги|протяжка/i;
+function injOk(name){
+  const f = window._injFlt;
+  if (!f) return true;
+  if (f === 'knee' && INJ_KNEE.test(name)) return false;
+  if (f === 'spine' && INJ_SPINE.test(name)) return false;
+  return true;
+}
+window.setInjFlt = function(f){
+  window._injFlt = window._injFlt === f ? '' : f;
+  document.querySelectorAll('.injrow .chip').forEach(b=>b.classList.toggle('done', b.dataset.f === window._injFlt));
+  renderSwapList();
+  catList(($('#swap-q')||{}).value || '');
+};
+function renderSwapList(){
+  const el = $('#swap-list'); if (!el || !window._swapCtx) return;
+  const {sid, ei} = window._swapCtx;
+  const s = SESSIONS[sid];
+  const cur = variantOf(sid, ei);
+  const slot = ALTS[s.type][ei];
+  const orig = EXDB[s.type][ei];
+  const opts = [{n:orig.n, inc:orig.inc}, ...slot.a];
+  const rows = opts.map((o,i)=>({o,i})).filter(x => injOk(x.o.n));
+  el.innerHTML = rows.map(({o,i})=>`<button class="varrow ${!cur.cat && i===cur.idx?'on':''}" data-i="${i}" onclick="pickVar(${i})">
+      <b>${esc(o.n)}</b><span>${i===0?'оригинал программы':'аналог'} · шаг +${o.inc} кг</span></button>`).join('')
+    || `<div class="small" style="padding:6px 2px">Все аналоги слота под фильтром — глянь каталог ниже.</div>`;
+}
 window.swapDlg = function(sid, ei){
   const s = SESSIONS[sid];
   const cur = variantOf(sid, ei);
   swapSel = cur.cat ? {n:cur.n, inc:cur.inc, bw:cur.bw} : cur.idx;
   const slot = ALTS[s.type][ei];
-  const orig = EXDB[s.type][ei];
-  const opts = [{n:orig.n, inc:orig.inc}, ...slot.a];
   window._swapCtx = {sid, ei};
+  window._injFlt = '';
   openModal(`<h2>Замена · ${esc(slot.m)}</h2>
     <div class="small" style="margin-bottom:8px">Аналоги на ту же группу — или вообще любое упражнение из каталога. История весов по каждому варианту ведётся отдельно.</div>
-    <div id="swap-list">` +
-    opts.map((o,i)=>`<button class="varrow ${!cur.cat && i===cur.idx?'on':''}" data-i="${i}" onclick="pickVar(${i})">
-      <b>${esc(o.n)}</b><span>${i===0?'оригинал программы':'аналог'} · шаг +${o.inc} кг</span></button>`).join('') +
-    `</div>
+    <div class="injrow">
+      <button class="chip" data-f="knee" onclick="setInjFlt('knee')">🦵 Без нагрузки на колени</button>
+      <button class="chip" data-f="spine" onclick="setInjFlt('spine')">🧍 Без осевой на спину</button>
+    </div>
+    <div id="swap-list"></div>
     <div class="wlab" style="margin-top:12px">Любое из каталога · ${catalog().length} упражнений</div>
     <input type="text" id="swap-q" placeholder="Поиск: жим, тяга, присед, пресс…" oninput="catList(this.value)">
     <div id="cat-list"></div>
@@ -2210,6 +2332,7 @@ window.swapDlg = function(sid, ei){
       <button class="btn grow" style="flex:1" onclick="applySwap(${sid},${ei},true)">Насовсем</button>
     </div>
     <button class="btn danger full sm" style="margin-top:8px" onclick="skipEx(${sid},${ei})">Пропустить сегодня (болит / нет тренажёра)</button>`);
+  renderSwapList();
   catList('');
 };
 window.catList = function(q){
@@ -2221,9 +2344,10 @@ window.catList = function(q){
   const all = catalog();
   const idxed = all.map((c,i)=>({c,i}));
   const selN = swapSel && typeof swapSel === 'object' ? swapSel.n : null;
+  const safe = idxed.filter(o => injOk(o.c.n));
   let rows = q
-    ? idxed.filter(o => o.c.n.toLowerCase().includes(q) || (o.c.m||'').toLowerCase().includes(q)).slice(0,10)
-    : idxed.filter(o => (!gflt || o.c.g===gflt) && (!selN || o.c.n!==selN)).slice(0,5);
+    ? safe.filter(o => o.c.n.toLowerCase().includes(q) || (o.c.m||'').toLowerCase().includes(q)).slice(0,10)
+    : safe.filter(o => (!gflt || o.c.g===gflt) && (!selN || o.c.n!==selN)).slice(0,5);
   if (!q && selN){ const cur = idxed.find(o=>o.c.n===selN); if (cur) rows = [cur, ...rows].slice(0,6); }
   el.innerHTML = rows.map(o => `<button class="varrow ${selN===o.c.n?'on':''}" data-c="${o.i}" onclick="pickCat(${o.i})">
     <b>${esc(o.c.n)}</b><span>${esc(o.c.m||'')}${o.c.bw?' · свой вес':' · шаг +'+o.c.inc+' кг'}</span></button>`).join('')
@@ -2328,6 +2452,7 @@ window.saveSet = function(sid, ei, si, rest){
   if (!isFinite(r) || r<1 || r>99) return toast('Проверь повторы');
   const st = DB.sessions[sid];
   if (!st.sets[ei]) st.sets[ei] = [];
+  if (!st.t0 && !st.done) st.t0 = Date.now();
   window._lastChip = {ei, si, t: Date.now()};
   const failFl = $('#set-fail') && $('#set-fail').checked;
   st.sets[ei][si] = wEl ? {w:r1(w), r} : {w:null, r};
@@ -2354,11 +2479,13 @@ window.finishSession = function(sid){
   const st = DB.sessions[sid];
   const total = Object.values(st.sets).reduce((a,arr)=>a+arr.filter(Boolean).length, 0);
   if (!total) return toast('Ни одного подхода не записано');
-  st.done = key(today()); save(); stopTimer(); achCheck();
+  st.done = key(today());
+  if (st.t0){ const m = Math.round((Date.now() - st.t0)/60000); if (m >= 1 && m <= 600) st.dur = m; delete st.t0; }
+  save(); stopTimer(); achCheck();
   const s = SESSIONS[sid];
   const tonnage = Object.values(st.sets).flat().filter(Boolean).reduce((a,x)=>a+(x.w||0)*x.r,0);
   trainSelected = null; render();
-  toast(typeLabel(s.type)+' готово: '+total+' подходов'+(tonnage>0?', тоннаж '+Math.round(tonnage).toLocaleString('ru-RU')+' кг':''));
+  toast(typeLabel(s.type)+' готово: '+total+' подходов'+(tonnage>0?', тоннаж '+Math.round(tonnage).toLocaleString('ru-RU')+' кг':'')+(st.dur?' · '+durTxt(st.dur):''));
 };
 /* --- разминка, блины, прогресс упражнения --- */
 const r25 = x => Math.round(x/2.5)*2.5;
@@ -3137,16 +3264,35 @@ function startTimer(sec, label){
 function tickTimer(){
   const left = Math.ceil((timerEnd - Date.now())/1000);
   if (left <= 0){
-    $('#timer-t').textContent = '0:00'; stopTimer(); beep();
+    $('#timer-t').textContent = '0:00'; stopTimer(); closeRestFull(); beep();
     toast('Отдых окончен — следующий подход'); return;
   }
-  $('#timer-t').textContent = Math.floor(left/60)+':'+pad(left%60);
+  const txt = Math.floor(left/60)+':'+pad(left%60);
+  $('#timer-t').textContent = txt;
   const fill = $('#timer-fill');
   if (fill && timerTotal) fill.style.width = Math.max(0, (timerEnd-Date.now())/timerTotal*100)+'%';
+  const ft = $('#rest-full-t');
+  if (ft && $('#rest-full').classList.contains('show')){
+    ft.textContent = txt;
+    const arc = $('#rest-arc');
+    if (arc && timerTotal) arc.style.strokeDashoffset = (552.9 * (1 - Math.max(0,(timerEnd-Date.now())/timerTotal))).toFixed(1);
+  }
 }
 function stopTimer(){ clearInterval(timerTick); $('#timerbar').classList.remove('show'); }
+window.openRestFull = function(){
+  if (timerEnd == null || timerEnd - Date.now() <= 0) return;
+  $('#rest-full-l').textContent = $('#timer-l').textContent;
+  $('#rest-full').classList.add('show'); tickTimer();
+};
+window.closeRestFull = function(){ $('#rest-full').classList.remove('show'); };
+window.nudgeTimer = function(ds){
+  if (timerEnd == null) return;
+  timerEnd = Math.max(Date.now() + 1000, timerEnd + ds*1000);
+  timerTotal = Math.max(timerTotal + ds*1000, timerEnd - Date.now());
+  tickTimer();
+};
 $('#timer-x').onclick = stopTimer;
-$('#timer-plus').onclick = () => { timerEnd += 30000; tickTimer(); };
+$('#timer-plus').onclick = () => { nudgeTimer(30); };
 function beep(){
   try{ if (navigator.vibrate) navigator.vibrate([180,90,180]); }catch(e){}
   try{
@@ -5104,7 +5250,7 @@ function vMore(){
       <div class="kv"><span>${PROF.place==='home' ? 'Дом · '+(['db','band','bar'].filter(k=>PROF.equip&&PROF.equip[k]).map(k=>({db:'гантели',band:'резинка',bar:'турник'})[k]).join(', ')||'вес тела') : 'Зал'} · ${PROF.split==='fb'?'Фулбади':'PPL'} · Старт ${PROF.startWeight} кг → ~${Math.round(TARGETS[WEEKS()])} кг к ${fmtD(PROG_END)} (${WEEKS()} нед.)</span></div>
       <button class="btn sec full" style="margin-top:10px" onclick="adjustDlg()">Настройка: уровень · травмы · разнообразие</button>
       <button class="btn sec full" style="margin-top:8px" onclick="if(confirm('Пересоздать программу заново через анкету? Вес, еда и шаги сохранятся, а журнал тренировок и замены очистятся.')){DB.profile=null;DB.sessions={};DB.swaps={};DB.skips={};DB.dateOv={};save();location.reload();}">Пересоздать программу (анкета)</button></div>`;
-    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 4.3 (энциклопедия: 873 упражнения с фото и техникой) · собрано для Егора и друзей · 22.08.2026. Фото упражнений — Free Exercise DB (public domain).</div>`;
+    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 4.4 (тренировка 2.0: карусель, прошлые подходы, таймер-кольцо, фильтры замен по травмам, секундомер) · собрано для Егора и друзей · 22.08.2026. Фото упражнений — Free Exercise DB (public domain).</div>`;
   }
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }

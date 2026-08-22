@@ -1971,8 +1971,7 @@ window.techDlg = function(sid, ei){
   const T = techFor(v.n);
   const fem = PROF.sex === 'f';
   const A = animFor(v.n);
-  const animHtml = A ? `<div class="animbox"><svg id="anim-svg" viewBox="0 0 320 200" style="width:100%;display:block"></svg></div>
-    <div class="card" style="margin:8px 0 0;padding:12px 10px 10px">${muscleMap(A.mus)}</div>` : '';
+  const mapHtml = A ? `<div class="card" style="margin:10px 0 0;padding:12px 10px 10px">${muscleMap(A.mus)}</div>` : '';
   const yt = 'https://www.youtube.com/results?search_query='+encodeURIComponent(v.n+' техника выполнения'+(fem?' для девушек':''));
   const vid = videoFor(v.n);
   const vidHtml = vid ? `<div class="vidbox" id="vidbox" onclick="playVideo('${vid}')">
@@ -1982,20 +1981,19 @@ window.techDlg = function(sid, ei){
     </div>` : '';
   let body;
   if (T){
-    body = `${animHtml}${vidHtml}
+    body = `${vidHtml}${mapHtml}
       <div class="section-t" style="margin-top:10px">Техника</div>
       <ol class="tech-steps">${T.s.map(x=>`<li>${esc(x)}</li>`).join('')}</ol>
       <div class="section-t">Частые ошибки</div>
       ${T.e.map(x=>`<div class="tech-err"><b>✗</b><span>${esc(x)}</span></div>`).join('')}
       ${T.note?`<div class="tech-note">${esc(T.note)}${T.baseName?' Остальное — как в базовом варианте («'+esc(T.baseName)+'»).':''}</div>`:''}`;
   } else {
-    body = `${animHtml}${vidHtml}<div class="small" style="margin:10px 0">Разбор для этого упражнения ещё не добавлен — держи общий принцип: полная амплитуда, контроль на негативе 2 секунды, без рывков корпусом.</div>`;
+    body = `${vidHtml}${mapHtml}<div class="small" style="margin:10px 0">Разбор для этого упражнения ещё не добавлен — держи общий принцип: полная амплитуда, контроль на негативе 2 секунды, без рывков корпусом.</div>`;
   }
   openModal(`<h2>${esc(v.n)}</h2><div class="small">${esc(grp)}</div>
     ${body}
     <a class="btn sec full" style="margin-top:14px;text-decoration:none" href="${yt}" target="_blank" rel="noopener">${vid?'Найти другие видео':(fem?'▶ Видео женской техники':'Видео-разборы на YouTube')}</a>
     <button class="btn full" style="margin-top:8px" onclick="closeModal()">Понятно</button>`);
-  if (A) playAnim(A);
 };
 window.playVideo = function(id){
   const b = document.getElementById('vidbox');
@@ -4069,7 +4067,7 @@ function vMore(){
       <div class="kv"><span>${PROF.place==='home' ? 'Дом · '+(['db','band','bar'].filter(k=>PROF.equip&&PROF.equip[k]).map(k=>({db:'гантели',band:'резинка',bar:'турник'})[k]).join(', ')||'вес тела') : 'Зал'} · ${PROF.split==='fb'?'Фулбади':'PPL'} · Старт ${PROF.startWeight} кг → ~${Math.round(TARGETS[WEEKS()])} кг к ${fmtD(PROG_END)} (${WEEKS()} нед.)</span></div>
       <button class="btn sec full" style="margin-top:10px" onclick="adjustDlg()">Настройка: уровень · травмы · разнообразие</button>
       <button class="btn sec full" style="margin-top:8px" onclick="if(confirm('Пересоздать программу заново через анкету? Вес, еда и шаги сохранятся, а журнал тренировок и замены очистятся.')){DB.profile=null;DB.sessions={};DB.swaps={};DB.skips={};DB.dateOv={};save();location.reload();}">Пересоздать программу (анкета)</button></div>`;
-    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 3.1.1 (контур рук на фигуре, рукояти жима ногами) · собрано для Егора и друзей · 22.08.2026. Анимации техники — собственный движок, силуэт без пола и возраста.</div>`;
+    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 3.2 (видео — главная демонстрация техники, фигурка-схема убрана из карточки) · собрано для Егора и друзей · 22.08.2026. Анимации техники — собственный движок, силуэт без пола и возраста.</div>`;
   }
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }

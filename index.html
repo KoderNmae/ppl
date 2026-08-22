@@ -248,6 +248,9 @@ html[data-theme=dark] .x, html[data-theme=dark] .qbtn, html[data-theme=dark] .sw
 .acable{stroke:rgba(12,74,84,.55); stroke-width:2; fill:none}
 .aband{stroke:var(--bad); stroke-width:3; fill:none}
 .amusg{stroke:rgba(20,189,142,.28)} .amuss{stroke:var(--accent2); opacity:.9}
+.atrace{stroke:rgba(11,147,164,.45); stroke-width:2; stroke-dasharray:4 4; fill:none}
+.atracehead{stroke:var(--accent); stroke-width:2.2; fill:none}
+html[data-theme=dark] .atrace{stroke:rgba(46,198,209,.4)}
 .mm-wrap{display:flex; gap:18px; justify-content:center; margin-top:4px}
 .mm-side svg{width:88px; display:block}
 .mbody{fill:var(--fig); opacity:.13}
@@ -579,58 +582,69 @@ const GYM_ALTS = {
   {m:'Пресс', a:[{n:'Подъём ног в упоре',inc:2.5},{n:'Скручивания на полу с весом',inc:2.5}]},
  ]
 };
-/* ============ ДВИЖОК АНИМАЦИИ ТЕХНИКИ: 2D-силуэт, вид сбоку ============ */
-/* Углы в градусах: 0 = вверх экрана, 90 = вперёд (+x), 180 = вниз. Фигура смотрит вправо. */
-const BODY = {torso:46, neck:7, head:11.5, uarm:29, farm:26, thigh:34, shin:31, foot:13};
-function rad(a){ return (a-90)*Math.PI/180; }
-function pt(x, y, ang, len){ return [x + Math.cos(rad(ang))*len, y - Math.sin(rad(ang))*-1*len*0 + Math.sin(rad(ang))*0 + 0, 0]; }
-/* прямой расчёт: угол 0 = вверх → dx = sin(a), dy = -cos(a) */
-function step(x, y, ang, len){
+/* ============ ДВИЖОК ТЕХНИКИ v2: обратная кинематика от точек контакта ============ */
+const BODY = {torso:46, sh:42.3, neck:7, head:11.5, uarm:29, farm:26, thigh:34, shin:31, foot:13};
+const FLOOR_Y = 176, ANKLE_Y = 174;
+function dirp(x, y, ang, len){
   const r = ang*Math.PI/180;
   return [x + Math.sin(r)*len, y - Math.cos(r)*len];
 }
-function fk(p){
-  const px = p.px==null?160:p.px, py = p.py==null?100:p.py;
-  const to = p.to||0;
-  const pelvis = [px, py];
-  const neck = step(px, py, to, BODY.torso);
-  const headC = step(neck[0], neck[1], to + (p.hd||0), BODY.neck + BODY.head);
-  const sh = step(px, py, to, BODY.torso*0.92);           // плечо чуть ниже шеи
-  const mkArm = (ua, fa) => {
-    const el = step(sh[0], sh[1], ua, BODY.uarm);
-    const wr = step(el[0], el[1], fa, BODY.farm);
-    return {el, wr};
-  };
-  const mkLeg = (th, sn, ft) => {
-    const kn = step(pelvis[0], pelvis[1], th, BODY.thigh);
-    const an = step(kn[0], kn[1], sn, BODY.shin);
-    const to_ = step(an[0], an[1], ft==null?90:ft, BODY.foot);
-    return {kn, an, toe: to_};
-  };
-  const a1 = mkArm(p.ua==null?180:p.ua, p.fa==null?(p.ua==null?180:p.ua):p.fa);
-  const a2 = mkArm(p.ua2==null?(p.ua==null?180:p.ua):p.ua2, p.fa2==null?(p.fa==null?(p.ua==null?180:p.ua):p.fa):p.fa2);
-  const l1 = mkLeg(p.th==null?180:p.th, p.sh==null?(p.th==null?180:p.th):p.sh, p.ft);
-  const l2 = mkLeg(p.th2==null?(p.th==null?180:p.th):p.th2, p.sh2==null?(p.sh==null?(p.th==null?180:p.th):p.sh):p.sh2, p.ft2==null?p.ft:p.ft2);
-  return {pelvis, neck, headC, sh, a1, a2, l1, l2};
+/* двухзвенная ОК: root→target, длины L1/L2, s=+1|-1 сторона сгиба */
+function ik2(R, T, L1, L2, s){
+  let dx = T[0]-R[0], dy = T[1]-R[1];
+  let L = Math.hypot(dx, dy) || 1e-6;
+  const d = Math.min(L1+L2-0.6, Math.max(Math.abs(L1-L2)+0.6, L));
+  const ux = dx/L, uy = dy/L;
+  const T2 = [R[0]+ux*d, R[1]+uy*d];
+  const a = (L1*L1 + d*d - L2*L2)/(2*L1*d);
+  const h = Math.sqrt(Math.max(0, 1 - a*a));
+  const J = [R[0] + ux*L1*a - uy*L1*h*s, R[1] + uy*L1*a + ux*L1*h*s];
+  return {j: J, t: T2, stretched: L > L1+L2+2};
 }
-function lerpPose(A, B, t){
+function fk2(anim, p){
+  const pv = p.pv, to = p.to||0;
+  const neck = dirp(pv[0], pv[1], to, BODY.torso);
+  const sh = dirp(pv[0], pv[1], to, BODY.sh);
+  const headC = dirp(neck[0], neck[1], to + (p.hd||0), BODY.neck + BODY.head);
+  const limb = (root, eff, L1, L2, s, angFallback) => {
+    if (Array.isArray(eff)){
+      const r = ik2(root, eff, L1, L2, s);
+      return {j: r.j, t: r.t, stretched: r.stretched};
+    }
+    const a = eff && eff.a ? eff.a : angFallback;
+    const j = dirp(root[0], root[1], a[0], L1);
+    return {j, t: dirp(j[0], j[1], a[1], L2), stretched: false};
+  };
+  const l1 = limb(pv, p.f1, BODY.thigh, BODY.shin, -(anim.k1 != null ? anim.k1 : 1), [180,180]);
+  const l2 = limb(pv, p.f2 != null ? p.f2 : p.f1, BODY.thigh, BODY.shin, -(anim.k2 != null ? anim.k2 : (anim.k1 != null ? anim.k1 : 1)), [180,180]);
+  const a1 = limb(sh, p.h1, BODY.uarm, BODY.farm, (anim.e1 != null ? anim.e1 : -1), [180,180]);
+  const a2 = limb(sh, p.h2 != null ? p.h2 : p.h1, BODY.uarm, BODY.farm, (anim.e2 != null ? anim.e2 : (anim.e1 != null ? anim.e1 : -1)), [180,180]);
+  const mkToe = (an, ft) => dirp(an[0], an[1], ft==null?90:ft, BODY.foot);
+  return {pelvis: pv, neck, sh, headC,
+    l1: {kn: l1.j, an: l1.t, toe: mkToe(l1.t, p.ft)},
+    l2: {kn: l2.j, an: l2.t, toe: mkToe(l2.t, p.ft2 != null ? p.ft2 : p.ft)},
+    a1: {el: a1.j, wr: a1.t, str: a1.stretched},
+    a2: {el: a2.j, wr: a2.t, str: a2.stretched}};
+}
+function lerpPose2(A, B, t){
+  const num = (a, b) => a + (b - a)*t;
   const out = {};
   const keys = new Set([...Object.keys(A), ...Object.keys(B)]);
   for (const k of keys){
     const a = A[k] != null ? A[k] : B[k], b = B[k] != null ? B[k] : A[k];
-    out[k] = a + (b - a)*t;
+    if (typeof a === 'number') out[k] = num(a, b);
+    else if (Array.isArray(a) && Array.isArray(b)) out[k] = [num(a[0], b[0]), num(a[1], b[1])];
+    else if (a && a.a && b && b.a) out[k] = {a: [num(a.a[0], b.a[0]), num(a.a[1], b.a[1])]};
+    else out[k] = a;
   }
   return out;
 }
-function seg(a, b, w, cls){
-  return `<path d="M${a[0].toFixed(1)} ${a[1].toFixed(1)}L${b[0].toFixed(1)} ${b[1].toFixed(1)}" stroke-width="${w}" class="${cls}" stroke-linecap="round" fill="none"/>`;
-}
-function chain(pts, w, cls){
+function chain2(pts, w, cls){
   let d = `M${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
-  for (let i=1;i<pts.length;i++) d += `L${pts[i][0].toFixed(1)} ${pts[i][1].toFixed(1)}`;
+  for (let i = 1; i < pts.length; i++) d += `L${pts[i][0].toFixed(1)} ${pts[i][1].toFixed(1)}`;
   return `<path d="${d}" stroke-width="${w}" class="${cls}" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`;
 }
-function drawProps(props, F, layer, pose){
+function drawProps2(props, pose, layer){
   if (!props) return '';
   let h = '';
   for (const pr of props){
@@ -640,56 +654,53 @@ function drawProps(props, F, layer, pose){
     if (pr.t==='box'){ const bx = (pr.kx != null && pose && pose[pr.kx] != null) ? pose[pr.kx] : pr.x;
       h += `<rect x="${bx}" y="${pr.y}" width="${pr.w}" height="${pr.h}" rx="4" class="aprop"/>`; }
     if (pr.t==='wall') h += `<line x1="${pr.x}" y1="20" x2="${pr.x}" y2="${pr.y2||176}" class="aline" stroke-width="5"/>`;
-    if (pr.t==='barline') h += `<line x1="${pr.x1||90}" y1="${pr.y}" x2="${pr.x2||230}" y2="${pr.y}" class="aline" stroke-width="5"/><line x1="${(pr.x1||90)+8}" y1="${pr.y}" x2="${(pr.x1||90)+8}" y2="18" class="aline" stroke-width="4"/><line x1="${(pr.x2||230)-8}" y1="${pr.y}" x2="${(pr.x2||230)-8}" y2="18" class="aline" stroke-width="4"/>`;
+    if (pr.t==='barline'){ const yEnd = pr.legs==='down' ? 176 : 18;
+      h += `<line x1="${pr.x1||90}" y1="${pr.y}" x2="${pr.x2||230}" y2="${pr.y}" class="aline" stroke-width="5"/><line x1="${(pr.x1||90)+8}" y1="${pr.y}" x2="${(pr.x1||90)+8}" y2="${yEnd}" class="aline" stroke-width="4"/><line x1="${(pr.x2||230)-8}" y1="${pr.y}" x2="${(pr.x2||230)-8}" y2="${yEnd}" class="aline" stroke-width="4"/>`; }
     if (pr.t==='block') h += `<rect x="${pr.x-9}" y="${pr.y-9}" width="18" height="18" rx="3" class="aprop"/>`;
     if (pr.t==='seatback') h += `<rect x="${pr.x-4}" y="${pr.y-pr.h}" width="8" height="${pr.h}" rx="3" transform="rotate(${pr.rot||0} ${pr.x} ${pr.y})" class="aprop"/>`;
     if (pr.t==='chair') h += `<rect x="${pr.x-22}" y="${pr.y}" width="44" height="7" rx="3" class="aprop"/><rect x="${pr.x-20}" y="${pr.y+7}" width="6" height="${176-pr.y-7}" class="aprop"/><rect x="${pr.x+14}" y="${pr.y+7}" width="6" height="${176-pr.y-7}" class="aprop"/>${pr.back===false?'':`<rect x="${pr.x-24}" y="${pr.y-40}" width="6" height="42" rx="2" class="aprop"/>`}`;
   }
   return h;
 }
-function drawTools(anim, F){
+function drawTools2(anim, F){
   let h = '';
   const wr = F.a1.wr, wr2 = F.a2.wr;
-  if (anim.db){ for (const w of [wr2, wr]) h += `<g class="atool"><circle cx="${w[0]}" cy="${w[1]}" r="6.5"/><circle cx="${w[0]}" cy="${w[1]}" r="2.6" class="atool2"/></g>`; }
-  if (anim.bar === 'wrist') h += `<circle cx="${wr[0]}" cy="${wr[1]}" r="10" class="aplate"/><circle cx="${wr[0]}" cy="${wr[1]}" r="2.4" class="atool2"/>`;
-  if (anim.bar === 'hip') h += `<circle cx="${F.pelvis[0]+6}" cy="${F.pelvis[1]-4}" r="10" class="aplate"/>`;
-  if (anim.bar === 'shoulder') h += `<circle cx="${F.sh[0]+2}" cy="${F.sh[1]+3}" r="9" class="aplate"/>`;
+  if (anim.db){ for (const w of [wr2, wr]) h += `<g class="atool"><circle cx="${w[0].toFixed(1)}" cy="${w[1].toFixed(1)}" r="6.5"/><circle cx="${w[0].toFixed(1)}" cy="${w[1].toFixed(1)}" r="2.6" class="atool2"/></g>`; }
+  if (anim.bar === 'wrist') h += `<circle cx="${wr[0].toFixed(1)}" cy="${wr[1].toFixed(1)}" r="10" class="aplate"/><circle cx="${wr[0].toFixed(1)}" cy="${wr[1].toFixed(1)}" r="2.4" class="atool2"/>`;
+  if (anim.bar === 'hip') h += `<circle cx="${(F.pelvis[0]+7).toFixed(1)}" cy="${(F.pelvis[1]-5).toFixed(1)}" r="10" class="aplate"/><circle cx="${(F.pelvis[0]+7).toFixed(1)}" cy="${(F.pelvis[1]-5).toFixed(1)}" r="2.4" class="atool2"/>`;
+  if (anim.bar === 'shoulder') h += `<circle cx="${(F.sh[0]+2).toFixed(1)}" cy="${(F.sh[1]+3).toFixed(1)}" r="9" class="aplate"/>`;
   if (anim.cable){ const from = anim.cable.at==='ankle' ? F.l1.an : wr; h += `<path d="M${from[0].toFixed(1)} ${from[1].toFixed(1)}L${anim.cable.x} ${anim.cable.y}" class="acable"/><rect x="${anim.cable.x-8}" y="${anim.cable.y-8}" width="16" height="16" rx="3" class="aprop"/>`; }
-  if (anim.band){ const from = anim.band.at==='ankle' ? F.l1.an : wr; h += `<path d="M${from[0].toFixed(1)} ${from[1].toFixed(1)} Q${(from[0]+anim.band.x)/2+6} ${(from[1]+anim.band.y)/2} ${anim.band.x} ${anim.band.y}" class="aband"/>`; }
-  if (anim.pad === 'ankle') h += `<circle cx="${F.l1.an[0]}" cy="${F.l1.an[1]}" r="6.5" class="aprop"/>`;
-  if (anim.grip){ h += `<line x1="${wr2[0]}" y1="${wr2[1]}" x2="${wr[0]}" y2="${wr[1]}" class="aprop" stroke-width="4"/>`; }
+  if (anim.band){ const from = anim.band.at==='ankle' ? F.l1.an : wr; h += `<path d="M${from[0].toFixed(1)} ${from[1].toFixed(1)} Q${((from[0]+anim.band.x)/2+6).toFixed(1)} ${((from[1]+anim.band.y)/2).toFixed(1)} ${anim.band.x} ${anim.band.y}" class="aband"/>`; }
+  if (anim.pad === 'ankle') h += `<circle cx="${F.l1.an[0].toFixed(1)}" cy="${F.l1.an[1].toFixed(1)}" r="6.5" class="aprop"/>`;
+  if (anim.grip) h += `<line x1="${wr2[0].toFixed(1)}" y1="${wr2[1].toFixed(1)}" x2="${wr[0].toFixed(1)}" y2="${wr[1].toFixed(1)}" class="aprop" stroke-width="4"/>`;
   return h;
 }
-/* сегмент [A→B] с долей от t0 до t1 и поперечным смещением off */
-function musSeg(A, B, t0, t1, off){
+function musSeg2(A, B, t0, t1, off){
   const dx = B[0]-A[0], dy = B[1]-A[1];
   const L = Math.hypot(dx, dy) || 1;
   const nx = -dy/L, ny = dx/L;
   const P = t => [A[0]+dx*t + nx*off, A[1]+dy*t + ny*off];
   return [P(t0), P(t1)];
 }
-function musHighlight(anim, F){
+function musHighlight2(anim, F){
   const tags = anim.mus ? (Array.isArray(anim.mus) ? anim.mus : [anim.mus]) : [];
   let h = '';
   for (const m of tags){
     const segs = {
-      chest:    [[...musSeg(F.pelvis, F.neck, .62, .95, 7), 9]],
-      delts:    [[...musSeg(F.sh, F.a1.el, 0, .3, 0), 10]],
-      shoulder: [[...musSeg(F.sh, F.a1.el, 0, .3, 0), 10]],
-      traps:    [[...musSeg(F.pelvis, F.neck, .82, 1, -6), 8]],
-      lats:     [[...musSeg(F.pelvis, F.neck, .35, .8, -7), 8]],
-      back:     [[...musSeg(F.pelvis, F.neck, .35, .8, -7), 8]],
-      erectors: [[...musSeg(F.pelvis, F.neck, .05, .45, -6), 7]],
-      abs:      [[...musSeg(F.pelvis, F.neck, .15, .6, 7), 8]],
-      core:     [[...musSeg(F.pelvis, F.neck, .15, .6, 7), 8]],
-      biceps:   [[...musSeg(F.sh, F.a1.el, .3, .95, 3), 6]],
-      triceps:  [[...musSeg(F.sh, F.a1.el, .3, .95, -3), 6]],
-      forearm:  [[...musSeg(F.a1.el, F.a1.wr, .15, .85, 0), 6]],
-      quad:     [[...musSeg(F.pelvis, F.l1.kn, .2, .95, 5), 7]],
-      ham:      [[...musSeg(F.pelvis, F.l1.kn, .2, .95, -5), 7]],
-      adductor: [[...musSeg(F.pelvis, F.l1.kn, .25, .9, 0), 6]],
-      glute:    [[...musSeg(F.pelvis, F.l1.kn, -.12, .22, -6), 10]],
-      calf:     [[...musSeg(F.l1.kn, F.l1.an, .15, .8, -4), 6]],
+      chest:    [[...musSeg2(F.pelvis, F.neck, .62, .95, 7), 9]],
+      delts:    [[...musSeg2(F.sh, F.a1.el, 0, .3, 0), 10]],
+      traps:    [[...musSeg2(F.pelvis, F.neck, .82, 1, -6), 8]],
+      lats:     [[...musSeg2(F.pelvis, F.neck, .35, .8, -7), 8]],
+      erectors: [[...musSeg2(F.pelvis, F.neck, .05, .45, -6), 7]],
+      abs:      [[...musSeg2(F.pelvis, F.neck, .15, .6, 7), 8]],
+      biceps:   [[...musSeg2(F.sh, F.a1.el, .3, .95, 3), 6]],
+      triceps:  [[...musSeg2(F.sh, F.a1.el, .3, .95, -3), 6]],
+      forearm:  [[...musSeg2(F.a1.el, F.a1.wr, .15, .85, 0), 6]],
+      quad:     [[...musSeg2(F.pelvis, F.l1.kn, .2, .95, 5), 7]],
+      ham:      [[...musSeg2(F.pelvis, F.l1.kn, .2, .95, -5), 7]],
+      adductor: [[...musSeg2(F.pelvis, F.l1.kn, .25, .9, 0), 6]],
+      glute:    [[...musSeg2(F.pelvis, F.l1.kn, -.12, .22, -6), 10]],
+      calf:     [[...musSeg2(F.l1.kn, F.l1.an, .15, .8, -4), 6]],
     }[m];
     if (!segs) continue;
     for (const [A, B, w] of segs){
@@ -699,21 +710,38 @@ function musHighlight(anim, F){
   }
   return h;
 }
-function renderFrame(anim, pose, tGlob){
-  const F = fk(pose);
-  let h = drawProps(anim.props, F, 0, pose);
-  /* дальние конечности */
-  h += `<g class="afar">` + chain([F.sh, F.a2.el, F.a2.wr], 8, 'abone')
-     + chain([F.pelvis, F.l2.kn, F.l2.an, F.l2.toe], 9.5, 'abone') + `</g>`;
-  /* корпус и голова */
-  h += chain([F.pelvis, F.neck], 17, 'abone');
+function tracePath(anim){
+  if (!anim.trace) return '';
+  const pick = F => ({h1: F.a1.wr, h2: F.a2.wr, f1: F.l1.an, pv: F.pelvis})[anim.trace];
+  const pts = [];
+  for (let i = 0; i <= 20; i++){
+    const F = fk2(anim, lerpPose2(anim.frames[0], anim.frames[1] || anim.frames[0], i/20));
+    pts.push(pick(F));
+  }
+  const span = Math.hypot(pts[20][0]-pts[0][0], pts[20][1]-pts[0][1]);
+  if (span < 14) return '';
+  let d = `M${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
+  for (const p of pts.slice(1)) d += `L${p[0].toFixed(1)} ${p[1].toFixed(1)}`;
+  const A = pts[13], B = pts[15];
+  const ang = Math.atan2(B[1]-A[1], B[0]-A[0]);
+  const tip = pts[15], L = 7;
+  const w1 = [tip[0]-L*Math.cos(ang-0.5), tip[1]-L*Math.sin(ang-0.5)];
+  const w2 = [tip[0]-L*Math.cos(ang+0.5), tip[1]-L*Math.sin(ang+0.5)];
+  return `<path d="${d}" class="atrace"/><path d="M${w1[0].toFixed(1)} ${w1[1].toFixed(1)}L${tip[0].toFixed(1)} ${tip[1].toFixed(1)}L${w2[0].toFixed(1)} ${w2[1].toFixed(1)}" class="atracehead"/>`;
+}
+function renderFrame2(anim, pose, tGlob){
+  const F = fk2(anim, pose);
+  let h = drawProps2(anim.props, pose, 0);
+  h += tracePath(anim);
+  h += `<g class="afar">` + chain2([F.sh, F.a2.el, F.a2.wr], 8, 'abone')
+     + chain2([F.pelvis, F.l2.kn, F.l2.an, F.l2.toe], 9.5, 'abone') + `</g>`;
+  h += chain2([F.pelvis, F.neck], 17, 'abone');
   h += `<circle cx="${F.headC[0].toFixed(1)}" cy="${F.headC[1].toFixed(1)}" r="${BODY.head}" class="ahead"/>`;
-  /* ближние конечности */
-  h += chain([F.pelvis, F.l1.kn, F.l1.an, F.l1.toe], 10.5, 'abone');
-  h += chain([F.sh, F.a1.el, F.a1.wr], 9, 'abone');
-  h += drawTools(anim, F);
-  h += drawProps(anim.props, F, 1, pose);
-  h += musHighlight(anim, F);
+  h += chain2([F.pelvis, F.l1.kn, F.l1.an, F.l1.toe], 10.5, 'abone');
+  h += chain2([F.sh, F.a1.el, F.a1.wr], 9, 'abone');
+  h += drawTools2(anim, F);
+  h += drawProps2(anim.props, pose, 1);
+  h += musHighlight2(anim, F);
   return h;
 }
 let animRAF = null;
@@ -726,159 +754,200 @@ function playAnim(anim, svgId){
   const loop = (now) => {
     if (!el.isConnected){ stopAnim(); return; }
     const t = now - t0;
-    let ph = (t % (dur*2)) / dur;          // 0..2 пинг-понг
+    let ph = (t % (dur*2)) / dur;
     if (ph > 1) ph = 2 - ph;
-    const e = ph<.5 ? 2*ph*ph : 1-Math.pow(-2*ph+2,2)/2;   // easeInOutQuad
-    const pose = lerpPose(anim.frames[0], anim.frames[1] || anim.frames[0], e);
-    el.innerHTML = renderFrame(anim, pose, t);
+    const e = ph < .5 ? 2*ph*ph : 1 - Math.pow(-2*ph + 2, 2)/2;
+    el.innerHTML = renderFrame2(anim, lerpPose2(anim.frames[0], anim.frames[1] || anim.frames[0], e), t);
     animRAF = requestAnimationFrame(loop);
   };
   animRAF = requestAnimationFrame(loop);
 }
 function stopAnim(){ if (animRAF){ cancelAnimationFrame(animRAF); animRAF = null; } }
 
-/* ============ ПОЗЫ ============ */
+/* ============ ПОЗЫ v3: эффекторы (точки контакта) + pins ============ */
 const FLOOR = {t:'floor', y:176, z:0};
 const ANIMS = {
-squat:      {mus:['quad','glute'], db:1, props:[FLOOR], dur:1600, frames:[
-              {px:150, py:110, to:6, ua:165, fa:55, th:180, sh:183, th2:177},
-              {px:146, py:136, to:34, ua:150, fa:35, th:98, sh:200, th2:94, sh2:202}]},
-squat_bar:  {mus:['quad','glute','core'], bar:'shoulder', props:[FLOOR], dur:1600, frames:[
-              {px:150, py:110, to:4, ua:120, fa:20, th:180, sh:183},
-              {px:146, py:136, to:30, ua:118, fa:16, th:98, sh:200}]},
-squat_chair:{mus:['quad','glute'], props:[FLOOR, {t:'chair', x:145, y:134, z:0}], dur:1700, frames:[
-              {px:160, py:110, to:6, ua:120, fa:40, th:180, sh:183},
-              {px:146, py:132, to:30, ua:110, fa:30, th:105, sh:192}]},
-lunge:      {mus:['quad','glute'], db:1, props:[FLOOR], dur:1700, frames:[
-              {px:150, py:110, to:4, ua:180, th:180, sh:182, th2:178},
-              {px:158, py:127, to:8, ua:180, th:112, sh:186, th2:212, sh2:138}]},
-splitsquat: {mus:['quad','glute'], db:1, props:[FLOOR, {t:'box', x:66, y:134, w:44, h:42, z:0}], dur:1600, frames:[
-              {px:150, py:112, to:6, ua:180, th:155, sh:182, th2:220, sh2:285},
-              {px:150, py:128, to:10, ua:180, th:108, sh:188, th2:228, sh2:306}]},
-stepup:     {mus:['glute','quad'], props:[FLOOR, {t:'box', x:196, y:141, w:58, h:35, z:0}], dur:1900, frames:[
-              {px:146, py:110, to:10, ua:180, th:105, sh:134, ft:90, th2:180, sh2:182},
-              {px:212, py:78, to:4, ua:180, th:178, sh:180, th2:192, sh2:190}]},
-rdl:        {mus:['ham','glute','erectors'], db:1, props:[FLOOR], dur:1700, frames:[
-              {px:150, py:110, to:4, ua:180, fa:180, th:180, sh:183},
-              {px:143, py:114, to:64, ua:180, fa:180, th:188, sh:176}]},
-deadlift:   {mus:['ham','glute','erectors'], bar:'wrist', props:[FLOOR], dur:1700, frames:[
-              {px:150, py:110, to:6, ua:180, fa:180, th:180, sh:183},
-              {px:143, py:122, to:58, ua:180, fa:180, th:150, sh:196}]},
-goodmorning:{mus:['ham','erectors'], band:{x:150, y:174}, props:[FLOOR], dur:1700, frames:[
-              {px:150, py:110, to:4, ua:150, fa:35, th:180, sh:183},
-              {px:144, py:113, to:62, ua:120, fa:10, th:186, sh:178}]},
-calfraise:  {mus:['calf'], props:[FLOOR, {t:'box', x:154, y:164, w:44, h:12, z:0}], dur:1300, frames:[
-              {px:150, py:101, to:2, ua:180, th:180, sh:181, ft:95},
-              {px:153, py:91, to:2, ua:180, th:180, sh:181, ft:128}]},
-legpress:   {mus:['quad','glute'], props:[{t:'floor', y:176, z:0}, {t:'seatback', x:102, y:168, h:78, rot:-44, z:0}, {t:'box', x:96, y:148, w:52, h:28, z:0}, {t:'box', kx:'bx', x:166, y:58, w:14, h:74, z:1}], dur:1600, frames:[
-              {px:120, py:136, to:-42, hd:6, ua:170, fa:110, th:20, sh:83, ft:0, bx:166},
-              {px:120, py:136, to:-42, hd:6, ua:170, fa:110, th:64, sh:64, ft:0, bx:181}]},
-legext:     {mus:['quad'], pad:'ankle', props:[{t:'floor', y:176, z:0}, {t:'chair', x:134, y:120, z:0}], dur:1400, frames:[
-              {px:138, py:116, to:-6, ua:170, fa:150, th:95, sh:178},
-              {px:138, py:116, to:-6, ua:170, fa:150, th:95, sh:98}]},
-legcurl:    {mus:['ham'], pad:'ankle', props:[{t:'floor', y:176, z:0}, {t:'bench', x:145, y:132, w:170, leg:26, z:0}], dur:1400, frames:[
-              {px:168, py:128, to:-90, hd:-6, ua:262, fa:268, th:88, sh:88, ft:150},
-              {px:168, py:128, to:-90, hd:-6, ua:262, fa:268, th:88, sh:350, ft:340}]},
-hipthrust:  {mus:['glute','ham'], bar:'hip', props:[FLOOR, {t:'bench', x:106, y:118, w:72, leg:50, z:0}], dur:1500, frames:[
-              {px:146, py:144, to:-47, hd:20, ua:205, fa:195, th:87, sh:20, ft:90},
-              {px:160, py:122, to:-96, hd:14, ua:215, fa:200, th:125, sh:6, ft:90}]},
-glutebridge:{mus:['glute','ham'], props:[FLOOR], dur:1500, frames:[
-              {px:150, py:158, to:-72, hd:14, ua:175, fa:175, th:55, sh:182},
-              {px:150, py:136, to:-92, hd:22, ua:185, fa:185, th:88, sh:186}]},
-donkeykick: {mus:['glute'], props:[FLOOR], dur:1500, frames:[
-              {px:136, py:120, to:-88, hd:16, ua:180, fa:180, th:152, sh:262, th2:168, sh2:262},
-              {px:136, py:120, to:-88, hd:16, ua:180, fa:180, th:52, sh:62, th2:168, sh2:262}]},
-kickback:   {mus:['glute'], cable:{x:52, y:160, at:'ankle'}, props:[FLOOR, {t:'block', x:52, y:160, z:0}], dur:1500, frames:[
-              {px:158, py:110, to:14, ua:120, fa:60, th:176, sh:186, th2:180, sh2:182},
-              {px:158, py:110, to:20, ua:120, fa:60, th:222, sh:212, th2:180, sh2:182}]},
-benchpress: {mus:['chest','triceps'], bar:'wrist', props:[{t:'floor', y:176, z:0}, {t:'bench', x:132, y:128, w:130, leg:40, z:0}], dur:1500, frames:[
-              {px:126, py:122, to:-90, hd:4, ua:-2, fa:-2, th:135, sh:195, ft:95},
-              {px:126, py:122, to:-90, hd:4, ua:118, fa:-24, th:135, sh:195, ft:95}]},
-dbbench:    {mus:['chest','triceps'], db:1, props:[{t:'floor', y:176, z:0}, {t:'bench', x:132, y:128, w:130, leg:40, z:0}], dur:1500, frames:[
-              {px:126, py:122, to:-90, hd:4, ua:-4, fa:-4, th:135, sh:195, ft:95},
-              {px:126, py:122, to:-90, hd:4, ua:122, fa:-20, th:135, sh:195, ft:95}]},
-dbfloor:    {mus:['chest','triceps'], db:1, props:[FLOOR], dur:1500, frames:[
-              {px:130, py:162, to:-90, hd:4, ua:-4, fa:-4, th:96, sh:186},
-              {px:130, py:162, to:-90, hd:4, ua:126, fa:-18, th:96, sh:186}]},
-fly:        {mus:['chest'], db:1, props:[FLOOR], dur:1600, frames:[
-              {px:130, py:162, to:-90, hd:4, ua:-4, fa:-8, ua2:-4, fa2:-8, th:96, sh:186},
-              {px:130, py:162, to:-90, hd:4, ua:66, fa:52, ua2:-64, fa2:-56, th:96, sh:186}]},
-incline:    {mus:['chest','delts'], db:1, props:[FLOOR, {t:'seatback', x:124, y:142, h:82, rot:-45, z:0}, {t:'box', x:116, y:142, w:44, h:34, z:0}], dur:1500, frames:[
-              {px:140, py:132, to:-45, hd:10, ua:118, fa:8, th:120, sh:170, ft:100},
-              {px:140, py:132, to:-45, hd:10, ua:45, fa:45, th:120, sh:170, ft:100}]},
-ohp:        {mus:['delts','triceps'], db:1, props:[FLOOR, {t:'chair', x:146, y:146, z:0}], dur:1500, frames:[
-              {px:150, py:142, to:-2, ua:8, fa:8, th:95, sh:180},
-              {px:150, py:142, to:-2, ua:118, fa:-16, th:95, sh:180}]},
-latraise:   {mus:['delts'], db:1, props:[FLOOR], dur:1400, frames:[
-              {px:150, py:110, to:4, ua:172, fa:168, ua2:186, fa2:190, th:180, sh:182},
-              {px:150, py:110, to:4, ua:96, fa:92, ua2:264, fa2:268, th:180, sh:182}]},
-reversefly: {mus:['delts','traps'], db:1, props:[FLOOR], dur:1500, frames:[
-              {px:150, py:111, to:56, ua:180, fa:180, ua2:180, fa2:180, th:186, sh:178},
-              {px:150, py:111, to:56, ua:262, fa:258, ua2:96, fa2:100, th:186, sh:178}]},
-pushdown:   {mus:['triceps'], cable:{x:236, y:26}, props:[FLOOR, {t:'block', x:236, y:26, z:0}], dur:1400, frames:[
-              {px:146, py:110, to:12, ua:172, fa:64, th:180, sh:183},
-              {px:146, py:110, to:12, ua:172, fa:168, th:180, sh:183}]},
-frenchpress:{mus:['triceps'], db:1, props:[FLOOR], dur:1400, frames:[
-              {px:150, py:110, to:6, ua:16, fa:238, th:180, sh:182},
-              {px:150, py:110, to:6, ua:12, fa:14, th:180, sh:182}]},
-dips:       {mus:['triceps','chest'], props:[FLOOR, {t:'box', x:147, y:97, w:9, h:79, z:0}], dur:1500, frames:[
-              {px:152, py:84, to:8, ua:184, fa:182, th:196, sh:242},
-              {px:152, py:102, to:16, ua:230, fa:142, th:200, sh:238}]},
-pushup:     {mus:['chest','triceps'], props:[FLOOR], dur:1500, frames:[
-              {px:182, py:139, to:-59, hd:12, ua:180, fa:180, th:121, sh:121, ft:155},
-              {px:175, py:157, to:-77, hd:14, ua:107, fa:225, th:103, sh:103, ft:155}]},
-pushup_knee:{mus:['chest','triceps'], props:[FLOOR], dur:1500, frames:[
-              {px:176, py:140, to:-63, hd:12, ua:180, fa:180, th:200, sh:295},
-              {px:170, py:143, to:-72, hd:14, ua:135, fa:210, th:193, sh:295}]},
-pushup_wall:{mus:['chest','triceps'], props:[FLOOR, {t:'wall', x:217, z:0}], dur:1500, frames:[
-              {px:150, py:112, to:14, ua:92, fa:88, th:184, sh:182},
-              {px:154, py:112, to:24, ua:118, fa:52, th:186, sh:184}]},
-pushup_inc: {mus:['chest','triceps'], props:[FLOOR, {t:'box', x:216, y:138, w:52, h:38, z:0}], dur:1500, frames:[
-              {px:126, py:118, to:-58, hd:10, ua:142, fa:140, th:114, sh:112, ft:160},
-              {px:132, py:128, to:-62, hd:10, ua:186, fa:104, th:112, sh:110, ft:160}]},
-pushup_dec: {mus:['chest','delts'], props:[FLOOR, {t:'box', x:214, y:98, w:56, h:78, z:0}], dur:1500, frames:[
-              {px:177, py:120, to:-92, hd:8, ua:180, fa:180, th:74, sh:74},
-              {px:180, py:133, to:-92, hd:8, ua:146, fa:226, th:63, sh:63}]},
-pulldown:   {mus:['lats','biceps'], grip:1, cable:{x:196, y:14}, props:[{t:'floor', y:176, z:0}, {t:'chair', x:146, y:146, z:0}, {t:'block', x:196, y:14, z:0}], dur:1500, frames:[
-              {px:150, py:142, to:-8, ua:12, fa:10, ua2:24, fa2:22, th:95, sh:180},
-              {px:150, py:142, to:-14, ua:152, fa:44, ua2:160, fa2:56, th:95, sh:180}]},
-pullup:     {mus:['lats','biceps'], props:[{t:'barline', y:22, z:0}], dur:1700, frames:[
-              {px:158, py:118, to:-4, ua:5, fa:3, th:188, sh:280, ft:200},
-              {px:158, py:88, to:-6, ua:70, fa:-60, th:190, sh:266, ft:200}]},
-kneeraise:  {mus:['abs'], props:[{t:'barline', y:22, z:0}], dur:1500, frames:[
-              {px:158, py:118, to:-2, ua:5, fa:3, th:184, sh:196},
-              {px:158, py:118, to:-6, ua:5, fa:3, th:82, sh:148}]},
-row_cable:  {mus:['lats','biceps'], cable:{x:252, y:134}, props:[FLOOR, {t:'block', x:252, y:134, z:0}, {t:'box', x:112, y:141, w:36, h:35, z:0}], dur:1500, frames:[
-              {px:132, py:136, to:14, ua:76, fa:80, th:96, sh:138, ft:120},
-              {px:132, py:136, to:-4, ua:196, fa:96, th:96, sh:138, ft:120}]},
-row_bent:   {mus:['lats','erectors'], db:1, props:[FLOOR], dur:1500, frames:[
-              {px:146, py:111, to:56, ua:178, fa:176, th:186, sh:176},
-              {px:146, py:111, to:56, ua:236, fa:148, th:186, sh:176}]},
-row_onearm: {mus:['lats','biceps'], db:1, props:[FLOOR, {t:'bench', x:214, y:110, w:86, leg:58, z:0}], dur:1500, frames:[
-              {px:142, py:110, to:62, ua2:112, fa2:112, ua:180, fa:178, th:184, sh:178, th2:172, sh2:176},
-              {px:142, py:110, to:62, ua2:112, fa2:112, ua:242, fa:146, th:184, sh:178, th2:172, sh2:176}]},
-row_austr:  {mus:['lats','biceps'], props:[FLOOR, {t:'barline', y:76, x1:96, x2:220, z:0}], dur:1500, frames:[
-              {px:168, py:146, to:-64, hd:10, ua:-16, fa:-14, th:104, sh:106, ft:150},
-              {px:160, py:132, to:-62, hd:10, ua:44, fa:-58, th:106, sh:108, ft:150}]},
-facepull:   {mus:['delts','traps'], cable:{x:250, y:58}, props:[FLOOR, {t:'block', x:250, y:58, z:0}], dur:1400, frames:[
-              {px:144, py:110, to:6, ua:66, fa:62, th:180, sh:183},
-              {px:144, py:110, to:2, ua:128, fa:34, th:180, sh:183}]},
-curl:       {mus:['biceps'], db:1, props:[FLOOR], dur:1400, frames:[
-              {px:150, py:110, to:2, ua:178, fa:176, th:180, sh:182},
-              {px:150, py:110, to:2, ua:174, fa:58, th:180, sh:182}]},
-superman:   {mus:['erectors','glute'], props:[FLOOR], dur:1600, frames:[
-              {px:160, py:164, to:-90, hd:-4, ua:-88, fa:-88, th:90, sh:92},
-              {px:160, py:161, to:-75, hd:-16, ua:-70, fa:-68, th:78, sh:74}]},
-plank:      {mus:['abs'], props:[FLOOR], dur:1800, frames:[
-              {px:170, py:136, to:-96, hd:8, ua:184, fa:272, th:86, sh:86, ft:150},
-              {px:170, py:134, to:-96, hd:8, ua:184, fa:272, th:86, sh:86, ft:150}]},
-crunch_fl:  {mus:['abs'], props:[FLOOR], dur:1400, frames:[
-              {px:152, py:158, to:-88, hd:16, ua:-50, fa:120, th:58, sh:180},
-              {px:152, py:158, to:-58, hd:22, ua:-16, fa:150, th:58, sh:180}]},
-crunch_cab: {mus:['abs'], cable:{x:238, y:18}, props:[FLOOR, {t:'block', x:238, y:18, z:0}], dur:1400, frames:[
-              {px:150, py:140, to:14, hd:8, ua:60, fa:230, th:180, sh:268, ft:270},
-              {px:150, py:140, to:52, hd:30, ua:64, fa:234, th:180, sh:268, ft:270}]},
+squat: {mus:['quad','glute'], db:1, k1:1, e1:-1, trace:'pv', props:[FLOOR], dur:1600,
+  pins:{f1:'floor', f2:'floor'}, frames:[
+  {pv:[150,110], to:6, hd:0, f1:[162,174], f2:[140,174], h1:{a:[160,45]}, h2:{a:[164,50]}},
+  {pv:[146,138], to:34, hd:-6, f1:[162,174], f2:[140,174], h1:{a:[150,30]}, h2:{a:[154,35]}}]},
+squat_bar: {mus:['quad','glute','core'], bar:'shoulder', k1:1, e1:-1, trace:'pv', props:[FLOOR], dur:1600,
+  pins:{f1:'floor', f2:'floor'}, frames:[
+  {pv:[150,110], to:5, f1:[162,174], f2:[140,174], h1:{a:[115,18]}, h2:{a:[119,22]}},
+  {pv:[146,138], to:30, hd:-6, f1:[162,174], f2:[140,174], h1:{a:[108,12]}, h2:{a:[112,16]}}]},
+squat_chair: {mus:['quad','glute'], k1:1, e1:1, trace:'pv', props:[FLOOR, {t:'chair', x:145, y:134, z:0}], dur:1700,
+  pins:{f1:'floor', f2:'floor'}, frames:[
+  {pv:[160,110], to:6, f1:[170,174], f2:[152,174], h1:{a:[120,35]}, h2:{a:[124,40]}},
+  {pv:[146,132], to:30, hd:-4, f1:[170,174], f2:[152,174], h1:{a:[100,20]}, h2:{a:[104,24]}}]},
+lunge: {mus:['quad','glute'], db:1, k1:1, k2:-1, e1:-1, trace:'pv', props:[FLOOR], dur:1700,
+  pins:{f1:'floor', f2:'floor'}, frames:[
+  {pv:[156,116], to:6, f1:[186,173], ft:92, f2:[118,170], ft2:118, h1:{a:[180,178]}, h2:{a:[182,180]}},
+  {pv:[158,130], to:8, f1:[186,173], ft:92, f2:[118,170], ft2:118, h1:{a:[180,178]}, h2:{a:[182,180]}}]},
+splitsquat: {mus:['quad','glute'], db:1, k1:1, k2:-1, e1:-1, trace:'pv', props:[FLOOR, {t:'box', x:66, y:134, w:44, h:42, z:0}], dur:1600,
+  pins:{f1:'floor', f2:'fix'}, frames:[
+  {pv:[150,114], to:6, f1:[170,174], f2:[96,130], ft2:210, h1:{a:[180,178]}, h2:{a:[182,180]}},
+  {pv:[148,132], to:10, f1:[170,174], f2:[96,130], ft2:210, h1:{a:[180,178]}, h2:{a:[182,180]}}]},
+stepup: {mus:['glute','quad'], k1:1, k2:1, e1:-1, trace:'pv', props:[FLOOR, {t:'box', x:196, y:141, w:58, h:35, z:0}], dur:1900,
+  pins:{f1:'fix'}, frames:[
+  {pv:[146,112], to:10, f1:[212,139], f2:[140,174], h1:{a:[180,178]}},
+  {pv:[212,80], to:4, f1:[212,139], f2:[204,141], ft2:95, h1:{a:[180,178]}}]},
+rdl: {mus:['ham','glute','erectors'], db:1, k1:1, e1:-1, trace:'h1', props:[FLOOR], dur:1700,
+  pins:{f1:'floor', f2:'floor'}, frames:[
+  {pv:[150,110], to:4, f1:[158,174], f2:[146,174], h1:[156,122], h2:[152,121]},
+  {pv:[143,116], to:64, hd:-10, f1:[158,174], f2:[146,174], h1:[179,146], h2:[175,144]}]},
+deadlift: {mus:['ham','glute','erectors'], bar:'wrist', k1:1, e1:-1, trace:'h1', props:[FLOOR], dur:1700,
+  pins:{f1:'floor', f2:'floor'}, frames:[
+  {pv:[150,110], to:6, f1:[158,174], f2:[146,174], h1:[156,122], h2:[150,123]},
+  {pv:[143,127], to:56, hd:-10, f1:[158,174], f2:[146,174], h1:[174,154], h2:[170,151]}]},
+goodmorning: {mus:['ham','erectors'], band:{x:150, y:174}, k1:1, e1:1, trace:'pv', props:[FLOOR], dur:1700,
+  pins:{f1:'floor', f2:'floor'}, frames:[
+  {pv:[150,110], to:4, f1:[158,174], f2:[146,174], h1:{a:[150,35]}, h2:{a:[154,40]}},
+  {pv:[144,114], to:62, hd:-12, f1:[158,174], f2:[146,174], h1:{a:[120,8]}, h2:{a:[124,12]}}]},
+calfraise: {mus:['calf'], k1:1, e1:-1, trace:'pv', props:[FLOOR, {t:'box', x:154, y:164, w:44, h:12, z:0}], dur:1300, frames:[
+  {pv:[150,101], to:2, f1:[152,166], f2:[149,167], ft:95, ft2:95, h1:{a:[180,178]}},
+  {pv:[153,91], to:2, f1:[155,154], f2:[152,155], ft:128, ft2:128, h1:{a:[180,178]}}]},
+legpress: {mus:['quad','glute'], k1:-1, e1:-1, trace:'f1', props:[{t:'floor', y:176, z:0}, {t:'seatback', x:102, y:168, h:78, rot:-44, z:0}, {t:'box', x:96, y:148, w:52, h:28, z:0}, {t:'box', kx:'bx', x:166, y:56, w:14, h:76, z:1}], dur:1600, frames:[
+  {pv:[120,136], to:-42, hd:6, f1:[161,97], f2:[161,111], ft:10, ft2:10, h1:{a:[168,115]}, bx:167},
+  {pv:[120,136], to:-42, hd:6, f1:[176,97], f2:[176,111], ft:10, ft2:10, h1:{a:[168,115]}, bx:182}]},
+legext: {mus:['quad'], pad:'ankle', k1:1, e1:-1, trace:'f1', props:[{t:'floor', y:176, z:0}, {t:'chair', x:134, y:120, z:0}], dur:1400,
+  pins:{}, frames:[
+  {pv:[138,116], to:-6, f1:[166,148], f2:[163,151], h1:[150,124], h2:[144,126]},
+  {pv:[138,116], to:-6, f1:[197,119], f2:[194,122], h1:[150,124], h2:[144,126]}]},
+legcurl: {mus:['ham'], pad:'ankle', k1:-1, e1:-1, props:[{t:'floor', y:176, z:0}, {t:'bench', x:145, y:132, w:170, leg:26, z:0}], dur:1400, frames:[
+  {pv:[168,128], to:-90, hd:-6, f1:[231,124], f2:[228,127], h1:{a:[262,268]}, h2:{a:[266,272]}},
+  {pv:[168,128], to:-90, hd:-6, f1:[199,97], f2:[196,100], h1:{a:[262,268]}, h2:{a:[266,272]}}]},
+hipthrust: {mus:['glute','ham'], bar:'hip', k1:1, e1:-1, trace:'pv', props:[FLOOR, {t:'bench', x:108, y:118, w:72, leg:50, z:0}], dur:1500,
+  pins:{f1:'floor', f2:'floor'}, frames:[
+  {pv:[150,150], to:-52, hd:26, f1:[194,174], f2:[184,174], h1:{a:[235,215]}, h2:{a:[240,220]}},
+  {pv:[158,121], to:-96, hd:14, f1:[194,174], f2:[184,174], h1:{a:[235,215]}, h2:{a:[240,220]}}]},
+glutebridge: {mus:['glute','ham'], k1:1, e1:-1, trace:'pv', props:[FLOOR], dur:1500,
+  pins:{f1:'floor', f2:'floor'}, frames:[
+  {pv:[150,158], to:-78, hd:18, f1:[190,174], f2:[178,174], h1:[150,172], h2:[144,173]},
+  {pv:[152,136], to:-96, hd:20, f1:[190,174], f2:[178,174], h1:[150,172], h2:[144,173]}]},
+donkeykick: {mus:['glute'], k1:-1, e1:-1, trace:'f1', props:[FLOOR], dur:1500,
+  pins:{h1:'floor-hand'}, frames:[
+  {pv:[136,138], to:-88, hd:14, h1:[95,174], h2:[91,174], f1:[118,168], f2:{a:[176,268]}, ft:250, ft2:270},
+  {pv:[136,138], to:-88, hd:14, h1:[95,174], h2:[91,174], f1:[186,108], f2:{a:[176,268]}, ft:150, ft2:270}]},
+kickback: {mus:['glute'], cable:{x:52, y:160, at:'ankle'}, k1:-1, k2:1, e1:1, trace:'f1', props:[FLOOR, {t:'block', x:52, y:160, z:0}], dur:1500,
+  pins:{f2:'floor'}, frames:[
+  {pv:[158,110], to:16, f1:[148,172], ft:95, f2:[168,174], ft2:95, h1:{a:[105,55]}, h2:{a:[109,60]}},
+  {pv:[158,110], to:22, f1:[112,150], ft:210, f2:[168,174], ft2:95, h1:{a:[105,55]}, h2:{a:[109,60]}}]},
+benchpress: {mus:['chest','triceps'], bar:'wrist', k1:1, k2:-1, e1:1, e2:1, grip:1, trace:'h1', props:[{t:'floor', y:176, z:0}, {t:'bench', x:132, y:128, w:130, leg:40, z:0}], dur:1500,
+  pins:{f1:'floor', f2:'floor'}, frames:[
+  {pv:[140,122], to:-90, hd:2, f1:[184,174], f2:[132,174], h1:[102,67], h2:[98,69]},
+  {pv:[140,122], to:-90, hd:2, f1:[184,174], f2:[132,174], h1:[104,112], h2:[100,114]}]},
+dbbench: {mus:['chest','triceps'], db:1, k1:1, k2:-1, e1:1, e2:1, trace:'h1', props:[{t:'floor', y:176, z:0}, {t:'bench', x:132, y:128, w:130, leg:40, z:0}], dur:1500,
+  pins:{f1:'floor', f2:'floor'}, frames:[
+  {pv:[140,122], to:-90, hd:2, f1:[184,174], f2:[132,174], h1:[104,67], h2:[96,70]},
+  {pv:[140,122], to:-90, hd:2, f1:[184,174], f2:[132,174], h1:[106,112], h2:[98,115]}]},
+dbfloor: {mus:['chest','triceps'], db:1, k1:1, k2:1, e1:1, e2:1, trace:'h1', props:[FLOOR], dur:1500,
+  pins:{f1:'floor', f2:'floor'}, frames:[
+  {pv:[130,164], to:-90, hd:2, f1:[174,174], f2:[162,174], h1:[90,110], h2:[84,113]},
+  {pv:[130,164], to:-90, hd:2, f1:[174,174], f2:[162,174], h1:[94,152], h2:[88,155]}]},
+fly: {mus:['chest'], db:1, k1:1, k2:1, e1:1, e2:-1, props:[FLOOR], dur:1600,
+  pins:{f1:'floor', f2:'floor'}, frames:[
+  {pv:[130,164], to:-90, hd:2, f1:[174,174], f2:[162,174], h1:[92,110], h2:[84,112]},
+  {pv:[130,164], to:-90, hd:2, f1:[174,174], f2:[162,174], h1:[130,146], h2:[44,146]}]},
+incline: {mus:['chest','delts'], db:1, k1:1, e1:1, e2:1, trace:'h1', props:[FLOOR, {t:'seatback', x:124, y:142, h:82, rot:-45, z:0}, {t:'box', x:116, y:142, w:44, h:34, z:0}], dur:1500,
+  pins:{f1:'floor', f2:'floor'}, frames:[
+  {pv:[140,132], to:-45, hd:8, f1:[178,174], f2:[164,174], h1:[130,80], h2:[124,84]},
+  {pv:[140,132], to:-45, hd:8, f1:[178,174], f2:[164,174], h1:[148,63], h2:[142,67]}]},
+ohp: {mus:['delts','triceps'], db:1, k1:1, e1:1, e2:1, trace:'h1', props:[FLOOR, {t:'chair', x:146, y:146, z:0}], dur:1500,
+  pins:{f1:'floor', f2:'floor'}, frames:[
+  {pv:[150,142], to:-2, f1:[186,174], f2:[176,174], h1:[162,88], h2:[152,90]},
+  {pv:[150,142], to:-2, f1:[186,174], f2:[176,174], h1:[153,46], h2:[145,48]}]},
+latraise: {mus:['delts'], db:1, k1:1, e1:1, e2:-1, trace:'h1', props:[FLOOR], dur:1400,
+  pins:{f1:'floor', f2:'floor'}, frames:[
+  {pv:[150,110], to:4, f1:[158,174], f2:[144,174], h1:[164,122], h2:[142,122]},
+  {pv:[150,110], to:4, f1:[158,174], f2:[144,174], h1:[198,92], h2:[106,96]}]},
+reversefly: {mus:['delts','traps'], db:1, k1:1, e1:-1, e2:1, props:[FLOOR], dur:1500,
+  pins:{f1:'floor', f2:'floor'}, frames:[
+  {pv:[150,112], to:56, hd:-8, f1:[160,174], f2:[144,174], h1:[188,140], h2:[182,141]},
+  {pv:[150,112], to:56, hd:-8, f1:[160,174], f2:[144,174], h1:[228,102], h2:[142,80]}]},
+pushdown: {mus:['triceps'], cable:{x:236, y:26}, k1:1, e1:-1, e2:-1, trace:'h1', props:[FLOOR, {t:'block', x:236, y:26, z:0}], dur:1400,
+  pins:{f1:'floor', f2:'floor'}, frames:[
+  {pv:[146,110], to:12, f1:[154,174], f2:[140,174], h1:[172,90], h2:[166,92]},
+  {pv:[146,110], to:12, f1:[154,174], f2:[140,174], h1:[168,121], h2:[162,123]}]},
+frenchpress: {mus:['triceps'], db:1, k1:1, e1:-1, e2:-1, trace:'h1', props:[FLOOR], dur:1400,
+  pins:{f1:'floor', f2:'floor'}, frames:[
+  {pv:[150,110], to:6, f1:[158,174], f2:[146,174], h1:[139,58], h2:[133,60]},
+  {pv:[150,110], to:6, f1:[158,174], f2:[146,174], h1:[161,15], h2:[155,17]}]},
+dips: {mus:['triceps','chest'], k1:1, e1:-1, e2:-1, trace:'pv', props:[FLOOR, {t:'box', x:150, y:95, w:8, h:81, z:0}], dur:1500,
+  pins:{h1:'fix', h2:'fix'}, frames:[
+  {pv:[152,84], to:10, f1:{a:[186,262]}, f2:{a:[190,266]}, h1:[157,94], h2:[153,95]},
+  {pv:[150,102], to:20, f1:{a:[190,258]}, f2:{a:[194,262]}, h1:[157,94], h2:[153,95]}]},
+pushup: {mus:['chest','triceps'], k1:-1, k2:-1, e1:1, e2:1, trace:'pv', props:[FLOOR], dur:1500,
+  pins:{h1:'floor-hand', h2:'floor-hand', f1:'fix'}, frames:[
+  {pv:[182,139], to:-59, hd:12, f1:[236,168], f2:[232,168], ft:135, h1:[149,174], h2:[145,174]},
+  {pv:[176,154], to:-75, hd:14, f1:[236,168], f2:[232,168], ft:135, h1:[149,174], h2:[145,174]}]},
+pushup_knee: {mus:['chest','triceps'], e1:1, e2:1, trace:'pv', props:[FLOOR], dur:1500,
+  pins:{h1:'floor-hand', h2:'floor-hand'}, frames:[
+  {pv:[176,140], to:-63, hd:12, f1:{a:[200,295]}, f2:{a:[204,299]}, h1:[142,176], h2:[138,176]},
+  {pv:[176,141], to:-75, hd:16, f1:{a:[200,295]}, f2:{a:[204,299]}, h1:[142,176], h2:[138,176]}]},
+pushup_wall: {mus:['chest','triceps'], k1:1, e1:-1, e2:-1, trace:'pv', props:[FLOOR, {t:'wall', x:219, z:0}], dur:1500,
+  pins:{h1:'fix', h2:'fix', f1:'floor', f2:'floor'}, frames:[
+  {pv:[150,112], to:14, f1:[158,174], f2:[144,174], h1:[216,76], h2:[216,82]},
+  {pv:[157,112], to:23, f1:[158,174], f2:[144,174], h1:[216,76], h2:[216,82]}]},
+pushup_inc: {mus:['chest','triceps'], k1:-1, k2:-1, e1:1, e2:1, trace:'pv', props:[FLOOR, {t:'box', x:214, y:136, w:54, h:40, z:0}], dur:1500,
+  pins:{h1:'fix', h2:'fix', f1:'floor', f2:'floor'}, frames:[
+  {pv:[136,148], to:55, hd:6, f1:[96,170], f2:[88,171], ft:115, ft2:115, h1:[225,134], h2:[221,136]},
+  {pv:[142,156], to:52, hd:8, f1:[96,170], f2:[88,171], ft:115, ft2:115, h1:[225,134], h2:[221,136]}]},
+pushup_dec: {mus:['chest','delts'], k1:-1, k2:-1, e1:1, e2:1, trace:'pv', props:[FLOOR, {t:'box', x:214, y:98, w:56, h:78, z:0}], dur:1500,
+  pins:{h1:'floor-hand', h2:'floor-hand', f1:'fix'}, frames:[
+  {pv:[177,120], to:-92, hd:8, f1:[238,96], f2:[232,98], h1:[140,174], h2:[134,174]},
+  {pv:[184,130], to:-88, hd:10, f1:[238,96], f2:[232,98], h1:[140,174], h2:[134,174]}]},
+pulldown: {mus:['lats','biceps'], grip:1, cable:{x:196, y:14}, k1:1, e1:-1, e2:-1, trace:'h1', props:[{t:'floor', y:176, z:0}, {t:'chair', x:146, y:146, z:0}, {t:'block', x:196, y:14, z:0}], dur:1500,
+  pins:{f1:'floor', f2:'floor'}, frames:[
+  {pv:[150,142], to:-8, f1:[186,174], f2:[176,174], h1:[181,63], h2:[169,59]},
+  {pv:[150,142], to:-14, f1:[186,174], f2:[176,174], h1:[176,103], h2:[164,99]}]},
+pullup: {mus:['lats','biceps'], k1:1, e1:-1, e2:-1, trace:'pv', props:[{t:'barline', y:22, z:0}], dur:1700,
+  pins:{h1:'fix', h2:'fix'}, frames:[
+  {pv:[158,120], to:-4, f1:{a:[188,278]}, f2:{a:[192,282]}, ft:200, h1:[163,24], h2:[153,24]},
+  {pv:[158,93], to:-8, f1:{a:[190,272]}, f2:{a:[194,276]}, ft:200, h1:[163,24], h2:[153,24]}]},
+kneeraise: {mus:['abs'], k1:1, e1:-1, e2:-1, trace:'f1', props:[{t:'barline', y:22, z:0}], dur:1500,
+  pins:{h1:'fix', h2:'fix'}, frames:[
+  {pv:[158,120], to:-2, f1:{a:[184,196]}, f2:{a:[188,200]}, h1:[163,24], h2:[153,24]},
+  {pv:[158,118], to:-8, f1:{a:[84,148]}, f2:{a:[88,152]}, h1:[163,24], h2:[153,24]}]},
+row_cable: {mus:['lats','biceps'], cable:{x:252, y:134}, k1:1, e1:-1, e2:-1, trace:'h1', props:[FLOOR, {t:'block', x:252, y:134, z:0}, {t:'box', x:112, y:141, w:36, h:35, z:0}, {t:'box', x:188, y:148, w:14, h:28, z:0}], dur:1500, frames:[
+  {pv:[138,136], to:14, f1:[196,150], f2:[192,154], ft:60, ft2:60, h1:[192,126], h2:[188,128]},
+  {pv:[138,136], to:-6, f1:[196,150], f2:[192,154], ft:60, ft2:60, h1:[164,124], h2:[160,126]}]},
+row_bent: {mus:['lats','erectors'], db:1, k1:1, e1:-1, e2:-1, trace:'h1', props:[FLOOR], dur:1500,
+  pins:{f1:'floor', f2:'floor'}, frames:[
+  {pv:[146,112], to:56, hd:-8, f1:[156,174], f2:[142,174], h1:[184,141], h2:[178,142]},
+  {pv:[146,112], to:56, hd:-8, f1:[156,174], f2:[142,174], h1:[176,112], h2:[170,114]}]},
+row_onearm: {mus:['lats','biceps'], db:'h1', k1:1, e1:-1, e2:-1, trace:'h1', props:[FLOOR, {t:'bench', x:214, y:110, w:86, leg:58, z:0}], dur:1500,
+  pins:{f1:'floor', f2:'floor', h2:'fix'}, frames:[
+  {pv:[142,112], to:62, hd:-10, f1:[152,174], f2:[136,174], h1:[184,146], h2:[227,108]},
+  {pv:[142,112], to:62, hd:-10, f1:[152,174], f2:[136,174], h1:[180,112], h2:[227,108]}]},
+row_austr: {mus:['lats','biceps'], k1:1, e1:-1, e2:-1, trace:'pv', props:[FLOOR, {t:'barline', y:76, x1:96, x2:220, legs:'down', z:0}], dur:1500,
+  pins:{h1:'fix', h2:'fix'}, frames:[
+  {pv:[164,138], to:-62, hd:8, f1:[220,168], f2:[214,170], ft:118, h1:[163,78], h2:[155,78]},
+  {pv:[168,130], to:-58, hd:10, f1:[220,168], f2:[214,170], ft:118, h1:[163,78], h2:[155,78]}]},
+facepull: {mus:['delts','traps'], cable:{x:250, y:58}, k1:1, e1:1, e2:1, trace:'h1', props:[FLOOR, {t:'block', x:250, y:58, z:0}], dur:1400,
+  pins:{f1:'floor', f2:'floor'}, frames:[
+  {pv:[144,110], to:6, f1:[152,174], f2:[138,174], h1:[197,70], h2:[193,74]},
+  {pv:[144,110], to:2, f1:[152,174], f2:[138,174], h1:[168,60], h2:[162,64]}]},
+curl: {mus:['biceps'], db:1, k1:1, e1:-1, e2:-1, trace:'h1', props:[FLOOR], dur:1400,
+  pins:{f1:'floor', f2:'floor'}, frames:[
+  {pv:[150,110], to:2, f1:[158,174], f2:[144,174], h1:[157,122], h2:[151,123]},
+  {pv:[150,110], to:2, f1:[158,174], f2:[144,174], h1:[174,84], h2:[168,86]}]},
+superman: {mus:['erectors','glute'], k1:1, e1:-1, trace:'h1', props:[FLOOR], dur:1600, frames:[
+  {pv:[160,164], to:-90, hd:-6, f1:[224,170], f2:[218,172], ft:120, h1:[66,166], h2:[62,168]},
+  {pv:[160,159], to:-71, hd:-16, f1:[221,146], f2:[215,150], ft:105, h1:[70,130], h2:[68,136]}]},
+plank: {mus:['abs'], e1:-1, trace:null, props:[FLOOR], dur:1800,
+  pins:{f1:'fix'}, frames:[
+  {pv:[170,136], to:-96, hd:8, f1:[234,168], f2:[228,170], ft:132, ft2:128, h1:{a:[184,272]}, h2:{a:[188,276]}},
+  {pv:[170,133], to:-96, hd:8, f1:[234,168], f2:[228,170], ft:132, ft2:128, h1:{a:[184,272]}, h2:{a:[188,276]}}]},
+crunch_fl: {mus:['abs'], k1:1, e1:-1, props:[FLOOR], dur:1400,
+  pins:{f1:'floor', f2:'floor'}, frames:[
+  {pv:[152,160], to:-88, hd:16, f1:[188,174], f2:[178,174], h1:{a:[-40,140]}, h2:{a:[-36,144]}},
+  {pv:[152,158], to:-60, hd:26, f1:[188,174], f2:[178,174], h1:{a:[-14,152]}, h2:{a:[-10,156]}}]},
+crunch_cab: {mus:['abs'], cable:{x:238, y:18}, e1:-1, e2:-1, trace:'h1', props:[FLOOR, {t:'block', x:238, y:18, z:0}], dur:1400,
+  pins:{}, frames:[
+  {pv:[150,144], to:18, hd:12, f1:{a:[184,268]}, f2:{a:[188,272]}, ft:270, ft2:270, h1:{a:[52,238]}, h2:{a:[56,242]}},
+  {pv:[150,144], to:58, hd:44, f1:{a:[184,268]}, f2:{a:[188,272]}, ft:270, ft2:270, h1:{a:[52,238]}, h2:{a:[56,242]}}]},
 };
+
 /* соответствие: имя упражнения → анимация */
 const ANIM_OF = {
  'Жим штанги лёжа':'benchpress','Жим в Смите лёжа':'benchpress','Жим лёжа узким хватом':'benchpress','Жим в тренажёре (грудь)':'benchpress',
@@ -3782,7 +3851,7 @@ function vMore(){
       <div class="kv"><span>${PROF.place==='home' ? 'Дом · '+(['db','band','bar'].filter(k=>PROF.equip&&PROF.equip[k]).map(k=>({db:'гантели',band:'резинка',bar:'турник'})[k]).join(', ')||'вес тела') : 'Зал'} · ${PROF.split==='fb'?'Фулбади':'PPL'} · Старт ${PROF.startWeight} кг → ~${Math.round(TARGETS[WEEKS()])} кг к ${fmtD(PROG_END)} (${WEEKS()} нед.)</span></div>
       <button class="btn sec full" style="margin-top:10px" onclick="adjustDlg()">Настройка: уровень · травмы · разнообразие</button>
       <button class="btn sec full" style="margin-top:8px" onclick="if(confirm('Пересоздать программу заново через анкету? Вес, еда и шаги сохранятся, а журнал тренировок и замены очистятся.')){DB.profile=null;DB.sessions={};DB.swaps={};DB.skips={};DB.dateOv={};save();location.reload();}">Пересоздать программу (анкета)</button></div>`;
-    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 2.8.2 (пересобраны позы тренажёров: жим ногами, мост, сгибания лёжа, жимы лёжа и наклонный, брусья, тяги, вис) · собрано для Егора и друзей · 19.08.2026. Анимации техники — собственный движок, силуэт без пола и возраста.</div>`;
+    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 2.9 (движок техники v2: обратная кинематика от точек контакта, траектория движения, проверка всех фаз) · собрано для Егора и друзей · 19.08.2026. Анимации техники — собственный движок, силуэт без пола и возраста.</div>`;
   }
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }

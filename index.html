@@ -1725,6 +1725,7 @@ window.saveWeight = function(){
   const v = parseFloat($('#w-in').value);
   if (!isFinite(v) || v<60 || v>250) return toast('Проверь число');
   DB.weights[key(today())] = r1(v); save(); closeModal(); render();
+  achCheck();
 };
 window.askSteps = function(){
   const k = key(today());
@@ -1790,7 +1791,7 @@ function vTrain(){
       <div class="sets">` +
       Array.from({length: Math.max(ex.sets, (st.sets[ex.ei]||[]).length)}, (_,si) => {
         const v = (st.sets[ex.ei]||[])[si];
-        return `<button class="chip ${v?'done':''}" onclick="logSet(${s.id},${ex.ei},${si},${ex.rest},${sg.w||0})">${v ? (v.w!=null ? v.w+'×'+v.r : v.r+' повт') : 'П'+(si+1)}</button>`;
+        return `<button class="chip ${v?'done':''}" onclick="logSet(${s.id},${ex.ei},${si},${ex.rest},${sg.w||0})">${v ? (v.w!=null ? v.w+'×'+v.r : v.r+' повт')+(v.fail?'⚡':'') : 'П'+(si+1)}</button>`;
       }).join('') +
       ((st.sets[ex.ei]||[]).length >= ex.sets && (st.sets[ex.ei]||[]).slice(ex.sets).length < 2
         ? `<button class="chip add" onclick="logSet(${s.id},${ex.ei},${(st.sets[ex.ei]||[]).length},${ex.rest},${sg.w||0})">+</button>` : '') +
@@ -2140,6 +2141,7 @@ window.logSet = function(sid, ei, si, rest, sugW){
     <div class="stepper"><span class="lbl">Повторы</span><button onclick="stepNum('set-r',-1)">−</button>
       <input id="set-r" type="number" step="1" inputmode="numeric" value="${r0}">
       <button onclick="stepNum('set-r',1)">+</button></div>
+    <label class="row" style="gap:8px;margin:0 2px 8px;font-size:13.5px;cursor:pointer"><input type="checkbox" id="set-fail" ${(st.sets[ei]||[])[si]&&(st.sets[ei]||[])[si].fail?'checked':''} style="width:18px;height:18px;accent-color:var(--accent)"> до отказа (ещё один повтор не смог бы)</label>
     <div class="row" style="gap:8px">
       <button class="btn sec grow" onclick="closeModal()">Отмена</button>
       ${(DB.sessions[sid].sets[ei]||[])[si] ? `<button class="btn danger" onclick="delSet(${sid},${ei},${si})">Удалить</button>` : ''}
@@ -2157,7 +2159,9 @@ window.saveSet = function(sid, ei, si, rest){
   if (!isFinite(r) || r<1 || r>99) return toast('Проверь повторы');
   const st = DB.sessions[sid];
   if (!st.sets[ei]) st.sets[ei] = [];
+  const failFl = $('#set-fail') && $('#set-fail').checked;
   st.sets[ei][si] = wEl ? {w:r1(w), r} : {w:null, r};
+  if (failFl) st.sets[ei][si].fail = 1;
   (st.vars = st.vars || {})[ei] = variantOf(sid, ei).idx;
   save(); closeModal(); render();
   const s = SESSIONS[sid];
@@ -2171,6 +2175,7 @@ window.saveSet = function(sid, ei, si, rest){
     (st.sets[ei]||[]).forEach((x,idx)=>{ if(x && idx!==si && x.w!=null) best = Math.max(best, x.w*(1+x.r/30)); });
     if (best > 0 && e1 > best + 1e-9) setTimeout(()=>toast('🎉 Личный рекорд: '+w+' кг × '+r), 700);
   }
+  achCheck();
   const nDone = st.sets[ei].filter(Boolean).length;
   if (nDone < ex.sets) startTimer(rest, esc(ex.n)+' · подход '+(nDone+1)+' из '+ex.sets);
   else startTimer(Math.min(rest, 120), esc(ex.n)+' — сделано · отдохни перед следующим');
@@ -2179,7 +2184,7 @@ window.finishSession = function(sid){
   const st = DB.sessions[sid];
   const total = Object.values(st.sets).reduce((a,arr)=>a+arr.filter(Boolean).length, 0);
   if (!total) return toast('Ни одного подхода не записано');
-  st.done = key(today()); save(); stopTimer();
+  st.done = key(today()); save(); stopTimer(); achCheck();
   const s = SESSIONS[sid];
   const tonnage = Object.values(st.sets).flat().filter(Boolean).reduce((a,x)=>a+(x.w||0)*x.r,0);
   trainSelected = null; render();
@@ -2382,7 +2387,7 @@ window.saveMeas = function(){
   }
   if (!any) return toast('Заполни хотя бы одно поле');
   (DB.meas = DB.meas || {})[key(today())] = m;
-  save(); closeModal(); render(); toast('Замеры записаны');
+  save(); closeModal(); render(); toast('Замеры записаны'); achCheck();
 };
 function dlText(txt, name, mime){
   const a = document.createElement('a');
@@ -2544,7 +2549,7 @@ window.photoAdd = function(){
       if (JSON.stringify(DB).length + data.length > 4300000)
         return toast('Хранилище почти заполнено — удали старые фото (тап по фото) или сделай экспорт');
       (DB.photos = DB.photos || {})[key(today())] = data;
-      save(); render(); toast('Фото сохранено');
+      save(); render(); toast('Фото сохранено'); achCheck();
     };
     img.onerror = () => toast('Не удалось прочитать фото');
     img.src = URL.createObjectURL(f);
@@ -2566,6 +2571,87 @@ window.photoView = function(k){
     `<div class="row" style="gap:8px;margin-top:12px">
       <button class="btn danger" onclick="if(confirm('Удалить это фото?')){delete DB.photos['${k}'];save();closeModal();render();}">Удалить</button>
       <button class="btn grow" onclick="closeModal()">Закрыть</button></div>`);
+};
+/* --- достижения, установка приложения --- */
+const ACH = [
+  {id:'t1',  e:'🏁', n:'Первая тренировка', d:'заверши 1 тренировку', f:s=>s.done>=1},
+  {id:'t10', e:'🔟', n:'10 тренировок', d:'заверши 10 тренировок', f:s=>s.done>=10},
+  {id:'t25', e:'🥉', n:'25 тренировок', d:'заверши 25 тренировок', f:s=>s.done>=25},
+  {id:'tall', e:'🏆', n:'Вся программа', d:'заверши все тренировки цикла', f:s=>s.total>0&&s.done>=s.total},
+  {id:'s4',  e:'🔥', n:'Серия 4', d:'4 тренировки подряд без пропусков', f:s=>s.streak>=4},
+  {id:'s12', e:'⚡', n:'Серия 12', d:'12 тренировок подряд', f:s=>s.streak>=12},
+  {id:'set100', e:'💪', n:'100 подходов', d:'запиши 100 подходов', f:s=>s.sets>=100},
+  {id:'set1000', e:'🦾', n:'1000 подходов', d:'запиши 1000 подходов', f:s=>s.sets>=1000},
+  {id:'ton10', e:'🚚', n:'10 тонн', d:'подними суммарно 10 000 кг', f:s=>s.ton>=10000},
+  {id:'ton100', e:'🚀', n:'100 тонн', d:'подними суммарно 100 000 кг', f:s=>s.ton>=100000},
+  {id:'kg3', e:'⚖️', n:'−3 кг', d:'минус 3 кг от старта', f:s=>s.loss>=3},
+  {id:'kg7', e:'🎯', n:'−7 кг', d:'минус 7 кг от старта', f:s=>s.loss>=7},
+  {id:'kg15', e:'👑', n:'−15 кг', d:'минус 15 кг от старта', f:s=>s.loss>=15},
+  {id:'meas1', e:'📏', n:'Первые замеры', d:'запиши замеры тела', f:s=>s.meas>=1},
+  {id:'photo1', e:'📷', n:'Фото «до»', d:'добавь первое фото прогресса', f:s=>s.photos>=1},
+];
+function achStats(){
+  let done = 0, sets = 0, ton = 0;
+  for (const s of SESSIONS){
+    const st = DB.sessions[s.id];
+    if (!st) continue;
+    if (st.done) done++;
+    for (const ei in (st.sets||{})){
+      const arr = (st.sets[ei]||[]).filter(Boolean);
+      sets += arr.length;
+      ton += arr.reduce((a,x)=>a+(x.w||0)*x.r,0);
+    }
+  }
+  const lw = lastWeight();
+  return { done, sets, ton, total: SESSIONS.length, streak: streakCount(),
+    loss: lw ? Math.max(0, (PROF.startWeight||0) - lw.v) : 0,
+    meas: Object.keys(DB.meas||{}).length, photos: Object.keys(DB.photos||{}).length };
+}
+function achCheck(){
+  try {
+    const s = achStats();
+    DB.achSeen = DB.achSeen || {};
+    const fresh = [];
+    for (const a of ACH) if (!DB.achSeen[a.id] && a.f(s)){ DB.achSeen[a.id] = key(today()); fresh.push(a); }
+    if (fresh.length){ save(); setTimeout(()=>toast('🏅 Достижение: '+fresh.map(a=>a.e+' '+a.n).join(' · ')), 900); }
+  } catch(e){}
+}
+function achCard(){
+  const s = achStats();
+  DB.achSeen = DB.achSeen || {};
+  const isOn = a => DB.achSeen[a.id] || a.f(s);
+  const got = ACH.filter(isOn).length;
+  const next = ACH.find(a => !isOn(a));
+  return `<div class="card"><h3>Достижения · ${got} из ${ACH.length}</h3>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px 6px;margin-top:8px">` +
+    ACH.map(a => `<div style="text-align:center;${isOn(a)?'':'opacity:.28;filter:grayscale(1)'}">
+      <div style="font-size:25px;line-height:1">${a.e}</div>
+      <div class="tiny" style="font-size:9.5px;line-height:1.15;margin-top:3px">${esc(a.n)}</div></div>`).join('') +
+    `</div>${next?`<div class="tiny" style="margin-top:10px">Следующее: <b>${next.e} ${esc(next.n)}</b> — ${esc(next.d)}.</div>`:`<div class="tiny" style="margin-top:10px">Всё собрано. Красавец.</div>`}</div>`;
+}
+function installCard(){
+  let standalone = false;
+  try { standalone = matchMedia('(display-mode: standalone)').matches; } catch(e){}
+  const canPrompt = !!window._instPrompt;
+  return `<div class="card"><h3>Приложение</h3>` +
+    (standalone
+      ? `<div class="small">Ты уже в установленном приложении. Поделись с друзьями — программа настроится под каждого.</div>`
+      : `<div class="small">${canPrompt
+          ? 'Поставь на главный экран: своя иконка, полный экран, работает как обычное приложение.'
+          : 'Чтобы поставить на главный экран: меню браузера (⋮ в Chrome, «Поделиться» на iPhone) → «Добавить на главный экран».'}</div>` +
+        (canPrompt ? `<button class="btn full" style="margin-top:10px" onclick="installApp()">📲 Установить приложение</button>` : '')) +
+    `<button class="btn sec full" style="margin-top:8px" onclick="shareApp()">🔗 Поделиться ссылкой</button></div>`;
+}
+window.installApp = function(){
+  const p = window._instPrompt;
+  if (!p) return toast('Меню браузера → «Добавить на главный экран»');
+  p.prompt();
+  p.userChoice.then(r => { if (r.outcome === 'accepted'){ toast('Установлено 🎉'); window._instPrompt = null; render(); } });
+};
+window.shareApp = function(){
+  const url = 'https://kodernmae.github.io/ppl/';
+  if (navigator.share) navigator.share({title:'PPL трекер', text:'Тренировки, питание и прогресс — программа настраивается под тебя', url}).catch(()=>{});
+  else if (navigator.clipboard){ navigator.clipboard.writeText(url); toast('Ссылка скопирована'); }
 };
 /* ============ 8. ТАЙМЕР ОТДЫХА ============ */
 let timerEnd = null, timerTick = null, timerTotal = 0;
@@ -4388,12 +4474,13 @@ function vMore(){
   let h = `<div class="seg">` + secs.map(s=>`<button class="${moreSec===s[0]?'on':''}" onclick="moreSec='${s[0]}';render()">${s[1]}</button>`).join('') + `</div>`;
   h += `<div class="row" style="margin:10px 2px 2px"><div class="grow small">Тема оформления</div>
     <div class="seg" style="flex:none;margin:0;min-width:150px">
-      <button class="${(DB.theme||'light')!=='dark'?'on':''}" style="min-height:36px;padding:0 12px" onclick="setTheme('light')">☀️</button>
-      <button class="${DB.theme==='dark'?'on':''}" style="min-height:36px;padding:0 12px" onclick="setTheme('dark')">🌙</button></div></div>`;
+      <button class="${(DB.theme||'light')==='light'?'on':''}" style="min-height:36px;padding:0 10px" onclick="setTheme('light')">☀️</button>
+      <button class="${DB.theme==='dark'?'on':''}" style="min-height:36px;padding:0 10px" onclick="setTheme('dark')">🌙</button>
+      <button class="${DB.theme==='auto'?'on':''}" style="min-height:36px;padding:0 10px;font-size:12.5px" onclick="setTheme('auto')">Авто</button></div></div>`;
   if (moreSec==='insights'){
     const ins = insights();
     h += ins.length ? ins.map(insightHTML).join('') : `<div class="card small">Пока нечего советовать — записывай вес, еду и тренировки.</div>`;
-    h += weekVolumeCard() + monthReportCard();
+    h += weekVolumeCard() + monthReportCard() + achCard();
     if (DB.kcalLog && DB.kcalLog.length){
       h += `<div class="card"><h3>История корректировок</h3>` +
         DB.kcalLog.map(x=>`<div class="kv"><span>${fmtD(fromKey(x.d))} · ${esc(x.reason)}</span><span class="${x.delta<0?'c-warn':'c-good'}">${x.delta>0?'+':''}${x.delta}</span></div>`).join('') +
@@ -4447,6 +4534,7 @@ function vMore(){
   }
   if (moreSec==='data'){
     const n = Object.keys(DB.weights).length + SESSIONS.filter(s=>DB.sessions[s.id]?.done).length + Object.keys(DB.food).length;
+    h += installCard();
     h += `<div class="card"><h3>Цели</h3>
       <div class="row" style="margin-bottom:8px"><div class="grow small">Калории, ккал</div>
         <button class="btn sec sm" onclick="adjustKcal(-50,'вручную')">−50</button>
@@ -4475,7 +4563,7 @@ function vMore(){
       <div class="kv"><span>${PROF.place==='home' ? 'Дом · '+(['db','band','bar'].filter(k=>PROF.equip&&PROF.equip[k]).map(k=>({db:'гантели',band:'резинка',bar:'турник'})[k]).join(', ')||'вес тела') : 'Зал'} · ${PROF.split==='fb'?'Фулбади':'PPL'} · Старт ${PROF.startWeight} кг → ~${Math.round(TARGETS[WEEKS()])} кг к ${fmtD(PROG_END)} (${WEEKS()} нед.)</span></div>
       <button class="btn sec full" style="margin-top:10px" onclick="adjustDlg()">Настройка: уровень · травмы · разнообразие</button>
       <button class="btn sec full" style="margin-top:8px" onclick="if(confirm('Пересоздать программу заново через анкету? Вес, еда и шаги сохранятся, а журнал тренировок и замены очистятся.')){DB.profile=null;DB.sessions={};DB.swaps={};DB.skips={};DB.dateOv={};save();location.reload();}">Пересоздать программу (анкета)</button></div>`;
-    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 3.8 (вода, шаблоны приёмов, окно питания, голосовой поиск, фото прогресса) · собрано для Егора и друзей · 22.08.2026. Анимации техники — собственный движок, силуэт без пола и возраста.</div>`;
+    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 3.9 (достижения, отказные подходы, установка приложения, авто-тема) · собрано для Егора и друзей · 22.08.2026. Анимации техники — собственный движок, силуэт без пола и возраста.</div>`;
   }
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }
@@ -4945,12 +5033,15 @@ window.wizardGo = function(){
 };
 /* ============ 15. ЗАГРУЗКА ============ */
 function applyTheme(){
-  const t = DB.theme || 'light';
+  let t = DB.theme || 'light';
+  if (t === 'auto') t = (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
   document.documentElement.dataset.theme = t;
   const mt = document.querySelector('meta[name=theme-color]');
   if (mt) mt.setAttribute('content', t==='dark' ? '#0a1215' : '#eef6f6');
 }
-window.setTheme = function(t){ DB.theme = t; save(); applyTheme(); render(); toast(t==='light' ? 'Светлая тема' : 'Тёмная тема'); };
+window.setTheme = function(t){ DB.theme = t; save(); applyTheme(); render(); toast(t==='light' ? 'Светлая тема' : t==='dark' ? 'Тёмная тема' : 'Тема как в системе'); };
+try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if ((DB.theme||'light') === 'auto'){ applyTheme(); render(); } }); } catch(e){}
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); window._instPrompt = e; });
 (function boot(){
   applyTheme();
   if (!DB.profile){

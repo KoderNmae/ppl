@@ -1,8 +1,9 @@
 // офлайн-кэш: приложение открывается в зале даже без сети
-const C = 'ppl-v40';
+const C = 'ppl-v41';
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(C).then(c => c.addAll(['./', './index.html'])).then(() => self.skipWaiting()));
 });
+self.addEventListener('message', e => { if (e.data === 'SKIP_WAITING') self.skipWaiting(); });
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== C).map(k => caches.delete(k)))).then(() => self.clients.claim()));
 });

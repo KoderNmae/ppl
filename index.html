@@ -2801,8 +2801,20 @@ function installCard(){
           ? 'Поставь на главный экран: своя иконка, полный экран, работает как обычное приложение.'
           : 'Чтобы поставить на главный экран: меню браузера (⋮ в Chrome, «Поделиться» на iPhone) → «Добавить на главный экран».'}</div>` +
         (canPrompt ? `<button class="btn full" style="margin-top:10px" onclick="installApp()">📲 Установить приложение</button>` : '')) +
-    `<button class="btn sec full" style="margin-top:8px" onclick="shareApp()">🔗 Поделиться ссылкой</button></div>`;
+    `<button class="btn sec full" style="margin-top:8px" onclick="shareApp()">🔗 Поделиться ссылкой</button>
+    <button class="btn ghost full" style="margin-top:6px" onclick="forceUpdate()">⟳ Проверить обновления</button></div>`;
 }
+window.forceUpdate = async function(){
+  toast('Проверяю обновления…');
+  try {
+    const reg = await navigator.serviceWorker.getRegistration();
+    if (reg){
+      await reg.update();
+      if (reg.waiting){ reg.waiting.postMessage('SKIP_WAITING'); return; }
+    }
+  } catch(e){}
+  setTimeout(() => location.reload(), 900);
+};
 window.installApp = function(){
   const p = window._instPrompt;
   if (!p) return toast('Меню браузера → «Добавить на главный экран»');
@@ -5019,7 +5031,7 @@ function vMore(){
       <div class="kv"><span>${PROF.place==='home' ? 'Дом · '+(['db','band','bar'].filter(k=>PROF.equip&&PROF.equip[k]).map(k=>({db:'гантели',band:'резинка',bar:'турник'})[k]).join(', ')||'вес тела') : 'Зал'} · ${PROF.split==='fb'?'Фулбади':'PPL'} · Старт ${PROF.startWeight} кг → ~${Math.round(TARGETS[WEEKS()])} кг к ${fmtD(PROG_END)} (${WEEKS()} нед.)</span></div>
       <button class="btn sec full" style="margin-top:10px" onclick="adjustDlg()">Настройка: уровень · травмы · разнообразие</button>
       <button class="btn sec full" style="margin-top:8px" onclick="if(confirm('Пересоздать программу заново через анкету? Вес, еда и шаги сохранятся, а журнал тренировок и замены очистятся.')){DB.profile=null;DB.sessions={};DB.swaps={};DB.skips={};DB.dateOv={};save();location.reload();}">Пересоздать программу (анкета)</button></div>`;
-    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 4.2 (контент: +52 упражнения с техникой и видео во всех программах) · собрано для Егора и друзей · 22.08.2026. Анимации техники — собственный движок, силуэт без пола и возраста.</div>`;
+    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 4.2.1 (кнопка принудительного обновления) · собрано для Егора и друзей · 22.08.2026. Анимации техники — собственный движок, силуэт без пола и возраста.</div>`;
   }
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }

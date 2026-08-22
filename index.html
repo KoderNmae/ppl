@@ -4067,17 +4067,45 @@ window.eatRecipe = function(rid, q, mid){
   save(); closeModal(); render(); toast(r.n+' — в дневнике: '+((MEAL_DEF.find(m=>m.id===mid)||{}).n||'приём').toLowerCase());
 };
 /* ---- добавление модулей в приём ---- */
+const ING_CATS = [['prot','🥩 Мясо, рыба, яйца'],['carb','🍚 Крупы и гарниры'],['veg','🥦 Овощи и зелень'],['fruit','🍎 Фрукты и ягоды'],['dairy','🥛 Молочное'],['fat','🥑 Масла и орехи'],['ready','🍲 Готовые блюда'],['sweet','🍫 Сладкое'],['drink','🥤 Напитки'],['misc','🧂 Прочее']];
+let _ingCatOpen = null;
+function prodRow(x, mid){
+  return `<button class="varrow" style="margin:6px 0;flex-direction:row;align-items:center;gap:10px" onclick="psPick('${x.id}','${mid}')">
+      ${prodThumb(x, 34)}
+      <span class="grow" style="text-align:left"><b style="font-size:14px">${x.my?'★ ':''}${esc(x.n)}</b>
+      <span style="display:block">${x.kcal} ккал · Б${x.p} на 100 г${x.unitG?' · шт ≈ '+x.unitG+' г':''}</span></span></button>`;
+}
+window.toggleIngCat = function(cat){
+  _ingCatOpen = _ingCatOpen === cat ? null : cat;
+  const el = $('#ing-cats'); if (el) el.innerHTML = ingCatsHTML(window._psMid);
+  const sec = document.getElementById('cat-'+(_ingCatOpen||''));
+  if (sec) sec.scrollIntoView({behavior:'smooth', block:'nearest'});
+};
+function ingCatsHTML(mid){
+  const pool = prodPool();
+  return ING_CATS.map(([cat, label]) => {
+    const items = pool.filter(x => x.cat === cat && !x.my);
+    if (!items.length) return '';
+    const open = _ingCatOpen === cat;
+    return `<div id="cat-${cat}"><button class="varrow" style="margin:6px 0" onclick="toggleIngCat('${cat}')">
+        <b>${label}</b><span>${items.length} продуктов ${open?'▴':'▾'}</span></button>
+      ${open ? items.map(x => prodRow(x, mid)).join('') : ''}</div>`;
+  }).join('');
+}
 window.modulesDlg = function(mid){
   const mname = (MEAL_DEF.find(m=>m.id===mid)||{}).n || '';
+  window._psMid = mid; _ingCatOpen = null;
+  const favs = (DB.myProds||[]).slice(0, 8);
   openModal(`<h2>Добавить: ${mname.toLowerCase()}</h2>
-    <input type="text" id="ps-q" placeholder="Найти: яйцо, гречка, любой товар из магазина…" style="margin-top:8px" oninput="psList('${mid}', this.value)">
+    <input type="search" id="ps-q" placeholder="Найти: яйцо, гречка, любой товар из магазина…" style="margin-top:8px" oninput="psList('${mid}', this.value)">
     <div id="ps-list"></div>
     <div class="row" style="gap:8px;margin:8px 0 2px">
-      <button class="btn sec grow sm" onclick="barcodeDlg('${mid}')">Штрихкод</button>
-      <button class="btn sec grow sm" onclick="closeModal();foodCustom('${mid}')">Своё блюдо</button></div>` +
-    Object.keys(FOOD).map(cat => `<div class="wlab" style="margin-top:10px">${cat}</div><div class="mods">` +
-      FOOD[cat].map((m,i)=>`<button class="mod" onclick="foodAdd('${cat}',${i},'${mid}')"><b>${m[0]}</b><span>${m[1]?m[1]+' · ':''}${m[5]} ккал · Б${m[2]}</span></button>`).join('') + '</div>').join('') +
-    `<button class="btn sec full" style="margin-top:12px" onclick="closeModal()">Готово</button>`);
+      <button class="btn sec grow sm" onclick="barcodeDlg('${mid}')">📷 Штрихкод</button>
+      <button class="btn sec grow sm" onclick="closeModal();foodCustom('${mid}')">Своё блюдо</button></div>
+    ${favs.length ? `<div class="wlab" style="margin-top:10px">★ Мои продукты</div>` + favs.map(x=>prodRow({...x, my:1}, mid)).join('') : ''}
+    <div class="wlab" style="margin-top:10px">Каталог · 175 продуктов</div>
+    <div id="ing-cats">${ingCatsHTML(mid)}</div>
+    <button class="btn sec full" style="margin-top:12px" onclick="closeModal()">Готово</button>`);
   psList(mid, '');
 };
 function prodPool(){
@@ -4871,10 +4899,12 @@ function vFood(){
       h += `<div class="kv" style="margin-top:8px"><span class="tiny">По меню: <b style="color:var(--text)">${esc(wmR.n)}</b> · ${Math.round(wt.kcal)} ккал</span>
         <button class="btn sm" onclick="eatRecipe('${wmR.id}',${wmIt.q},'${m.id}')">В дневник</button></div>`;
     }
+    const ydayItems = (DB.food[key(new Date(fromKey(k).getTime()-864e5))]?.items||[]).filter(x=>x.meal===m.id);
     h += `<div class="row" style="gap:8px;margin-top:10px">
       <button class="btn grow sm" onclick="recipesDlg('${m.id}')">Что приготовить</button>
       <button class="btn sec grow sm" onclick="modulesDlg('${m.id}')">Добавить</button>
-      <button class="btn sec sm" style="flex:none;min-width:46px" onclick="tplDlg('${m.id}')">⭐</button></div></div>`;
+      <button class="btn sec sm" style="flex:none;min-width:46px" onclick="tplDlg('${m.id}')">⭐</button></div>
+      ${!items.length && ydayItems.length ? `<button class="btn ghost full sm" style="margin-top:6px" onclick="copyYday('${m.id}')">↧ Повторить вчерашнее (${Math.round(ydayItems.reduce((a,x)=>a+x.kcal*x.q,0))} ккал)</button>` : ''}</div>`;
   }
   // записи без приёма (старый формат)
   const legacy = (DB.food[k]?.items||[]).map((x,i)=>({x,i})).filter(o=>!o.x.meal);
@@ -4886,6 +4916,7 @@ function vFood(){
         <button class="x" onclick="foodQty(${o.i},0.5)">+</button>
         <button class="x" onclick="foodDel(${o.i})">✕</button></div>`).join('') + `</div>`;
   }
+  h += weekFoodCard();
   h += `<button class="btn sec full" style="margin-top:8px" onclick="toggleFree()">${isFree?'Убрать свободный приём':'Отметить свободный приём'}</button>
   <div class="tiny" style="margin:10px 2px">Свободный приём — 1 раз в неделю, один приём без подсчёта. «Что приготовить» собирает рецепты из продуктов, которые ты отметил, и советует под остаток дня.</div>`;
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
@@ -4908,6 +4939,36 @@ window.foodQty = function(i, d){
   save(); render();
 };
 window.foodDel = function(i){ DB.food[foodDate].items.splice(i,1); save(); render(); };
+window.copyYday = function(mid){
+  const yk = key(new Date(fromKey(foodDate).getTime()-864e5));
+  const items = (DB.food[yk]?.items||[]).filter(x=>x.meal===mid);
+  if (!items.length) return toast('Вчера этот приём был пуст');
+  if (!DB.food[foodDate]) DB.food[foodDate] = {items:[]};
+  items.forEach(x => DB.food[foodDate].items.push({...x}));
+  save(); render(); toast('Скопировано из вчера: +'+Math.round(items.reduce((a,x)=>a+x.kcal*x.q,0))+' ккал');
+};
+function weekFoodCard(){
+  const days = [];
+  for (let i = 6; i >= 0; i--){
+    const d = new Date(today().getTime() - i*864e5), kk = key(d);
+    const t = foodTotals(kk);
+    days.push({kk, d, kcal: t.kcal, p: t.p});
+  }
+  if (!days.some(x=>x.kcal>0)) return '';
+  const kt = DB.kcalTarget, max = Math.max(kt*1.15, ...days.map(x=>x.kcal));
+  const eaten = days.filter(x=>x.kcal>0);
+  const avgK = Math.round(eaten.reduce((a,x)=>a+x.kcal,0)/eaten.length);
+  const avgP = Math.round(eaten.reduce((a,x)=>a+x.p,0)/eaten.length);
+  const DOW = ['вс','пн','вт','ср','чт','пт','сб'];
+  return `<div class="card"><h3>Неделя</h3>
+    <div style="display:flex;gap:6px;align-items:flex-end;height:86px;margin:10px 2px 2px;position:relative">
+      <div style="position:absolute;left:0;right:0;bottom:${Math.min(96, kt/max*86)}px;border-top:1.5px dashed var(--accent-dim);opacity:.7"></div>
+      ${days.map(x => `<div style="flex:1;text-align:center">
+        <div style="height:${Math.max(3, x.kcal/max*80)}px;border-radius:6px 6px 3px 3px;background:${x.kcal>kt*1.05?'var(--warn)':x.kcal>0?'var(--grad)':'var(--border2)'};opacity:${x.kk===foodDate?1:.75}"></div>
+      </div>`).join('')}</div>
+    <div style="display:flex;gap:6px;margin-top:4px">${days.map(x=>`<div style="flex:1;text-align:center" class="tiny">${DOW[x.d.getDay()]}</div>`).join('')}</div>
+    <div class="kv" style="margin-top:8px"><span>Среднее за неделю</span><span><b>${avgK}</b> ккал · Б ${avgP}</span></div></div>`;
+}
 window.toggleFree = function(){
   if (DB.freeMeals[foodDate]) delete DB.freeMeals[foodDate]; else DB.freeMeals[foodDate] = 1;
   save(); render();
@@ -5250,7 +5311,7 @@ function vMore(){
       <div class="kv"><span>${PROF.place==='home' ? 'Дом · '+(['db','band','bar'].filter(k=>PROF.equip&&PROF.equip[k]).map(k=>({db:'гантели',band:'резинка',bar:'турник'})[k]).join(', ')||'вес тела') : 'Зал'} · ${PROF.split==='fb'?'Фулбади':'PPL'} · Старт ${PROF.startWeight} кг → ~${Math.round(TARGETS[WEEKS()])} кг к ${fmtD(PROG_END)} (${WEEKS()} нед.)</span></div>
       <button class="btn sec full" style="margin-top:10px" onclick="adjustDlg()">Настройка: уровень · травмы · разнообразие</button>
       <button class="btn sec full" style="margin-top:8px" onclick="if(confirm('Пересоздать программу заново через анкету? Вес, еда и шаги сохранятся, а журнал тренировок и замены очистятся.')){DB.profile=null;DB.sessions={};DB.swaps={};DB.skips={};DB.dateOv={};save();location.reload();}">Пересоздать программу (анкета)</button></div>`;
-    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 4.4 (тренировка 2.0: карусель, прошлые подходы, таймер-кольцо, фильтры замен по травмам, секундомер) · собрано для Егора и друзей · 22.08.2026. Фото упражнений — Free Exercise DB (public domain).</div>`;
+    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 4.5 (питание 2.0: каталог по категориям вместо плиток, «повторить вчерашнее», график недели) · собрано для Егора и друзей · 22.08.2026. Фото упражнений — Free Exercise DB (public domain).</div>`;
   }
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }

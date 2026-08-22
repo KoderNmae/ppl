@@ -255,6 +255,7 @@ html[data-theme=dark] .x, html[data-theme=dark] .qbtn, html[data-theme=dark] .sw
 .acable{stroke:rgba(12,74,84,.55); stroke-width:2; fill:none}
 .aband{stroke:var(--bad); stroke-width:3; fill:none}
 .afill{fill:var(--fig); stroke:none} .afillm{fill:var(--accent2); stroke:none} .amusfill{fill:var(--accent2)}
+.aoutl{stroke:var(--bg); stroke-width:1.1; paint-order:stroke}
 .atrace{stroke:rgba(11,147,164,.45); stroke-width:2; stroke-dasharray:4 4; fill:none}
 .atracehead{stroke:var(--accent); stroke-width:2.2; fill:none}
 html[data-theme=dark] .atrace{stroke:rgba(46,198,209,.4)}
@@ -709,6 +710,7 @@ function drawTools2(anim, F){
   if (anim.band){ const from = anim.band.at==='ankle' ? F.l1.an : wr; h += `<path d="M${from[0].toFixed(1)} ${from[1].toFixed(1)} Q${((from[0]+anim.band.x)/2+6).toFixed(1)} ${((from[1]+anim.band.y)/2).toFixed(1)} ${anim.band.x} ${anim.band.y}" class="aband"/>`; }
   if (anim.pad === 'ankle') h += `<g class="atool"><circle cx="${F.l1.an[0].toFixed(1)}" cy="${F.l1.an[1].toFixed(1)}" r="7"/><circle cx="${F.l1.an[0].toFixed(1)}" cy="${F.l1.an[1].toFixed(1)}" r="2.6" class="atool2"/></g>`;
   if (anim.grip) h += `<line x1="${wr2[0].toFixed(1)}" y1="${wr2[1].toFixed(1)}" x2="${wr[0].toFixed(1)}" y2="${wr[1].toFixed(1)}" class="aprop" stroke-width="4"/>`;
+  if (anim.handle){ for (const w of [wr2, wr]) h += `<rect x="${(w[0]-1.6).toFixed(1)}" y="${(w[1]-9).toFixed(1)}" width="3.2" height="11" rx="1.6" class="aprop"/><circle cx="${w[0].toFixed(1)}" cy="${w[1].toFixed(1)}" r="2.8" class="atool"/>`; }
   return h;
 }
 function musSeg2(A, B, t0, t1, off){
@@ -791,8 +793,8 @@ function renderFrame2(anim, pose, tGlob){
   const drawArm = (A, far) => {
     const k = far ? .88 : 1;
     let g = far ? '<g class="afar">' : '';
-    g += polySeg(F.sh, A.el, 5.4*k, 4.2*k, (has('biceps')||has('triceps')) && !far ? 'afillm' : 'afill');
-    g += polySeg(A.el, A.wr, 4*k, 3*k, has('forearm') && !far ? 'afillm' : 'afill');
+    g += polySeg(F.sh, A.el, 5.4*k, 4.2*k, ((has('biceps')||has('triceps')) && !far ? 'afillm' : 'afill') + ' aoutl');
+    g += polySeg(A.el, A.wr, 4*k, 3*k, (has('forearm') && !far ? 'afillm' : 'afill') + ' aoutl');
     if (has('delts') && !far)
       g += `<circle cx="${F.sh[0].toFixed(1)}" cy="${F.sh[1].toFixed(1)}" r="7.5" class="afillm"/>`;
     if (far) g += '</g>';
@@ -881,7 +883,7 @@ goodmorning: {mus:['ham','erectors'], band:{x:150, y:174}, k1:1, e1:1, trace:'pv
 calfraise: {mus:['calf'], k1:1, e1:-1, trace:'pv', props:[FLOOR, {t:'box', x:154, y:164, w:44, h:12, z:0}], dur:1300, frames:[
   {pv:[150,101], to:2, f1:[152,166], f2:[149,167], ft:95, ft2:95, h1:{a:[180,178]}},
   {pv:[153,88], to:2, f1:[155,151], f2:[152,152], ft:132, ft2:132, h1:{a:[180,178]}}]},
-legpress: {mus:['quad','glute'], k1:-1, e1:-1, e2:-1, trace:'f1', props:[{t:'floor', y:176, z:0}, {t:'backrest', off:14, ext0:18, ext1:14, z:0}, {t:'box', x:98, y:144, w:54, h:32, z:0}, {t:'rail', z:0}, {t:'box', kx:'bx', x:166, y:56, w:14, h:76, z:1}], dur:1600, frames:[
+legpress: {mus:['quad','glute'], handle:1, k1:-1, e1:-1, e2:-1, trace:'f1', props:[{t:'floor', y:176, z:0}, {t:'backrest', off:14, ext0:18, ext1:14, z:0}, {t:'box', x:98, y:144, w:54, h:32, z:0}, {t:'rail', z:0}, {t:'box', kx:'bx', x:166, y:56, w:14, h:76, z:1}], dur:1600, frames:[
   {pv:[122,136], to:-42, hd:6, f1:[162,100], f2:[161,102], ft:10, ft2:10, h1:[132,140], h2:[128,142], bx:168},
   {pv:[122,136], to:-42, hd:6, f1:[177,100], f2:[176,102], ft:10, ft2:10, h1:[132,140], h2:[128,142], bx:183}]},
 legext: {mus:['quad'], pad:'ankle', k1:1, e1:-1, trace:'f1', props:[{t:'floor', y:176, z:0}, {t:'chair', x:134, y:120, z:0}], dur:1400,
@@ -4067,7 +4069,7 @@ function vMore(){
       <div class="kv"><span>${PROF.place==='home' ? 'Дом · '+(['db','band','bar'].filter(k=>PROF.equip&&PROF.equip[k]).map(k=>({db:'гантели',band:'резинка',bar:'турник'})[k]).join(', ')||'вес тела') : 'Зал'} · ${PROF.split==='fb'?'Фулбади':'PPL'} · Старт ${PROF.startWeight} кг → ~${Math.round(TARGETS[WEEKS()])} кг к ${fmtD(PROG_END)} (${WEEKS()} нед.)</span></div>
       <button class="btn sec full" style="margin-top:10px" onclick="adjustDlg()">Настройка: уровень · травмы · разнообразие</button>
       <button class="btn sec full" style="margin-top:8px" onclick="if(confirm('Пересоздать программу заново через анкету? Вес, еда и шаги сохранятся, а журнал тренировок и замены очистятся.')){DB.profile=null;DB.sessions={};DB.swaps={};DB.skips={};DB.dateOv={};save();location.reload();}">Пересоздать программу (анкета)</button></div>`;
-    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 3.1 (видео техники в каждом упражнении, доработка 11 анимаций) · собрано для Егора и друзей · 22.08.2026. Анимации техники — собственный движок, силуэт без пола и возраста.</div>`;
+    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 3.1.1 (контур рук на фигуре, рукояти жима ногами) · собрано для Егора и друзей · 22.08.2026. Анимации техники — собственный движок, силуэт без пола и возраста.</div>`;
   }
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }

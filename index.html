@@ -374,6 +374,11 @@ a{color:#6da7ec}
 .rpe-lab{font-size:12px; font-weight:800; letter-spacing:.06em; color:var(--muted); display:flex; align-items:center; gap:5px; flex:none}
 .hbtn{width:20px; height:20px; border-radius:50%; border:1.5px solid var(--border2); background:var(--card);
   color:var(--muted); font-size:11.5px; font-weight:800; line-height:1; cursor:pointer; padding:0}
+.wheelrow{display:flex; gap:6px; overflow-x:auto; padding:2px 2px 8px; margin:-2px 0 4px; -webkit-overflow-scrolling:touch; scrollbar-width:none}
+.wheelrow::-webkit-scrollbar{display:none}
+.wchip{flex:none; min-width:46px; min-height:40px; border-radius:11px; border:1.5px solid var(--border2); background:transparent; color:var(--text2); font-size:14px; font-weight:700; cursor:pointer}
+.wchip.tgt{border-color:var(--accent-dim, var(--accent))}
+.wchip.on{background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#fff; border-color:transparent}
 .pchips{display:flex; gap:6px; overflow-x:auto; padding:2px 0 6px; margin-top:8px; -webkit-overflow-scrolling:touch; scrollbar-width:none}
 .pchips::-webkit-scrollbar{display:none}
 .pchip{flex:none; min-height:34px; padding:0 12px; border-radius:99px; border:1.5px solid var(--border2); background:transparent; color:var(--text2); font-size:12.5px; font-weight:700; cursor:pointer}
@@ -2636,21 +2641,40 @@ window.logSet = function(sid, ei, si, rest, sugW){
   const v = variantOf(sid, ei);
   const w0 = prev && prev.w!=null ? prev.w : (sugW || 20);
   const r0 = prev ? prev.r : ex.hi;
+  const inc = v.inc || 2.5;
+  const wOpts = [];
+  for (let x = Math.max(inc, w0 - 5*inc); x <= w0 + 5*inc + 0.01; x += inc) wOpts.push(Math.round(x*10)/10);
+  const rOpts = []; for (let x = 3; x <= 20; x++) rOpts.push(x);
+  const wRow = v.bw ? '' : `<div class="wheelrow" id="wr-w">${wOpts.map(x =>
+    `<button class="wchip ${x===w0?'on':''}" data-wv="${x}" onclick="wheelSet('set-w',${x},this);updPlates()">${x%1?x.toFixed(1):x}</button>`).join('')}</div>`;
+  const rRow = `<div class="wheelrow" id="wr-r">${rOpts.map(x =>
+    `<button class="wchip ${x===r0?'on':''} ${x>=ex.lo&&x<=ex.hi?'tgt':''}" data-wv="${x}" onclick="wheelSet('set-r',${x},this)">${x}</button>`).join('')}</div>`;
   openModal(`<h2>${esc(v.n)}</h2><div class="small">Подход ${si+1} · цель ${ex.reps}${v.bw?' · вес тела':''}</div>
-    ${v.bw ? '' : `<div class="stepper"><span class="lbl">Вес, кг</span><button onclick="stepNum('set-w',-${v.inc||2.5})">−</button>
+    ${v.bw ? '' : `<div class="stepper"><span class="lbl">Вес, кг</span><button onclick="stepNum('set-w',-${inc})">−</button>
       <input id="set-w" type="number" step="0.5" inputmode="decimal" value="${w0}" oninput="updPlates()">
-      <button onclick="stepNum('set-w',${v.inc||2.5})">+</button></div>
+      <button onclick="stepNum('set-w',${inc})">+</button></div>
+    ${wRow}
     <button class="btn ghost sm" style="margin:-2px 0 6px" onclick="togglePlates()">⚖ Разложить на гриф</button>
     <div id="plates" style="display:none"></div>`}
     <div class="stepper"><span class="lbl">Повторы</span><button onclick="stepNum('set-r',-1)">−</button>
       <input id="set-r" type="number" step="1" inputmode="numeric" value="${r0}">
       <button onclick="stepNum('set-r',1)">+</button></div>
+    ${rRow}
     <label class="row" style="gap:8px;margin:0 2px 8px;font-size:13.5px;cursor:pointer"><input type="checkbox" id="set-fail" ${(st.sets[ei]||[])[si]&&(st.sets[ei]||[])[si].fail?'checked':''} style="width:18px;height:18px;accent-color:var(--accent)"> до отказа (ещё один повтор не смог бы)</label>
     <div class="row" style="gap:8px">
       <button class="btn sec grow" onclick="closeModal()">Отмена</button>
       ${(DB.sessions[sid].sets[ei]||[])[si] ? `<button class="btn danger" onclick="delSet(${sid},${ei},${si})">Удалить</button>` : ''}
       <button class="btn grow" onclick="saveSet(${sid},${ei},${si},${rest})">Готово</button>
     </div>`);
+  setTimeout(() => document.querySelectorAll('.wheelrow .wchip.on').forEach(el => el.scrollIntoView({block:'nearest', inline:'center'})), 60);
+};
+window.wheelSet = function(id, val, el){
+  const inp = $('#'+id); if (inp) inp.value = val;
+  if (el && el.parentElement){
+    el.parentElement.querySelectorAll('.wchip').forEach(b => b.classList.remove('on'));
+    el.classList.add('on');
+    el.scrollIntoView({behavior:'smooth', block:'nearest', inline:'center'});
+  }
 };
 window.delSet = function(sid, ei, si){
   const arr = DB.sessions[sid].sets[ei]; arr.splice(si,1); save(); closeModal(); render();
@@ -3107,11 +3131,59 @@ function photosCard(){
         ${phCount(k)>1?`<span class="tiny" style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,.55);color:#fff;border-radius:8px;padding:1px 6px">${phCount(k)}×</span>`:''}
         <div class="tiny" style="margin-top:2px">${fmtD(fromKey(k))}</div></div>`).join('') + `</div>`
     : `<div class="small">Раз в 2–4 недели, в одном месте, освещении и позе. Теперь три ракурса — спереди, сбоку, сзади: со спины прогресс часто виден раньше всего. Фото сжимаются и хранятся в приложении.</div>`;
+  const baCandidate = PH_ANGLES.map(x=>x[0]).find(a => keys.filter(k => phGet(k,a)).length >= 2);
   return `<div class="card"><h3>Фото прогресса</h3>${strip}
     <div class="row" style="gap:8px;margin-top:10px">${PH_ANGLES.map(([a,l]) =>
       `<button class="btn sec sm grow" onclick="photoAdd('${a}')">📷 ${l}${phGet(key(today()),a)?' ✓':''}</button>`).join('')}</div>
+    ${baCandidate ? `<button class="btn sec full" style="margin-top:8px" onclick="beforeAfterPng('${baCandidate}')">Скачать «до/после» · PNG</button>` : ''}
     <input type="file" id="ph-file" accept="image/*" style="display:none"></div>`;
 }
+window.beforeAfterPng = function(angle){
+  const keys = Object.keys(DB.photos||{}).sort().filter(k => phGet(k, angle));
+  if (keys.length < 2) return toast('Нужно минимум два фото одного ракурса');
+  const k1 = keys[0], k2 = keys[keys.length-1];
+  const load = src => new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = src; });
+  Promise.all([load(phGet(k1, angle)), load(phGet(k2, angle))]).then(([im1, im2]) => {
+    const W = 1080, H = 1350, c = document.createElement('canvas');
+    c.width = W; c.height = H;
+    const x = c.getContext('2d');
+    const g = x.createLinearGradient(0, 0, W, H);
+    g.addColorStop(0, '#0d1b1e'); g.addColorStop(1, '#123a40');
+    x.fillStyle = g; x.fillRect(0, 0, W, H);
+    const F = (w, px2) => `${w} ${px2}px -apple-system, "Segoe UI", Roboto, sans-serif`;
+    x.fillStyle = '#2ec6d1'; x.font = F(800, 42);
+    x.fillText('PPL · БЫЛО → СТАЛО', 70, 110);
+    const days = Math.round((fromKey(k2) - fromKey(k1))/864e5);
+    const w1 = DB.weights[k1] || (Object.entries(DB.weights).filter(([kk])=>kk<=k1).map(([,v])=>v).pop());
+    const w2 = DB.weights[k2] || lastWeight()?.v;
+    x.fillStyle = 'rgba(255,255,255,.8)'; x.font = F(500, 40);
+    x.fillText(`${days} дней${(w1 && w2) ? ` · ${(w2-w1) <= 0 ? '−' : '+'}${Math.abs(w2-w1).toFixed(1)} кг` : ''}`, 70, 170);
+    const drawIn = (im, bx, by, bw, bh) => {
+      const sc = Math.min(bw/im.width, bh/im.height);
+      const dw = im.width*sc, dh = im.height*sc;
+      x.save(); x.beginPath();
+      const rx = bx + (bw-dw)/2, ry = by + (bh-dh)/2;
+      x.roundRect ? (x.roundRect(rx, ry, dw, dh, 22), x.clip()) : 0;
+      x.drawImage(im, rx, ry, dw, dh);
+      x.restore();
+    };
+    drawIn(im1, 55, 220, 470, 900);
+    drawIn(im2, 555, 220, 470, 900);
+    x.fillStyle = 'rgba(255,255,255,.7)'; x.font = F(700, 36);
+    x.fillText(fmtD(fromKey(k1)), 70, 1180);
+    const t2 = fmtD(fromKey(k2));
+    x.fillText(t2, W - 70 - x.measureText(t2).width, 1180);
+    x.fillStyle = 'rgba(255,255,255,.45)'; x.font = F(500, 32);
+    x.fillText('каждодневный труд · без уколов и чудес', 70, H - 60);
+    try {
+      const a = document.createElement('a');
+      a.download = 'ppl-before-after.png';
+      a.href = c.toDataURL('image/png');
+      document.body.appendChild(a); a.click(); a.remove();
+      toast('Картинка «до/после» в загрузках');
+    } catch(e){ toast('Не получилось: ' + e.message); }
+  }).catch(() => toast('Не удалось прочитать фото'));
+};
 window.photoAdd = function(angle){
   angle = angle || 'f';
   const inp = $('#ph-file'); if (!inp) return;
@@ -6889,6 +6961,36 @@ function encDlg(i){
     <a class="btn ghost full" style="margin-top:10px" target="_blank" rel="noopener"
       href="https://yandex.ru/video/search?text=${encodeURIComponent(e[0]+' техника выполнения')}">Найти видео разбора ↗</a>`);
 }
+/* ============ 11г. ГАЙДЫ: короткие статьи-шпаргалки ============ */
+const GUIDES = [
+ {t:'Разминка за 5 минут', e:'🔥', b:'<p>Задача разминки — поднять температуру мышц и «включить» суставы, а не устать. Схема: 2–3 минуты лёгкого кардио (ходьба в горку, велотренажёр), затем 8–10 махов/вращений на суставы, которые будут работать (плечи в жимовой день, таз и колени в день ног).</p><p>Дальше — разминочные подходы первого упражнения (отдельный гайд). Статическую растяжку до тренировки не делаем: она снижает силу. Тянемся после.</p>'},
+ {t:'Как выбрать стартовый вес', e:'⚖️', b:'<p>Правило простое: первый рабочий подход нового упражнения должен идти на RPE 6–7 — «мог бы сделать ещё 3–4 повтора». Если сомневаешься между двумя весами — бери меньший: добавить на следующем подходе всегда можно, а сорванная техника учит плохому.</p><p>Приложение запоминает твои веса и само подсказывает, когда добавлять (стабильно лёгкие подходы) — доверься процессу, рост веса на штанге придёт быстрее, чем думаешь.</p>'},
+ {t:'RPE и запас повторов', e:'🎚', b:'<p>RPE — шкала «насколько тяжело» от 6 до 10. RPE 8 значит «остались 2 повтора в запасе». Почти вся программа живёт в зоне 7–8: достаточно тяжело для роста, достаточно безопасно для техники и восстановления.</p><p>Запас повторов — это не лень. Мышца растёт от качественных повторов близко к отказу, а не от самого отказа. Отмечай RPE после подхода — тренер приложения по нему считает, когда пора добавить вес, а когда придержать.</p>'},
+ {t:'Разминочные подходы', e:'🪜', b:'<p>К рабочему весу идём лесенкой: пустой гриф ×10–12 → 40–50% ×8 → 70% ×4–5 → 85–90% ×2 → рабочий. Между разминочными отдых короткий, 30–60 секунд — они не должны утомлять.</p><p>В изоляции (подъёмы на бицепс, разводки) хватает одного разминочного на 50% веса. Чем тяжелее базовое движение и чем ты тяжелее — тем важнее лесенка: связки прогреваются медленнее мышц.</p>'},
+ {t:'Отдых между подходами', e:'⏱', b:'<p>База (присед, тяги, жимы): 2–3 минуты. Изоляция: 60–90 секунд. Ориентир — дыхание успокоилось и есть ощущение «готов выдать столько же».</p><p>Отдыхать меньше ради «жжения» — обманывать себя: упадут веса, упадёт и стимул к росту. Таймер в приложении сам стартует после записанного подхода — просто следуй кольцу, кнопки ±15 сек подгонят под самочувствие.</p>'},
+ {t:'До отказа или нет?', e:'🧨', b:'<p>Отказ — инструмент, а не стиль жизни. На базовых движениях работа в отказ каждый подход быстро съедает восстановление и техника сыпется. Планово оставляй 1–2 повтора в запасе.</p><p>Где отказ уместен: последний подход изоляции (бицепс, икры, боковые дельты) и упражнения с весом тела. Отметил «до отказа» в приложении — тренер учтёт это в советах и придержит прогрессию, если отказы стали частыми.</p>'},
+ {t:'Болит сустав — что делать', e:'🩹', b:'<p>Первое правило: боль в суставе — не «забить и терпеть». Острая боль во время подхода — стоп упражнению сегодня. Дальше по схеме: замени движение на безболезненный аналог (в заменах есть фильтры «без колен» и «без спины»), уменьши амплитуду или вес, проверь технику по видео.</p><p>Болит неделю и дольше, отекает, будит ночью — это к врачу-травматологу, а не к статье. Тренировки вокруг боли продолжаются: болит колено — тренируй верх, болит плечо — ноги и хват.</p>'},
+ {t:'Дыхание под нагрузкой', e:'🌬', b:'<p>Общее правило: вдох на опускании (лёгкая фаза), мощный выдох на усилии. Присед: вдох сверху, сел, выдох на подъёме. Жим: вдох на опускании к груди, выдох при выжимании.</p><p>На тяжёлых базовых подходах работает манёвр Вальсальвы: глубокий вдох в живот до начала повтора, задержка на усилии, выдох после прохождения мёртвой точки. Это стабилизирует корпус. Кружится голова — сбавь вес и дыши чаще.</p>'},
+ {t:'Кардио при похудении', e:'🚶', b:'<p>Главный жиросжигатель — дефицит калорий, кардио лишь помогает его создать. Самый недооценённый инструмент — шаги: 8–12 тысяч в день сжигают больше, чем три «кардио-сессии», и не мешают восстановлению.</p><p>Формат: ходьба в горку 10–15 минут после силовой или отдельно 30–40 минут в лёгком темпе (можешь говорить не задыхаясь). Бег при большом весе побережём для коленей — придёт позже, вместе с −15 кг.</p>'},
+ {t:'Плато: вес не растёт', e:'🧱', b:'<p>Две тренировки подряд не добрал повторы — это ещё не плато, это жизнь. Держи вес и добирай повторы. Три-четыре тренировки без движения — сигнал: сбрось 10% и разгонись заново за 2 недели, либо смени вариацию упражнения (приложение предложит замены).</p><p>Проверь фон: сон меньше 7 часов, белок ниже цели, дефицит калорий слишком злой — любая из трёх вещей останавливает силу надёжнее плохой программы.</p>'},
+ {t:'Сон — половина прогресса', e:'😴', b:'<p>Мышцы растут не в зале, а между тренировками, и главный гормональный «строитель» работает во сне. Меньше 7 часов стабильно — минус к силе, плюс к аппетиту (грелин растёт, и рука сама тянется к сладкому).</p><p>Минимум для прогресса: 7–8 часов, тёмная прохладная комната, без кофеина после 15:00 и без экранов за 30–60 минут до сна. Привычка «Спать до 23:30» в квестах — про это.</p>'},
+ {t:'Как читать аналитику PPL', e:'📊', b:'<p>Раз в неделю смотри три вещи. Первое — средний вес за неделю против прошлой (не утренние качели). Второе — якоря силы: растёт расчётный 1ПМ по главным движениям — программа работает, даже если весы стоят. Третье — «Нутриенты недели»: жёлтые бары показывают, чем добрать рацион.</p><p>Всё остальное — карта мышц, прогнозы, тоннаж — интересно, но решения принимаются по этим трём. Одна метрика ушла не туда — тренер уже написал об этом в советах.</p>'},
+ {t:'Свободный приём без чувства вины', e:'🍕', b:'<p>Один приём в неделю без подсчёта — не «срыв», а часть плана: психика отдыхает, диета живёт долго. Правила: это один приём, а не день; в остальные приёмы дня — обычный план; на утро не «отрабатываем голодом».</p><p>+1–2 кг на весах наутро — это вода и содержимое желудка, не жир. Через 2–3 дня всё вернётся. Записывать свободный приём не нужно — просто отметь его в приложении и живи дальше.</p>'},
+];
+function guidesSection(){
+  return `<div class="card"><h3>Гайды: короткие шпаргалки</h3>
+    <div class="tiny" style="margin:2px 0 6px">2 минуты на чтение каждая — всё, что спрашивают чаще всего.</div>` +
+    GUIDES.map((g,i) => `<button class="varrow" style="margin:6px 0" onclick="guideDlg(${i})">
+      <b>${g.e} ${g.t}</b><span>→</span></button>`).join('') + `</div>`;
+}
+window.guideDlg = function(i){
+  const g = GUIDES[i]; if (!g) return;
+  openModal(`<h2>${g.e} ${g.t}</h2><div class="small" style="margin-top:8px">${g.b}</div>
+    <div class="row" style="gap:8px;margin-top:14px">
+      ${i>0?`<button class="btn sec sm" onclick="guideDlg(${i-1})">←</button>`:''}
+      <button class="btn grow" onclick="closeModal()">Понятно</button>
+      ${i<GUIDES.length-1?`<button class="btn sec sm" onclick="guideDlg(${i+1})">→</button>`:''}</div>`);
+};
 /* ============ 12. ЭКРАН «ЕЩЁ» ============ */
 let moreSec = 'insights';
 function vMore(){
@@ -6906,7 +7008,7 @@ function vMore(){
         `<div class="kv" style="margin-top:6px"><b>Текущая цель</b><b>${DB.kcalTarget} ккал</b></div></div>`;
     }
   }
-  if (moreSec==='base'){ h += encSection(); }
+  if (moreSec==='base'){ h += guidesSection() + encSection(); }
   if (moreSec==='plan'){
     const N = WEEKS(), dls = deloadWeeks(), p1end = N>=10?6:5;
     let phRows = `<tr><td>Нед. ${PROF.legacyWeek0?'0':'1'}–2</td><td>Возвращение · RPE 6–7, по 2 подхода, веса 60–70%</td></tr>
@@ -6996,7 +7098,7 @@ function vMore(){
       <div class="kv"><span>${PROF.place==='home' ? 'Дом · '+(['db','band','bar'].filter(k=>PROF.equip&&PROF.equip[k]).map(k=>({db:'гантели',band:'резинка',bar:'турник'})[k]).join(', ')||'вес тела') : 'Зал'} · ${PROF.split==='fb'?'Фулбади':'PPL'} · Старт ${PROF.startWeight} кг → ~${Math.round(TARGETS[WEEKS()])} кг к ${fmtD(PROG_END)} (${WEEKS()} нед.)</span></div>
       <button class="btn sec full" style="margin-top:10px" onclick="adjustDlg()">Настройка: уровень · травмы · разнообразие</button>
       <button class="btn sec full" style="margin-top:8px" onclick="if(confirm('Пересоздать программу заново через анкету? Вес, еда и шаги сохранятся, а журнал тренировок и замены очистятся.')){DB.profile=null;DB.sessions={};DB.swaps={};DB.skips={};DB.dateOv={};save();location.reload();}">Пересоздать программу (анкета)</button></div>`;
-    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 5.2 (дневник здоровья: сахар, температура и заметки; замеры 14 точек с лево/право, целями и % жира; фото в 3 ракурсах; «Неделя на ладони») · собрано для Егора и друзей · 26.08.2026. Фото — Free Exercise DB; нутриенты — USDA + Скурихин.</div>`;
+    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 5.3 (быстрый ввод подхода лентами чисел, 12 гайдов-шпаргалок в «Базе», экспорт «до/после» картинкой) · собрано для Егора и друзей · 26.08.2026. Фото — Free Exercise DB; нутриенты — USDA + Скурихин.</div>`;
   }
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }

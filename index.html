@@ -1826,7 +1826,8 @@ const HELP = {
   dens: {t:'Нутриенты: на 100 ккал или на 100 г', b:'<p>«В 100 г» — классика этикеток, но она льстит калорийным продуктам. «В 100 ккал» отвечает на вопрос дефицита: <b>сколько пользы я получу за эти калории</b>.</p><p>Пример с кальцием: в 100 г сыра его больше, чем в зелени. Но 100 ккал сыра — это 27 г, а 100 ккал шпината — 435 г, и кальция в этой порции втрое больше. Поэтому на похудении топ «в 100 ккал» — честнее. На наборе массы, наоборот, удобнее смотреть «в 100 г».</p>'},
   habits: {t:'Свои привычки', b:'<p>До трёх привычек, которые отмечаешь сам: вода, шаги, сон, «без сладкого» — что решишь. Тап по дню недели ставит и снимает отметку (задним числом в пределах недели — можно, вперёд — нельзя).</p><p>Каждая отметка даёт +2 XP и идёт в уровень. 5+ отметок за неделю — огонёк 🔥. Отметки прошлых недель сохраняются в общий счёт.</p>'},
   story: {t:'Твоя история', b:'<p>Карточка собирается автоматически из твоих данных: изменение веса от старта, закрытые тренировки, суммарный тоннаж, серия недель и рост силы по якорям.</p><p>Кнопка «Скачать карточкой» рисует картинку 1080×1350 — можно отправить другу или сохранить на память. Всё считается локально, никуда не публикуется.</p>'},
-  bp: {t:'Давление и пульс', b:'<p>При снижении веса давление обычно снижается — это одна из главных наград за труд, и её стоит видеть в цифрах.</p><p><b>Как мерить:</b> утром, сидя, спина с опорой, после 5 минут покоя, до кофе и тренировки. Рука на уровне сердца.</p><p><b>Ориентиры:</b> оптимально — ниже 120/80; 130–139/85–89 — повышенное; от 140/90 в покое несколько дней — повод дойти до врача, не откладывая.</p><p>Я не врач и диагнозов не ставлю — приложение только ведёт журнал и подсвечивает тренд. Пунктир на графике — отметка 130.</p>'},
+  bp: {t:'Дневник здоровья', b:'<p>При снижении веса давление обычно снижается — это одна из главных наград за труд, и её стоит видеть в цифрах.</p><p><b>Как мерить:</b> утром, сидя, спина с опорой, после 5 минут покоя, до кофе и тренировки. Рука на уровне сердца.</p><p><b>Ориентиры:</b> оптимально — ниже 120/80; 130–139/85–89 — повышенное; от 140/90 в покое несколько дней — повод дойти до врача, не откладывая.</p><p><b>Сахар:</b> натощак 3,9–5,6 ммоль/л, после еды до 7,8. <b>Температура</b> выше 37,2 — день отдыха вместо тренировки. <b>Заметка</b> — пара слов о самочувствии, пригодится врачу.</p><p>Я не врач и диагнозов не ставлю — приложение ведёт журнал и подсвечивает тренды. Пунктиры на графиках — верхние границы нормы.</p>'},
+  bodyfat: {t:'Оценка процента жира', b:'<p>Считается по формуле ВМС США из обхватов шеи и талии и роста. Это оценка с погрешностью ±3–4% — но её <b>динамика</b> честная: талия уходит быстрее шеи только когда уходит жир.</p><p>Меряй в одно время суток одной лентой. Для мужчин 10–20% — атлетичный диапазон, 20–25% — норма.</p>'},
 };
 window.helpDlg = function(key){
   const h = HELP[key]; if (!h) return;
@@ -2850,46 +2851,104 @@ function monthReportCard(){
     ${dW!=null?`<div class="kv"><span>Вес тела за период</span><b class="${dW<0?'c-good':'c-warn'}">${dW>0?'+':''}${dW.toFixed(1)} кг</b></div>`:''}
     ${top?`<div class="kv"><span>Больше всего тоннажа</span><b>${esc(top[0])}</b></div>`:''}</div>`;
 }
+/* — замеры 2.0: 14 точек, лево/право, цели, оценка % жира — */
+const MEAS_F = [
+  ['neck','Шея'],['shoulders','Плечи'],['chest','Грудь'],['waist','Талия'],['belly','Живот'],['hips','Ягодицы'],
+  ['armL','Бицепс L'],['armR','Бицепс R'],['forearmL','Предпл. L'],['forearmR','Предпл. R'],
+  ['thighL','Бедро L'],['thighR','Бедро R'],['calfL','Икра L'],['calfR','Икра R'],
+];
+const MEAS_LEGACY = {arm:'Бицепс', hip:'Бедро'};
+function measName(id){ return (MEAS_F.find(f=>f[0]===id)||[])[1] || MEAS_LEGACY[id] || id; }
+function bodyFatPct(m){
+  const w = m.waist, n = m.neck, h = PROF && PROF.height;
+  if (!w || !n || !h || w <= n) return null;
+  const v = 495/(1.0324 - 0.19077*Math.log10(w-n) + 0.15456*Math.log10(h)) - 450;
+  return (v > 3 && v < 65) ? Math.round(v*10)/10 : null;
+}
 function measCard(){
-  DB.meas = DB.meas || {};
+  DB.meas = DB.meas || {}; DB.measGoals = DB.measGoals || {};
   const keys = Object.keys(DB.meas).sort();
-  const F = [['waist','Талия'],['chest','Грудь'],['hip','Бедро'],['arm','Бицепс']];
+  const lastM = keys.length ? DB.meas[keys[keys.length-1]] : {};
+  const cols = [['waist','Талия'],['chest','Грудь'],
+    [lastM.thighL!=null?'thighL':'hip','Бедро'],[lastM.armL!=null?'armL':'arm','Бицепс']];
   let rows;
   const last5 = keys.slice(-5).reverse();
   if (last5.length){
-    rows = `<table><tr><th>Дата</th>${F.map(f=>`<th class="num">${f[1]}</th>`).join('')}</tr>` +
+    rows = `<table><tr><th>Дата</th>${cols.map(f=>`<th class="num">${f[1]}</th>`).join('')}</tr>` +
       last5.map(k=>{
         const m = DB.meas[k], pi = keys.indexOf(k)-1, pm = pi>=0 ? DB.meas[keys[pi]] : null;
-        return `<tr><td>${fmtD(fromKey(k))}</td>` + F.map(([id])=>{
+        return `<tr><td>${fmtD(fromKey(k))}</td>` + cols.map(([id])=>{
           const v = m[id];
           const d = (pm && v!=null && pm[id]!=null) ? Math.round((v-pm[id])*10)/10 : null;
           return `<td class="num">${v!=null?v:'—'}${d?` <span class="tiny ${d<0?'c-good':'c-mut'}">${d>0?'+':''}${d}</span>`:''}</td>`;
         }).join('') + `</tr>`;
       }).join('') + `</table>`;
   } else {
-    rows = `<div class="small">Раз в 1–2 недели, утром: талия — на уровне пупка, бицепс — в напряжении, лента параллельно полу. Замеры покажут прогресс, даже когда весы стоят.</div>`;
+    rows = `<div class="small">Раз в 1–2 недели, утром: талия — на уровне пупка, бицепс — в напряжении, лента параллельно полу. 14 точек, лево и право отдельно — замеры покажут прогресс, даже когда весы стоят.</div>`;
   }
-  return `<div class="card"><h3>Замеры тела, см</h3>${rows}
-    <button class="btn sec full" style="margin-top:10px" onclick="measDlg()">Записать замеры</button></div>`;
+  let extra = '';
+  const bf = bodyFatPct(lastM);
+  if (bf != null) extra += `<div class="kv" style="margin-top:8px"><span>≈ Жир по формуле ВМС США <button class="hbtn" onclick="helpDlg('bodyfat')">?</button></span><b>${bf}%</b></div>`;
+  const asym = [];
+  for (const [l, r, nm] of [['armL','armR','бицепсам'],['thighL','thighR','бёдрам'],['calfL','calfR','икрам']]){
+    if (lastM[l] != null && lastM[r] != null && Math.abs(lastM[l]-lastM[r]) >= 1.5)
+      asym.push(`по ${nm} разница ${Math.abs(lastM[l]-lastM[r]).toFixed(1)} см`);
+  }
+  if (asym.length) extra += `<div class="tiny c-warn" style="margin-top:6px">Асимметрия: ${asym.join(', ')} — добавь по подходу односторонней работы на отстающую сторону.</div>`;
+  const goals = Object.keys(DB.measGoals).filter(id => DB.measGoals[id] && lastM[id] != null);
+  if (goals.length){
+    extra += `<div class="wlab" style="margin-top:8px">Цели</div>` + goals.map(id => {
+      const cur = lastM[id], g = DB.measGoals[id];
+      const left = Math.round((cur-g)*10)/10;
+      return `<div class="kv"><span>${measName(id)}: ${cur} → ${g} см</span><b class="${Math.abs(left)<0.5?'c-good':''}">${Math.abs(left)<0.5?'цель! 🎉':(left>0?'−'+left+' осталось':'+'+(-left)+' сверх')}</b></div>`;
+    }).join('');
+  }
+  return `<div class="card"><h3>Замеры тела, см</h3>${rows}${extra}
+    <div class="row" style="gap:8px;margin-top:10px">
+      <button class="btn ghost sm" style="flex:none" onclick="measGoalDlg()">Цели</button>
+      <button class="btn sec grow" onclick="measDlg()">Записать замеры</button></div></div>`;
 }
 window.measDlg = function(){
   DB.meas = DB.meas || {};
   const keys = Object.keys(DB.meas).sort();
   const last = keys.length ? DB.meas[keys[keys.length-1]] : {};
-  const F = [['waist','Талия'],['chest','Грудь'],['hip','Бедро (обхват)'],['arm','Бицепс']];
-  openModal(`<h2>Замеры тела</h2><div class="small">в сантиметрах · можно заполнить не всё</div>` +
-    F.map(([id,l])=>`<div class="stepper"><span class="lbl">${l}</span>
-      <button onclick="stepNum('ms-${id}',-0.5)">−</button>
-      <input id="ms-${id}" type="number" step="0.5" inputmode="decimal" value="${last[id]!=null?last[id]:''}" placeholder="—">
-      <button onclick="stepNum('ms-${id}',0.5)">+</button></div>`).join('') +
-    `<div class="row" style="gap:8px;margin-top:4px">
+  const inp = (id, ph) => `<input id="ms-${id}" type="number" step="0.5" inputmode="decimal" value="${last[id]!=null?last[id]:''}" placeholder="${ph||'—'}" style="min-width:0;text-align:center">`;
+  const single = [['neck','Шея'],['shoulders','Плечи'],['chest','Грудь'],['waist','Талия'],['belly','Живот'],['hips','Ягодицы']];
+  const paired = [['arm','Бицепс'],['forearm','Предплечье'],['thigh','Бедро'],['calf','Икра']];
+  openModal(`<h2>Замеры тела</h2><div class="small">в сантиметрах · заполняй что хочешь — можно не всё</div>` +
+    single.map(([id,l])=>`<div class="row" style="gap:8px;margin-top:8px;align-items:center">
+      <span class="small grow">${l}</span>${inp(id)}</div>`).join('') +
+    `<div class="wlab" style="margin-top:12px">Лево / право</div>` +
+    paired.map(([id,l])=>`<div class="row" style="gap:8px;margin-top:8px;align-items:center">
+      <span class="small grow">${l}</span>${inp(id+'L','лево')}${inp(id+'R','право')}</div>`).join('') +
+    `<div class="tiny" style="margin-top:8px">Бицепс — в напряжении; бедро — верхняя треть; лента плотно, но без перетяжки.</div>
+    <div class="row" style="gap:8px;margin-top:10px">
       <button class="btn sec grow" onclick="closeModal()">Отмена</button>
       <button class="btn grow" onclick="saveMeas()">Сохранить</button></div>`);
+};
+window.measGoalDlg = function(){
+  DB.measGoals = DB.measGoals || {};
+  const ids = ['waist','belly','chest','hips','armL','thighL'];
+  openModal(`<h2>Цели по замерам</h2><div class="small">К чему идём, в см. Пусто — без цели.</div>` +
+    ids.map(id => `<div class="row" style="gap:8px;margin-top:8px;align-items:center">
+      <span class="small grow">${measName(id)}</span>
+      <input id="mg-${id}" type="number" step="0.5" inputmode="decimal" value="${DB.measGoals[id]||''}" placeholder="—" style="width:100px;text-align:center"></div>`).join('') +
+    `<button class="btn full" style="margin-top:12px" onclick="measGoalSave()">Сохранить</button>`);
+};
+window.measGoalSave = function(){
+  DB.measGoals = DB.measGoals || {};
+  for (const id of ['waist','belly','chest','hips','armL','thighL']){
+    const v = parseFloat(($('#mg-'+id)||{}).value);
+    if (isFinite(v) && v > 10 && v < 300) DB.measGoals[id] = Math.round(v*10)/10;
+    else delete DB.measGoals[id];
+  }
+  save(); closeModal(); render(); toast('Цели сохранены');
 };
 window.saveMeas = function(){
   const m = {};
   let any = false;
-  for (const id of ['waist','chest','hip','arm']){
+  const ids = MEAS_F.map(f=>f[0]);
+  for (const id of ids){
     const v = parseFloat(($('#ms-'+id)||{}).value);
     if (isFinite(v) && v > 10 && v < 300){ m[id] = Math.round(v*10)/10; any = true; }
   }
@@ -3028,20 +3087,33 @@ window.voiceInto = function(id){
     r.start();
   } catch(e){ toast('Голосовой ввод недоступен'); }
 };
+/* — фото прогресса: 3 ракурса на дату (спереди/сбоку/сзади), легаси-строки = «спереди» — */
+const PH_ANGLES = [['f','Спереди'],['s','Сбоку'],['b','Сзади']];
+function phGet(k, a){
+  const v = (DB.photos||{})[k];
+  if (!v) return null;
+  if (typeof v === 'string') return a === 'f' ? v : null; // легаси: одно фото = спереди
+  return v[a] || null;
+}
+function phAny(k){ return phGet(k,'f') || phGet(k,'s') || phGet(k,'b'); }
+function phCount(k){ return PH_ANGLES.filter(([a])=>phGet(k,a)).length; }
 function photosCard(){
   DB.photos = DB.photos || {};
   const keys = Object.keys(DB.photos).sort();
   const strip = keys.length
     ? `<div style="display:flex;gap:8px;overflow-x:auto;padding:4px 0 2px">` +
-      keys.map(k=>`<div style="flex:none;text-align:center;cursor:pointer" onclick="photoView('${k}')">
-        <img src="${DB.photos[k]}" style="height:110px;border-radius:10px;display:block">
+      keys.map(k=>`<div style="flex:none;text-align:center;cursor:pointer;position:relative" onclick="photoView('${k}','f')">
+        <img src="${phAny(k)}" style="height:110px;border-radius:10px;display:block">
+        ${phCount(k)>1?`<span class="tiny" style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,.55);color:#fff;border-radius:8px;padding:1px 6px">${phCount(k)}×</span>`:''}
         <div class="tiny" style="margin-top:2px">${fmtD(fromKey(k))}</div></div>`).join('') + `</div>`
-    : `<div class="small">Раз в 2–4 недели, в одном месте, освещении и позе — так прогресс видно лучше, чем на весах. Фото сжимаются и хранятся в приложении (попадают в экспорт-бэкап).</div>`;
+    : `<div class="small">Раз в 2–4 недели, в одном месте, освещении и позе. Теперь три ракурса — спереди, сбоку, сзади: со спины прогресс часто виден раньше всего. Фото сжимаются и хранятся в приложении.</div>`;
   return `<div class="card"><h3>Фото прогресса</h3>${strip}
-    <button class="btn sec full" style="margin-top:10px" onclick="photoAdd()">📷 Добавить фото</button>
+    <div class="row" style="gap:8px;margin-top:10px">${PH_ANGLES.map(([a,l]) =>
+      `<button class="btn sec sm grow" onclick="photoAdd('${a}')">📷 ${l}${phGet(key(today()),a)?' ✓':''}</button>`).join('')}</div>
     <input type="file" id="ph-file" accept="image/*" style="display:none"></div>`;
 }
-window.photoAdd = function(){
+window.photoAdd = function(angle){
+  angle = angle || 'f';
   const inp = $('#ph-file'); if (!inp) return;
   inp.onchange = () => {
     const f = inp.files[0]; if (!f) return;
@@ -3056,8 +3128,14 @@ window.photoAdd = function(){
       URL.revokeObjectURL(img.src);
       if (JSON.stringify(DB).length + data.length > 4300000)
         return toast('Хранилище почти заполнено — удали старые фото (тап по фото) или сделай экспорт');
-      (DB.photos = DB.photos || {})[key(today())] = data;
-      save(); render(); toast('Фото сохранено'); achCheck();
+      DB.photos = DB.photos || {};
+      const k = key(today());
+      let cur = DB.photos[k];
+      if (typeof cur === 'string') cur = {f: cur}; // миграция легаси
+      if (!cur || typeof cur !== 'object') cur = {};
+      cur[angle] = data;
+      DB.photos[k] = cur;
+      save(); render(); toast('Фото сохранено: ' + (PH_ANGLES.find(x=>x[0]===angle)||[])[1].toLowerCase()); achCheck();
     };
     img.onerror = () => toast('Не удалось прочитать фото');
     img.src = URL.createObjectURL(f);
@@ -3065,20 +3143,32 @@ window.photoAdd = function(){
   };
   inp.click();
 };
-window.photoView = function(k){
+window.photoView = function(k, angle){
   DB.photos = DB.photos || {};
-  if (!DB.photos[k]) return;
+  angle = angle || 'f';
+  if (!phGet(k, angle)) angle = PH_ANGLES.map(x=>x[0]).find(a=>phGet(k,a)) || 'f';
+  const cur = phGet(k, angle);
+  if (!cur) return;
   const keys = Object.keys(DB.photos).sort();
-  const first = keys[0];
-  const cmp = keys.length >= 2 && k !== first;
-  openModal(`<h2>Фото · ${fmtD(fromKey(k))}</h2>` +
-    (cmp ? `<div class="row" style="gap:8px;align-items:flex-start;margin-top:6px">
-      <div class="grow" style="text-align:center;min-width:0"><img src="${DB.photos[first]}" style="width:100%;border-radius:12px"><div class="tiny" style="margin-top:3px">${fmtD(fromKey(first))} · старт</div></div>
-      <div class="grow" style="text-align:center;min-width:0"><img src="${DB.photos[k]}" style="width:100%;border-radius:12px"><div class="tiny" style="margin-top:3px">${fmtD(fromKey(k))}</div></div></div>`
-       : `<img src="${DB.photos[k]}" style="width:100%;border-radius:12px;margin-top:6px">`) +
+  const firstK = keys.find(kk => phGet(kk, angle) && kk !== k);
+  const cmp = firstK && keys.indexOf(firstK) < keys.indexOf(k);
+  const tabs = `<div class="seg" style="margin-top:6px">${PH_ANGLES.map(([a,l]) =>
+    `<button class="${a===angle?'on':''}" ${phGet(k,a)?'':'disabled style="opacity:.4"'} onclick="photoView('${k}','${a}')">${l}</button>`).join('')}</div>`;
+  openModal(`<h2>Фото · ${fmtD(fromKey(k))}</h2>${tabs}` +
+    (cmp ? `<div class="row" style="gap:8px;align-items:flex-start;margin-top:8px">
+      <div class="grow" style="text-align:center;min-width:0"><img src="${phGet(firstK,angle)}" style="width:100%;border-radius:12px"><div class="tiny" style="margin-top:3px">${fmtD(fromKey(firstK))} · старт</div></div>
+      <div class="grow" style="text-align:center;min-width:0"><img src="${cur}" style="width:100%;border-radius:12px"><div class="tiny" style="margin-top:3px">${fmtD(fromKey(k))}</div></div></div>`
+       : `<img src="${cur}" style="width:100%;border-radius:12px;margin-top:8px">`) +
     `<div class="row" style="gap:8px;margin-top:12px">
-      <button class="btn danger" onclick="if(confirm('Удалить это фото?')){delete DB.photos['${k}'];save();closeModal();render();}">Удалить</button>
+      <button class="btn danger" onclick="photoDel('${k}','${angle}')">Удалить ракурс</button>
       <button class="btn grow" onclick="closeModal()">Закрыть</button></div>`);
+};
+window.photoDel = function(k, angle){
+  if (!confirm('Удалить это фото?')) return;
+  const v = DB.photos[k];
+  if (typeof v === 'string'){ delete DB.photos[k]; }
+  else if (v){ delete v[angle]; if (!v.f && !v.s && !v.b) delete DB.photos[k]; }
+  save(); closeModal(); render();
 };
 /* --- достижения, установка приложения --- */
 const ACH = [
@@ -3585,50 +3675,108 @@ function vWeight(){
   setupChartTip();
 }
 
-/* ---- дневник здоровья-лайт: давление и утренний пульс ---- */
+/* ---- дневник здоровья: давление/пульс, сахар, температура, заметки ---- */
+let _hlTab = 'bp';
+window.hlTab = function(t){ _hlTab = t; render(); };
+function hlChart(cs, hs, lines, dash, legend){
+  if (cs.length < 3) return '';
+  const W = 320, H = 96;
+  const all = cs.flatMap(k => lines.map(f => f(hs[k]))).filter(isFinite).concat(dash != null ? [dash] : []);
+  const mn = Math.min(...all) - (all[0] > 20 ? 6 : 0.6), mx = Math.max(...all) + (all[0] > 20 ? 6 : 0.6);
+  const px = i => (6 + i*(W-12)/Math.max(1, cs.length-1)).toFixed(1);
+  const py = v => (H - 10 - (v - mn)/(mx - mn)*(H - 20)).toFixed(1);
+  const path = f => cs.map((k, i) => { const v = f(hs[k]); return isFinite(v) ? `${i?'L':'M'}${px(i)},${py(v)}` : ''; }).join('');
+  const colors = ['var(--warn, #e8a13c)', 'var(--accent)'];
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;margin-top:10px;display:block">
+    ${dash != null ? `<path d="M6,${py(dash)}H${W-6}" stroke="var(--border2)" stroke-dasharray="4 4" fill="none" stroke-width="1.5"/>` : ''}
+    ${lines.map((f, i) => `<path d="${path(f)}" stroke="${colors[i]}" stroke-width="2.2" fill="none" stroke-linejoin="round"/>`).join('')}</svg>
+    ${legend ? `<div class="legend">${legend}</div>` : ''}`;
+}
 function healthCard(){
   const hs = DB.health || {};
   const ks = Object.keys(hs).sort();
   const tk = key(today());
   const tv = hs[tk] || {};
-  let chart = '';
-  const cs = ks.slice(-30).filter(k => isFinite(hs[k].s) && isFinite(hs[k].d));
-  if (cs.length >= 3){
-    const W = 320, H = 96;
-    const all = cs.flatMap(k => [hs[k].s, hs[k].d]).concat([130, 85]);
-    const mn = Math.min(...all) - 6, mx = Math.max(...all) + 6;
-    const px = i => (6 + i*(W-12)/Math.max(1, cs.length-1)).toFixed(1);
-    const py = v => (H - 10 - (v - mn)/(mx - mn)*(H - 20)).toFixed(1);
-    const line = f => cs.map((k, i) => `${i?'L':'M'}${px(i)},${py(f(hs[k]))}`).join('');
-    chart = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;margin-top:10px;display:block">
-      <path d="M6,${py(130)}H${W-6}" stroke="var(--border2)" stroke-dasharray="4 4" fill="none" stroke-width="1.5"/>
-      <path d="${line(h=>h.s)}" stroke="var(--warn, #e8a13c)" stroke-width="2.2" fill="none" stroke-linejoin="round"/>
-      <path d="${line(h=>h.d)}" stroke="var(--accent)" stroke-width="2.2" fill="none" stroke-linejoin="round"/></svg>
-      <div class="legend"><span><i style="background:var(--warn, #e8a13c)"></i>верхнее</span>
-        <span><i style="background:var(--accent)"></i>нижнее</span><span style="opacity:.7">пунктир — 130</span></div>`;
-  }
-  const last = ks.slice(-5).reverse();
-  return `<div class="card"><h3>Здоровье: давление и пульс <button class="hbtn" onclick="helpDlg('bp')">?</button></h3>
-    <div class="row" style="gap:8px;margin-top:10px">
+  const tabs = `<div class="seg" style="margin-top:8px">
+    <button class="${_hlTab==='bp'?'on':''}" onclick="hlTab('bp')">Давление</button>
+    <button class="${_hlTab==='su'?'on':''}" onclick="hlTab('su')">Сахар</button>
+    <button class="${_hlTab==='tp'?'on':''}" onclick="hlTab('tp')">Темп.</button>
+    <button class="${_hlTab==='note'?'on':''}" onclick="hlTab('note')">Заметка</button></div>`;
+  let form = '', chart = '', hint = '';
+  if (_hlTab === 'bp'){
+    form = `<div class="row" style="gap:8px;margin-top:10px">
       <input id="hl-s" type="number" inputmode="numeric" placeholder="верхнее" value="${tv.s||''}" style="text-align:center;min-width:0">
       <input id="hl-d" type="number" inputmode="numeric" placeholder="нижнее" value="${tv.d||''}" style="text-align:center;min-width:0">
       <input id="hl-p" type="number" inputmode="numeric" placeholder="пульс" value="${tv.p||''}" style="text-align:center;min-width:0">
-      <button class="btn sm" style="flex:none" onclick="healthSave()">OK</button></div>
-    <div class="tiny" style="margin-top:7px">Утром, сидя, после 5 минут покоя, до кофе. +2 XP за день с записью.</div>
+      <button class="btn sm" style="flex:none" onclick="healthSave('bp')">OK</button></div>`;
+    hint = 'Утром, сидя, после 5 минут покоя, до кофе.';
+    const cs = ks.slice(-30).filter(k => isFinite(hs[k].s) && isFinite(hs[k].d));
+    chart = hlChart(cs, hs, [h=>h.s, h=>h.d], 130,
+      `<span><i style="background:var(--warn, #e8a13c)"></i>верхнее</span><span><i style="background:var(--accent)"></i>нижнее</span><span style="opacity:.7">пунктир — 130</span>`);
+  } else if (_hlTab === 'su'){
+    form = `<div class="row" style="gap:8px;margin-top:10px">
+      <input id="hl-su" type="number" step="0.1" inputmode="decimal" placeholder="ммоль/л" value="${tv.su||''}" style="text-align:center;min-width:0">
+      <select id="hl-suw" style="min-width:0">${[['n','натощак'],['p','после еды']].map(([v,l])=>`<option value="${v}" ${tv.suW===v?'selected':''}>${l}</option>`).join('')}</select>
+      <button class="btn sm" style="flex:none" onclick="healthSave('su')">OK</button></div>`;
+    hint = 'Норма натощак — 3,9–5,6 ммоль/л; через 2 часа после еды — до 7,8.';
+    const cs = ks.slice(-30).filter(k => isFinite(hs[k].su));
+    chart = hlChart(cs, hs, [h=>h.su], 5.6, `<span><i style="background:var(--warn, #e8a13c)"></i>сахар</span><span style="opacity:.7">пунктир — 5,6</span>`);
+  } else if (_hlTab === 'tp'){
+    form = `<div class="row" style="gap:8px;margin-top:10px">
+      <input id="hl-tp" type="number" step="0.1" inputmode="decimal" placeholder="36.6" value="${tv.tp||''}" style="text-align:center;min-width:0">
+      <button class="btn sm" style="flex:none" onclick="healthSave('tp')">OK</button></div>`;
+    hint = 'Температура выше 37,2 — тренировку пропускаем, это правило.';
+    const cs = ks.slice(-30).filter(k => isFinite(hs[k].tp));
+    chart = hlChart(cs, hs, [h=>h.tp], 37, `<span><i style="background:var(--warn, #e8a13c)"></i>температура</span><span style="opacity:.7">пунктир — 37,0</span>`);
+  } else {
+    form = `<div class="row" style="gap:8px;margin-top:10px">
+      <input id="hl-note" type="text" maxlength="80" placeholder="самочувствие, сон, симптомы…" value="${esc(tv.note||'')}" style="min-width:0" class="grow">
+      <button class="btn sm" style="flex:none" onclick="healthSave('note')">OK</button></div>`;
+    hint = 'Пара слов о дне: «болит колено», «спал 5 часов», «изжога». Пригодится на приёме у врача.';
+  }
+  const last = ks.slice(-5).reverse();
+  const lastRows = last.map(k => {
+    const h2 = hs[k];
+    const bits = [];
+    if (h2.s || h2.d) bits.push(`${h2.s||'—'}/${h2.d||'—'}`);
+    if (h2.p) bits.push('💓' + h2.p);
+    if (h2.su) bits.push('🩸' + h2.su + (h2.suW==='p'?'п':''));
+    if (h2.tp) bits.push('🌡' + h2.tp);
+    return `<div class="kv"><span>${fmtD(fromKey(k))}${k===tk?' · сегодня':''}${h2.note?` <span class="tiny c-mut">· ${esc(h2.note)}</span>`:''}</span><span class="num" style="flex:none">${bits.join(' ')}</span></div>`;
+  }).join('');
+  return `<div class="card"><h3>Дневник здоровья <button class="hbtn" onclick="helpDlg('bp')">?</button></h3>
+    ${tabs}${form}
+    <div class="tiny" style="margin-top:7px">${hint} +2 XP за день с записью.</div>
     ${chart}
-    ${last.length ? `<div style="margin-top:10px">` + last.map(k => {
-      const h2 = hs[k];
-      return `<div class="kv"><span>${fmtD(fromKey(k))}${k===tk?' · сегодня':''}</span><span class="num">${h2.s||'—'}/${h2.d||'—'}${h2.p?' · 💓 '+h2.p:''}</span></div>`;
-    }).join('') + `</div>` : ''}
+    ${last.length ? `<div style="margin-top:10px">${lastRows}</div>` : ''}
   </div>`;
 }
-window.healthSave = function(){
-  const s = Math.round(+$('#hl-s').value) || 0, d = Math.round(+$('#hl-d').value) || 0, p = Math.round(+$('#hl-p').value) || 0;
-  if (!s && !d && !p) return toast('Введи хотя бы одно значение');
-  if ((s && (s < 70 || s > 260)) || (d && (d < 40 || d > 160)) || (p && (p < 30 || p > 230)))
-    return toast('Проверь цифры — похоже на опечатку');
-  if ((s && d) && s <= d) return toast('Верхнее должно быть больше нижнего');
-  (DB.health = DB.health || {})[key(today())] = { s: s || null, d: d || null, p: p || null };
+window.healthSave = function(kind){
+  DB.health = DB.health || {};
+  const k = key(today());
+  const rec = DB.health[k] || {};
+  if (kind === 'bp'){
+    const s = Math.round(+$('#hl-s').value) || 0, d = Math.round(+$('#hl-d').value) || 0, p = Math.round(+$('#hl-p').value) || 0;
+    if (!s && !d && !p) return toast('Введи хотя бы одно значение');
+    if ((s && (s < 70 || s > 260)) || (d && (d < 40 || d > 160)) || (p && (p < 30 || p > 230)))
+      return toast('Проверь цифры — похоже на опечатку');
+    if ((s && d) && s <= d) return toast('Верхнее должно быть больше нижнего');
+    rec.s = s || null; rec.d = d || null; rec.p = p || null;
+  } else if (kind === 'su'){
+    const su = Math.round(parseFloat($('#hl-su').value)*10)/10;
+    if (!isFinite(su)) return toast('Введи значение сахара');
+    if (su < 2 || su > 30) return toast('Проверь цифры — похоже на опечатку');
+    rec.su = su; rec.suW = $('#hl-suw').value;
+    if (rec.suW === 'n' && su >= 7) toast('Натощак ≥7 — это зона, где нужен врач, не приложение');
+  } else if (kind === 'tp'){
+    const tp = Math.round(parseFloat($('#hl-tp').value)*10)/10;
+    if (!isFinite(tp)) return toast('Введи температуру');
+    if (tp < 34 || tp > 42.5) return toast('Проверь цифры — похоже на опечатку');
+    rec.tp = tp;
+  } else {
+    rec.note = ($('#hl-note').value || '').trim() || null;
+  }
+  DB.health[k] = rec;
   save(); toast('Записано'); render(); lvlCheck();
 };
 /* ---- якоря силы: авто (по данным) или вручную ---- */
@@ -5553,6 +5701,52 @@ function mrDraw(skipList){
   const rich = NUTR_DEF.map((def,i)=>({name:def[1], pct: Math.round(sums[i]/def[3]*100)})).filter(x=>x.pct>=20).sort((a,b)=>b.pct-a.pct).slice(0,3);
   const rEl = $('#mr-rich'); if (rEl) rEl.textContent = rich.length ? 'Богат: ' + rich.map(x=>x.name+' '+x.pct+'%').join(' · ') : '';
 }
+/* — «Неделя на ладони»: сводная матрица недели — */
+function weekMatrixCard(){
+  const days = weekDayKeys();
+  const DL = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+  const tk = key(today());
+  const cell = (txt, cls) => `<td class="num ${cls||''}" style="padding:5px 2px;font-size:11px">${txt}</td>`;
+  const doneOn = k => Object.values(DB.sessions).some(s => s && s.done === k);
+  let rows = '';
+  rows += `<tr><td class="tiny">Вес</td>` + days.map(k => {
+    const v = DB.weights[k];
+    return cell(v != null ? (+v).toFixed(1) : (k > tk ? '' : '·'), v != null ? '' : 'c-mut');
+  }).join('') + `</tr>`;
+  rows += `<tr><td class="tiny">Ккал</td>` + days.map(k => {
+    if (k > tk) return cell('');
+    const t = foodTotals(k);
+    if (!t.kcal) return cell('·','c-mut');
+    return cell(Math.round(t.kcal/10)*10, t.kcal <= DB.kcalTarget*1.05 ? 'c-good' : 'c-warn');
+  }).join('') + `</tr>`;
+  rows += `<tr><td class="tiny">Белок</td>` + days.map(k => {
+    if (k > tk) return cell('');
+    const t = foodTotals(k);
+    if (!t.p) return cell('·','c-mut');
+    return cell(Math.round(t.p), t.p >= DB.protTarget*0.95 ? 'c-good' : '');
+  }).join('') + `</tr>`;
+  rows += `<tr><td class="tiny">Трен.</td>` + days.map(k => cell(k > tk ? '' : (doneOn(k) ? '✓' : '·'), doneOn(k) ? 'c-good' : 'c-mut')).join('') + `</tr>`;
+  if (days.some(k => (DB.steps||{})[k]))
+    rows += `<tr><td class="tiny">Шаги</td>` + days.map(k => {
+      const v = (DB.steps||{})[k];
+      return cell(v ? Math.round(v/1000) + 'к' : (k > tk ? '' : '·'), v ? '' : 'c-mut');
+    }).join('') + `</tr>`;
+  if ((DB.habits||[]).length)
+    rows += `<tr><td class="tiny">Привыч.</td>` + days.map(k => {
+      if (k > tk) return cell('');
+      const n = DB.habits.filter(h => h.d && h.d[k]).length;
+      return cell(n ? n + '/' + DB.habits.length : '·', n && n === DB.habits.length ? 'c-good' : 'c-mut');
+    }).join('') + `</tr>`;
+  if (days.some(k => (DB.health||{})[k] && DB.health[k].s))
+    rows += `<tr><td class="tiny">Давл.</td>` + days.map(k => {
+      const h = (DB.health||{})[k];
+      return cell(h && h.s ? h.s + '/' + (h.d || '—') : (k > tk ? '' : '·'),
+        h && h.s ? (h.s < 130 ? 'c-good' : (h.s >= 140 ? 'c-bad' : '')) : 'c-mut');
+    }).join('') + `</tr>`;
+  return `<div class="card"><h3>Неделя на ладони</h3>
+    <div style="overflow-x:auto"><table style="min-width:100%"><tr><th></th>${days.map((k,i)=>`<th class="num tiny" style="padding:5px 2px">${DL[i]}${k===tk?' •':''}</th>`).join('')}</tr>${rows}</table></div>
+    <div class="tiny" style="margin-top:6px">Зелёное — в цель, точка — нет данных. Вся неделя одним взглядом.</div></div>`;
+}
 window.mrDelRecipe = function(id, mid){
   if (!confirm('Удалить этот рецепт?')) return;
   DB.myRecipes = (DB.myRecipes||[]).filter(r => r.id !== id);
@@ -6498,6 +6692,13 @@ function weightCoachCard(){
     else if (aO != null && aR - aO >= 7)
       rows.push({t:`Верхнее давление подросло: в среднем ${Math.round(aO)} → <b>${Math.round(aR)}</b>. Частые причины — соль, недосып, кофеин, стресс. Продолжит расти неделю-другую — покажись врачу.`});
   }
+  // сахар натощак: мягкий сигнал
+  const sk = Object.keys(DB.health||{}).filter(k => isFinite((DB.health[k]||{}).su) && DB.health[k].suW !== 'p').sort();
+  if (sk.length >= 3){
+    const av3 = sk.slice(-3).reduce((a,k)=>a+DB.health[k].su,0)/3;
+    if (av3 >= 6.1)
+      rows.push({t:`Сахар натощак в среднем <b>${av3.toFixed(1)} ммоль/л</b> — выше нормы (до 5,6). Я не врач и это не диагноз, но с такими цифрами нужен анализ HbA1c и разговор с терапевтом. Хорошая новость: снижение веса — самое сильное, что улучшает сахар.`});
+  }
   // фото + замеры связка
   if (Object.keys(DB.photos||{}).length >= 2){
     const ms = Object.keys(DB.meas||{}).sort();
@@ -6696,7 +6897,7 @@ function vMore(){
   let h = `<div class="seg">` + secs.map(s=>`<button class="${moreSec===s[0]?'on':''}" onclick="moreSec='${s[0]}';render()">${s[1]}</button>`).join('') + `</div>`;
   if (moreSec==='insights'){
     const ins = insights();
-    h += questsCard() + forecastCard() + successCard();
+    h += questsCard() + weekMatrixCard() + forecastCard() + successCard();
     h += ins.length ? ins.map(insightHTML).join('') : `<div class="card small">Пока нечего советовать — записывай вес, еду и тренировки.</div>`;
     h += bodyMapWeekCard() + weekVolumeCard() + monthReportCard() + achCard();
     if (DB.kcalLog && DB.kcalLog.length){
@@ -6795,7 +6996,7 @@ function vMore(){
       <div class="kv"><span>${PROF.place==='home' ? 'Дом · '+(['db','band','bar'].filter(k=>PROF.equip&&PROF.equip[k]).map(k=>({db:'гантели',band:'резинка',bar:'турник'})[k]).join(', ')||'вес тела') : 'Зал'} · ${PROF.split==='fb'?'Фулбади':'PPL'} · Старт ${PROF.startWeight} кг → ~${Math.round(TARGETS[WEEKS()])} кг к ${fmtD(PROG_END)} (${WEEKS()} нед.)</span></div>
       <button class="btn sec full" style="margin-top:10px" onclick="adjustDlg()">Настройка: уровень · травмы · разнообразие</button>
       <button class="btn sec full" style="margin-top:8px" onclick="if(confirm('Пересоздать программу заново через анкету? Вес, еда и шаги сохранятся, а журнал тренировок и замены очистятся.')){DB.profile=null;DB.sessions={};DB.swaps={};DB.skips={};DB.dateOv={};save();location.reload();}">Пересоздать программу (анкета)</button></div>`;
-    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 5.1 (рецепты 2.0: 500+ блюд с фильтрами и поиском по ингредиентам, конструктор своих рецептов на всю базу, нутриенты рецептов считаются в дневнике) · собрано для Егора и друзей · 26.08.2026. Фото — Free Exercise DB; нутриенты — USDA + Скурихин.</div>`;
+    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 5.2 (дневник здоровья: сахар, температура и заметки; замеры 14 точек с лево/право, целями и % жира; фото в 3 ракурсах; «Неделя на ладони») · собрано для Егора и друзей · 26.08.2026. Фото — Free Exercise DB; нутриенты — USDA + Скурихин.</div>`;
   }
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }

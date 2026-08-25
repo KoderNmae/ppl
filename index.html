@@ -374,6 +374,12 @@ a{color:#6da7ec}
 .rpe-lab{font-size:12px; font-weight:800; letter-spacing:.06em; color:var(--muted); display:flex; align-items:center; gap:5px; flex:none}
 .hbtn{width:20px; height:20px; border-radius:50%; border:1.5px solid var(--border2); background:var(--card);
   color:var(--muted); font-size:11.5px; font-weight:800; line-height:1; cursor:pointer; padding:0}
+.hdots{display:flex; gap:6px; margin-top:7px}
+.hdot{flex:1; min-height:34px; border-radius:10px; border:1.5px solid var(--border2); background:transparent;
+  color:var(--muted); font-size:11px; font-weight:800; cursor:pointer; padding:0; transition:all .15s}
+.hdot.on{background:linear-gradient(135deg,var(--accent),var(--accent2)); border-color:transparent; color:#fff}
+.hdot.today:not(.on){border-color:var(--accent); color:var(--accent)}
+.hdot:disabled{opacity:.35; cursor:default}
 .rpe-row .rpe{display:flex; gap:5px; margin:0}
 .rpe-row .rpe button{min-height:32px; padding:0; flex:1; font-size:13.5px}
 .coach{display:flex; gap:9px; align-items:flex-start; margin-top:9px; padding:9px 11px; border-radius:12px;
@@ -1809,7 +1815,11 @@ const HELP = {
   forecast: {t:'Как считаются прогнозы', b:'<p>Берём твои реальные записи (вес за 30 дней, силу за 12 сессий) и строим линейный тренд. Это математика, не гадание: «при текущем темпе будет так». Изменится темп — изменится прогноз. Данных мало — прогноз не показывается.</p>'},
   quests: {t:'Задачи недели', b:'<p>Три задачи на неделю, считаются автоматически из твоих данных: тренировки, белок, взвешивания, вода. Понедельник — новый набор. Закрыл все три — неделя прожита правильно.</p>'},
   nutr: {t:'Нутриенты недели', b:'<p>Для каждого продукта из базы мы знаем 10 ключевых витаминов и минералов (данные USDA и справочника Скурихина). Когда ты записываешь еду с граммовкой, считается среднее за неделю против суточной нормы.</p><p><b>Жёлтый бар (&lt;60%)</b> — вероятный дефицит: под карточкой совет, какими продуктами добрать. Не хватает хронически — тема для разговора с врачом об анализах, добавки сами себе не назначаем.</p><p>Записи «своё блюдо» без привязки к базе в расчёт не входят.</p>'},
-  level: {t:'Уровень и XP', b:'<p>XP начисляется за всё: тренировка +50, подход +2, взвешивание +3, день с едой +6, замеры +8, фото +12, серия — бонус. Уровень открывает продвинутые упражнения в заменах и новые темы оформления. Это твой стаж, переведённый в цифру.</p>'},
+  level: {t:'Уровень и XP', b:'<p>XP начисляется за всё: тренировка +50, подход +2, взвешивание +3, день с едой +6, замеры +8, фото +12, отметка привычки +2, запись давления +2, серия — бонус. Уровень открывает продвинутые упражнения в заменах и новые темы оформления. Это твой стаж, переведённый в цифру.</p>'},
+  dens: {t:'Нутриенты: на 100 ккал или на 100 г', b:'<p>«В 100 г» — классика этикеток, но она льстит калорийным продуктам. «В 100 ккал» отвечает на вопрос дефицита: <b>сколько пользы я получу за эти калории</b>.</p><p>Пример с кальцием: в 100 г сыра его больше, чем в зелени. Но 100 ккал сыра — это 27 г, а 100 ккал шпината — 435 г, и кальция в этой порции втрое больше. Поэтому на похудении топ «в 100 ккал» — честнее. На наборе массы, наоборот, удобнее смотреть «в 100 г».</p>'},
+  habits: {t:'Свои привычки', b:'<p>До трёх привычек, которые отмечаешь сам: вода, шаги, сон, «без сладкого» — что решишь. Тап по дню недели ставит и снимает отметку (задним числом в пределах недели — можно, вперёд — нельзя).</p><p>Каждая отметка даёт +2 XP и идёт в уровень. 5+ отметок за неделю — огонёк 🔥. Отметки прошлых недель сохраняются в общий счёт.</p>'},
+  story: {t:'Твоя история', b:'<p>Карточка собирается автоматически из твоих данных: изменение веса от старта, закрытые тренировки, суммарный тоннаж, серия недель и рост силы по якорям.</p><p>Кнопка «Скачать карточкой» рисует картинку 1080×1350 — можно отправить другу или сохранить на память. Всё считается локально, никуда не публикуется.</p>'},
+  bp: {t:'Давление и пульс', b:'<p>При снижении веса давление обычно снижается — это одна из главных наград за труд, и её стоит видеть в цифрах.</p><p><b>Как мерить:</b> утром, сидя, спина с опорой, после 5 минут покоя, до кофе и тренировки. Рука на уровне сердца.</p><p><b>Ориентиры:</b> оптимально — ниже 120/80; 130–139/85–89 — повышенное; от 140/90 в покое несколько дней — повод дойти до врача, не откладывая.</p><p>Я не врач и диагнозов не ставлю — приложение только ведёт журнал и подсвечивает тренд. Пунктир на графике — отметка 130.</p>'},
 };
 window.helpDlg = function(key){
   const h = HELP[key]; if (!h) return;
@@ -3546,6 +3556,7 @@ function vWeight(){
     ${rows}</table>
     <div class="week-note">Δ: зелёный — идеальный темп (−0,5…−1,6) · оранжевый — медленно · красный — слишком быстро. Талию меряй по воскресеньям, тап по ячейке.</div></div>`;
   h += measCard();
+  h += healthCard();
   h += photosCard();
   // чек-поинты
   const anc = anchorsOf();
@@ -3567,6 +3578,52 @@ function vWeight(){
   setupChartTip();
 }
 
+/* ---- дневник здоровья-лайт: давление и утренний пульс ---- */
+function healthCard(){
+  const hs = DB.health || {};
+  const ks = Object.keys(hs).sort();
+  const tk = key(today());
+  const tv = hs[tk] || {};
+  let chart = '';
+  const cs = ks.slice(-30).filter(k => isFinite(hs[k].s) && isFinite(hs[k].d));
+  if (cs.length >= 3){
+    const W = 320, H = 96;
+    const all = cs.flatMap(k => [hs[k].s, hs[k].d]).concat([130, 85]);
+    const mn = Math.min(...all) - 6, mx = Math.max(...all) + 6;
+    const px = i => (6 + i*(W-12)/Math.max(1, cs.length-1)).toFixed(1);
+    const py = v => (H - 10 - (v - mn)/(mx - mn)*(H - 20)).toFixed(1);
+    const line = f => cs.map((k, i) => `${i?'L':'M'}${px(i)},${py(f(hs[k]))}`).join('');
+    chart = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;margin-top:10px;display:block">
+      <path d="M6,${py(130)}H${W-6}" stroke="var(--border2)" stroke-dasharray="4 4" fill="none" stroke-width="1.5"/>
+      <path d="${line(h=>h.s)}" stroke="var(--warn, #e8a13c)" stroke-width="2.2" fill="none" stroke-linejoin="round"/>
+      <path d="${line(h=>h.d)}" stroke="var(--accent)" stroke-width="2.2" fill="none" stroke-linejoin="round"/></svg>
+      <div class="legend"><span><i style="background:var(--warn, #e8a13c)"></i>верхнее</span>
+        <span><i style="background:var(--accent)"></i>нижнее</span><span style="opacity:.7">пунктир — 130</span></div>`;
+  }
+  const last = ks.slice(-5).reverse();
+  return `<div class="card"><h3>Здоровье: давление и пульс <button class="hbtn" onclick="helpDlg('bp')">?</button></h3>
+    <div class="row" style="gap:8px;margin-top:10px">
+      <input id="hl-s" type="number" inputmode="numeric" placeholder="верхнее" value="${tv.s||''}" style="text-align:center;min-width:0">
+      <input id="hl-d" type="number" inputmode="numeric" placeholder="нижнее" value="${tv.d||''}" style="text-align:center;min-width:0">
+      <input id="hl-p" type="number" inputmode="numeric" placeholder="пульс" value="${tv.p||''}" style="text-align:center;min-width:0">
+      <button class="btn sm" style="flex:none" onclick="healthSave()">OK</button></div>
+    <div class="tiny" style="margin-top:7px">Утром, сидя, после 5 минут покоя, до кофе. +2 XP за день с записью.</div>
+    ${chart}
+    ${last.length ? `<div style="margin-top:10px">` + last.map(k => {
+      const h2 = hs[k];
+      return `<div class="kv"><span>${fmtD(fromKey(k))}${k===tk?' · сегодня':''}</span><span class="num">${h2.s||'—'}/${h2.d||'—'}${h2.p?' · 💓 '+h2.p:''}</span></div>`;
+    }).join('') + `</div>` : ''}
+  </div>`;
+}
+window.healthSave = function(){
+  const s = Math.round(+$('#hl-s').value) || 0, d = Math.round(+$('#hl-d').value) || 0, p = Math.round(+$('#hl-p').value) || 0;
+  if (!s && !d && !p) return toast('Введи хотя бы одно значение');
+  if ((s && (s < 70 || s > 260)) || (d && (d < 40 || d > 160)) || (p && (p < 30 || p > 230)))
+    return toast('Проверь цифры — похоже на опечатку');
+  if ((s && d) && s <= d) return toast('Верхнее должно быть больше нижнего');
+  (DB.health = DB.health || {})[key(today())] = { s: s || null, d: d || null, p: p || null };
+  save(); toast('Записано'); render(); lvlCheck();
+};
 /* ---- якоря силы: авто (по данным) или вручную ---- */
 function anchorsOf(){
   const res = {};
@@ -4341,13 +4398,33 @@ function dayNutr(k){
   }
   return { sums, counted, total };
 }
-function nutrTop(idx, n){
+function nutrRank(idx, mode){ // рейтинг продуктов по нутриенту: 'kcal' — % нормы из 100 ккал, 'g' — на 100 г
+  const norm = NUTR_DEF[idx][3];
   return Object.entries(NUTR)
-    .filter(([id]) => ING_BY[id])
-    .sort((a,b) => b[1][idx] - a[1][idx])
-    .slice(0, n)
-    .map(([id]) => ING_BY[id][1]);
+    .filter(([id, a]) => ING_BY[id] && a[idx] > 0)
+    .map(([id, a]) => {
+      const kcal = Math.max(+ING_BY[id][3] || 0, 12); // защита от «почти нулевых» ккал
+      const g100k = Math.round(10000 / kcal);         // грамм продукта в 100 ккал
+      const val = mode === 'g' ? a[idx] : a[idx] * g100k / 100;
+      return { id, n: ING_BY[id][1], val, pct: Math.round(val / norm * 100), g100k };
+    })
+    .sort((a,b) => b.val - a.val);
 }
+function nutrTop(idx, n){ return nutrRank(idx, 'kcal').slice(0, n).map(x => x.n); }
+let _ntMode = 'kcal';
+window.nutrTopDlg = function(idx, mode){
+  if (mode) _ntMode = mode;
+  const def = NUTR_DEF[idx];
+  const rows = nutrRank(idx, _ntMode).slice(0, 20);
+  openModal(`<h2 style="margin-right:28px">${def[1]}: где брать</h2>
+    <div class="small" style="margin:4px 0 10px">Суточная норма: <b>${def[3]} ${def[2]}</b> · топ нашей базы <button class="hbtn" onclick="helpDlg('dens')">?</button></div>
+    <div class="seg" style="margin-bottom:4px">
+      <button class="${_ntMode==='kcal'?'on':''}" onclick="nutrTopDlg(${idx},'kcal')">в 100 ккал</button>
+      <button class="${_ntMode==='g'?'on':''}" onclick="nutrTopDlg(${idx},'g')">в 100 г</button></div>
+    ${rows.map((r,i) => `<div class="kv" style="margin-top:7px"><span>${i+1}. ${esc(r.n)}${_ntMode==='kcal'?`<span class="tiny" style="display:block">100 ккал ≈ ${r.g100k} г</span>`:''}</span>
+      <span class="num" style="flex:none"><b>${r.val < 10 ? +r.val.toFixed(1) : Math.round(r.val)}</b> ${def[2]} · ${r.pct}%</span></div>`).join('')}
+    <button class="btn full" style="margin-top:14px" onclick="closeModal()">Понятно</button>`);
+};
 function weekNutrCard(){
   const days = [];
   for (let i = 0; i < 7; i++){
@@ -4365,13 +4442,14 @@ function weekNutrCard(){
   const worst = rows.filter(r=>r.pct < 60).sort((a,b)=>a.pct-b.pct).slice(0,2);
   let h = `<div class="card"><h3>Нутриенты недели <button class="hbtn" onclick="helpDlg('nutr')">?</button></h3>
     <div class="tiny" style="margin:2px 0 8px">Среднее за ${days.length} дн. с записями · % от суточной нормы</div>`;
-  h += rows.map(r => `<div class="kv" style="margin-top:7px"><span>${r.def[1]}</span>
+  h += rows.map(r => `<div onclick="nutrTopDlg(${r.i})" style="cursor:pointer"><div class="kv" style="margin-top:7px"><span>${r.def[1]}</span>
       <span class="num"><b>${r.val < 10 ? r.val.toFixed(1) : Math.round(r.val)}</b> ${r.def[2]} · ${r.pct}%</span></div>
-    <div class="bar"><i class="${r.pct>=90?'good':r.pct<60?'over':''}" style="width:${Math.min(100,r.pct)}%${r.pct<60?';background:var(--warn)':''}"></i></div>`).join('');
+    <div class="bar"><i class="${r.pct>=90?'good':r.pct<60?'over':''}" style="width:${Math.min(100,r.pct)}%${r.pct<60?';background:var(--warn)':''}"></i></div></div>`).join('');
   if (worst.length){
     h += `<div class="wlab" style="margin-top:12px">Чем добрать</div>` +
-      worst.map(r => `<div class="coach" style="margin-top:6px">${ic('bulb',17)}<span><b>${r.def[1]} (${r.pct}%)</b>: ${nutrTop(r.i, 3).join(', ')}</span></div>`).join('');
+      worst.map(r => `<div class="coach" style="margin-top:6px" onclick="nutrTopDlg(${r.i})">${ic('bulb',17)}<span><b>${r.def[1]} (${r.pct}%)</b>: ${nutrTop(r.i, 3).join(', ')} · <u>весь топ</u></span></div>`).join('');
   }
+  h += `<div class="tiny" style="margin-top:8px">Тап по нутриенту — топ-20 продуктов, где его больше всего на калорию.</div>`;
   h += `<div class="tiny" style="margin-top:8px">Считается по продуктам из базы с граммовкой. Данные: USDA + Скурихин.</div></div>`;
   return h;
 }
@@ -5475,6 +5553,8 @@ function xpCalc(){
   const foodDays = Object.keys(DB.food||{}).filter(k => (DB.food[k].items||[]).length >= 2).length;
   xp += foodDays * 6;
   xp += (DB.cycles||[]).length * 300;
+  xp += (DB.habits||[]).reduce((a,h)=>a + Object.keys(h.d||{}).length, 0) * 2;
+  xp += Object.keys(DB.health||{}).length * 2;
   const stk = (typeof streakCount==='function') ? streakCount() : 0;
   xp += Math.min(stk, 30) * 15;
   return Math.round(xp);
@@ -5529,7 +5609,7 @@ function weekQuests(){
   const mon = new Date(d); mon.setDate(d.getDate() - (d.getDay()+6)%7); mon.setHours(0,0,0,0);
   const keys = []; for (let i=0;i<7;i++){ const x = new Date(mon); x.setDate(mon.getDate()+i); keys.push(key(x)); }
   const doneSess = Object.entries(DB.sessions).filter(([id,s])=>s && s.done && keys.includes(s.done));
-  const planN = Math.min(3, (PROF.days||3));
+  const planN = Math.min(3, Array.isArray(PROF.days) ? PROF.days.length : (+PROF.days || 3)) || 3;
   const protDays = keys.filter(k => { const t = foodTotals(k); return t.p >= DB.protTarget * 0.95; }).length;
   const weighDays = keys.filter(k => DB.weights[k] != null).length;
   const waterDays = keys.filter(k => ((DB.water||{})[k]||0) >= waterGoal()).length;
@@ -5549,8 +5629,57 @@ function questsCard(){
   return `<div class="card"><h3>Задачи недели ${allDone?'· все закрыты 🎉':''}</h3>` +
     qs.map(q => `<div class="kv" style="margin-top:8px"><span style="${q.done?'text-decoration:line-through;opacity:.6':''}">${q.done?'✅':'⬜'} ${q.t}</span><span class="tiny num">${q.cur}/${q.max}</span></div>
       <div class="bar" style="margin-top:4px"><i class="${q.done?'good':''}" style="width:${Math.round(q.cur/q.max*100)}%"></i></div>`).join('') +
-    `</div>`;
+    `<div class="wlab" style="margin-top:14px">Свои привычки <button class="hbtn" onclick="helpDlg('habits')">?</button></div>` +
+    habitsHTML() + `</div>`;
 }
+/* — свои привычки: до 3 штук, отметки по дням текущей недели, +2 XP за день — */
+function weekDayKeys(){
+  const d = today(), mon = new Date(d); mon.setDate(d.getDate() - (d.getDay()+6)%7);
+  const out = []; for (let i=0;i<7;i++){ const x = new Date(mon); x.setDate(mon.getDate()+i); out.push(key(x)); }
+  return out;
+}
+function habitsHTML(){
+  const hs = DB.habits || [];
+  const days = weekDayKeys(), tk = key(today());
+  const DL = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+  let h = hs.map((hb, hi) => {
+    const n = days.filter(k => hb.d && hb.d[k]).length;
+    const total = Object.keys(hb.d || {}).length;
+    return `<div style="margin-top:10px"><div class="kv"><span>${n>=5?'🔥 ':''}${esc(hb.n)}</span>
+      <span class="tiny num">${n}/7 · всего ${total} <button class="hbtn" style="margin-left:4px" onclick="habitDel(${hi})">✕</button></span></div>
+      <div class="hdots">${days.map((k, di) => `<button class="hdot ${hb.d && hb.d[k] ? 'on' : ''}${k===tk?' today':''}" ${k>tk?'disabled':''} onclick="habitToggle(${hi},'${k}')">${DL[di]}</button>`).join('')}</div></div>`;
+  }).join('');
+  if (!hs.length) h += `<div class="tiny" style="margin-top:4px">Вода, шаги, сон до 23:30 — что угодно, что хочешь делать каждый день. +2 XP за отметку.</div>`;
+  if (hs.length < 3) h += `<button class="btn ghost sm" style="margin-top:10px" onclick="habitDlg()">+ Своя привычка</button>`;
+  return h;
+}
+window.habitDlg = function(){
+  const presets = ['Вода 2 л','10 000 шагов','Спать до 23:30','Без сладкого'];
+  openModal(`<h2>Своя привычка</h2>
+    <div class="small" style="margin:6px 0 10px">Коротко назови, что отмечаешь каждый день. +2 XP за каждый отмеченный день — идёт в уровень.</div>
+    <input type="text" id="hb-n" maxlength="32" placeholder="Например: 10 000 шагов">
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">${presets.map(p =>
+      `<button class="btn ghost sm" onclick="document.getElementById('hb-n').value='${p}'">${p}</button>`).join('')}</div>
+    <button class="btn full" style="margin-top:14px" onclick="habitAdd()">Добавить</button>`);
+  setTimeout(() => { const el = $('#hb-n'); if (el) el.focus(); }, 60);
+};
+window.habitAdd = function(){
+  const v = ($('#hb-n')?.value || '').trim();
+  if (!v) return toast('Напиши название привычки');
+  (DB.habits = DB.habits || []).push({ n: v, d: {} });
+  save(); closeModal(); render(); toast('Привычка добавлена — отмечай каждый день');
+};
+window.habitDel = function(hi){
+  const hb = (DB.habits||[])[hi]; if (!hb) return;
+  if (!confirm(`Удалить привычку «${hb.n}» и её отметки?`)) return;
+  DB.habits.splice(hi, 1); save(); render();
+};
+window.habitToggle = function(hi, k){
+  const hb = (DB.habits||[])[hi]; if (!hb || k > key(today())) return;
+  hb.d = hb.d || {};
+  if (hb.d[k]) delete hb.d[k]; else hb.d[k] = 1;
+  save(); render(); lvlCheck();
+};
 /* — прогнозы — */
 function linTrend(pairs){ // [[dayIndex, value]] -> {k, b} per day
   const n = pairs.length; if (n < 2) return null;
@@ -5623,6 +5752,107 @@ function forecastCard(){
   h += `</div>`;
   return h;
 }
+/* — «Твоя история»: авто-карточка вех из собственных данных + выгрузка PNG — */
+function successStory(){
+  const ks = Object.keys(DB.weights||{}).sort();
+  const doneN = Object.values(DB.sessions||{}).filter(s=>s && s.done).length;
+  const startW = (PROF && PROF.startWeight) || (ks.length ? +DB.weights[ks[0]] : null);
+  const lastW = ks.length ? +DB.weights[ks[ks.length-1]] : null;
+  const dW = (startW != null && lastW != null) ? +(lastW - startW).toFixed(1) : null;
+  const days = ks.length ? Math.round((fromKey(ks[ks.length-1]) - fromKey(ks[0]))/864e5) + 1 : 0;
+  const lifts = [];
+  try{
+    const anc = anchorsOf();
+    for (const t of TYPES()){
+      const ai = anchorInfo(t, anc[t]);
+      if (ai && ai.delta != null && ai.delta > 0) lifts.push({ name: ai.name, txt: ai.txt, delta: ai.delta });
+    }
+  }catch(e){}
+  lifts.sort((a,b)=>b.delta-a.delta);
+  const ton = Object.values(DB.sessions||{}).filter(s=>s && s.done)
+    .reduce((a,s)=>a + Object.values(s.sets||{}).flat().filter(Boolean).reduce((b,x)=>b + (x.w||0)*(x.r||0), 0), 0);
+  const stk = (typeof streakCount==='function') ? streakCount() : 0;
+  const show = (dW != null && dW <= -3) || lifts.some(l=>l.delta >= 10) || doneN >= 10;
+  return { show, dW, startW, lastW, days, lifts: lifts.slice(0,3), doneN, ton: Math.round(ton), stk };
+}
+function successCard(){
+  const s = successStory();
+  let inner;
+  if (!s.show){
+    inner = `<div class="small" style="margin-top:6px">Соберётся сама из твоих данных: −3 кг от старта, +10% к силе или 10 закрытых тренировок — и здесь появится твоя карточка со скачиванием в PNG.</div>`;
+  } else {
+    const head = s.dW != null && s.dW <= -1 ? `−${Math.abs(s.dW).toFixed(1)} кг`
+      : s.dW != null && s.dW >= 1 ? `+${s.dW.toFixed(1)} кг`
+      : `${s.doneN} тренировок`;
+    inner = `<div style="font-size:34px;font-weight:800;line-height:1.1;margin:8px 0 2px">${head}</div>
+      <div class="tiny">${s.dW != null ? `${s.startW} → ${s.lastW} кг · путь ${s.days} дн.` : `путь ${s.days} дн.`}</div>
+      <div class="kv" style="margin-top:10px"><span>Тренировок закрыто</span><b>${s.doneN}</b></div>
+      <div class="kv"><span>Поднято суммарно</span><b>${s.ton >= 1000 ? (s.ton/1000).toFixed(1)+' т' : s.ton+' кг'}</b></div>
+      ${s.stk > 1 ? `<div class="kv"><span>Серия недель</span><b>${s.stk}</b></div>` : ''}
+      ${s.lifts.map(l => `<div class="kv"><span>${esc(l.name.length>24?l.name.slice(0,23)+'…':l.name)}</span><b class="c-good">${l.txt}</b></div>`).join('')}
+      <button class="btn sec full" style="margin-top:12px" onclick="storyPng()">Скачать карточкой · PNG</button>
+      <div class="tiny" style="margin-top:6px">Как «истории успеха» в трекерах — только из твоих настоящих цифр, без соцсети.</div>`;
+  }
+  return `<div class="card"><h3>Твоя история <button class="hbtn" onclick="helpDlg('story')">?</button></h3>${inner}</div>`;
+}
+window.storyPng = function(){
+  const s = successStory(); if (!s.show) return;
+  const W = 1080, H = 1350, c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const x = c.getContext('2d');
+  const g = x.createLinearGradient(0, 0, W, H);
+  g.addColorStop(0, '#0d1b1e'); g.addColorStop(1, '#123a40');
+  x.fillStyle = g; x.fillRect(0, 0, W, H);
+  x.fillStyle = 'rgba(46,198,209,.14)';
+  x.beginPath(); x.arc(W-120, 140, 260, 0, 7); x.fill();
+  const F = (w, px) => `${w} ${px}px -apple-system, "Segoe UI", Roboto, sans-serif`;
+  x.fillStyle = '#2ec6d1'; x.font = F(800, 40);
+  x.fillText('PPL · МОЯ ИСТОРИЯ', 80, 130);
+  x.fillStyle = '#fff'; x.font = F(800, 170);
+  const head = s.dW != null && s.dW <= -1 ? `−${Math.abs(s.dW).toFixed(1)} кг`
+    : s.dW != null && s.dW >= 1 ? `+${s.dW.toFixed(1)} кг` : `${s.doneN} трен.`;
+  x.fillText(head, 80, 340);
+  x.fillStyle = 'rgba(255,255,255,.75)'; x.font = F(500, 44);
+  x.fillText(s.dW != null ? `${s.startW} → ${s.lastW} кг за ${s.days} дней` : `${s.days} дней в работе`, 80, 415);
+  // спарклайн веса
+  const ks = Object.keys(DB.weights||{}).sort();
+  if (ks.length >= 3){
+    const vals = ks.map(k=>+DB.weights[k]).filter(isFinite);
+    const mn = Math.min(...vals), mx = Math.max(...vals), sp = Math.max(0.1, mx-mn);
+    x.strokeStyle = '#2ec6d1'; x.lineWidth = 7; x.lineJoin = 'round';
+    x.beginPath();
+    vals.forEach((v, i) => {
+      const px = 80 + i*(W-160)/Math.max(1, vals.length-1);
+      const py = 700 - (v-mn)/sp*160;
+      i ? x.lineTo(px, py) : x.moveTo(px, py);
+    });
+    x.stroke();
+  }
+  const rows = [];
+  rows.push(['Тренировок закрыто', String(s.doneN)]);
+  rows.push(['Поднято суммарно', s.ton >= 1000 ? (s.ton/1000).toFixed(1)+' т' : s.ton+' кг']);
+  if (s.stk > 1) rows.push(['Серия недель', String(s.stk)]);
+  s.lifts.slice(0,2).forEach(l => rows.push([l.name.length>22?l.name.slice(0,21)+'…':l.name, l.txt]));
+  let yy = 830;
+  for (const [a, b] of rows){
+    x.fillStyle = 'rgba(255,255,255,.6)'; x.font = F(500, 40); x.fillText(a, 80, yy);
+    x.fillStyle = '#fff'; x.font = F(800, 44);
+    const tw = x.measureText(b).width;
+    x.fillText(b, W-80-tw, yy);
+    x.strokeStyle = 'rgba(255,255,255,.12)'; x.lineWidth = 2;
+    x.beginPath(); x.moveTo(80, yy+26); x.lineTo(W-80, yy+26); x.stroke();
+    yy += 92;
+  }
+  x.fillStyle = 'rgba(255,255,255,.45)'; x.font = F(500, 34);
+  x.fillText(`${PROF && PROF.name ? PROF.name+' · ' : ''}${fmtD(today())}.${today().getFullYear()} · считает приложение, а делаешь ты`, 80, H-70);
+  try{
+    const a = document.createElement('a');
+    a.download = 'ppl-story.png';
+    a.href = c.toDataURL('image/png');
+    document.body.appendChild(a); a.click(); a.remove();
+    toast('Карточка сохранена в загрузки');
+  }catch(e){ toast('Не получилось сохранить: '+e.message); }
+};
 /* — дайджест: курируемая лента (обновляется с релизами) — */
 const DIGEST = [
  {d:'22.08', t:'Креатин работает у всех — и у новичков, и у опытных', s:'Свежая мета-2025/26 по дозе-эффекту: 3–5 г моногидрата в день дают прирост силы и сухой массы независимо от стажа. Загрузка не обязательна, циклировать не нужно.', src:'JISSN, мета-анализ', url:'https://pmc.ncbi.nlm.nih.gov/articles/PMC12777911/'},
@@ -5758,6 +5988,16 @@ function weightCoachCard(){
   // слишком быстро
   if (fw && fw.perWeek < -1.2)
     rows.push({t:`Темп −${Math.abs(fw.perWeek).toFixed(1)} кг/нед — быстрее безопасного. Часть уходит из мышц. Добавь 150-200 ккал (лучше белком) — итог за год будет лучше.`});
+  // давление: мягкий сигнал без диагнозов
+  const hk = Object.keys(DB.health||{}).filter(k => isFinite((DB.health[k]||{}).s)).sort();
+  if (hk.length >= 4){
+    const av = arr => arr.length ? arr.reduce((a,k)=>a+DB.health[k].s, 0)/arr.length : null;
+    const aR = av(hk.slice(-4)), aO = hk.length >= 8 ? av(hk.slice(-8,-4)) : null;
+    if (aR >= 140)
+      rows.push({t:`Давление в последних записях в среднем <b>${Math.round(aR)}</b> — выше нормы. Я не врач, и это не диагноз, но с такими цифрами стоит дойти до терапевта. Хорошая новость: снижение веса — самое эффективное, что ты уже делаешь для давления.`});
+    else if (aO != null && aR - aO >= 7)
+      rows.push({t:`Верхнее давление подросло: в среднем ${Math.round(aO)} → <b>${Math.round(aR)}</b>. Частые причины — соль, недосып, кофеин, стресс. Продолжит расти неделю-другую — покажись врачу.`});
+  }
   // фото + замеры связка
   if (Object.keys(DB.photos||{}).length >= 2){
     const ms = Object.keys(DB.meas||{}).sort();
@@ -5812,6 +6052,15 @@ function storySet(){
         <div><div class="tiny2">Через 4 нед</div><b>${fw.in4w.toFixed(1)}</b></div>
         ${fw.eta?`<div><div class="tiny2">Цель ${fw.eta.goal.toFixed(0)}</div><b>${fw.eta.weeks} нед</b></div>`:''}</div>
         <div class="stxt" style="margin-top:16px">${fw.eta?`Если держать темп — <b>${fw.eta.goal.toFixed(1)} кг к ${fmtMonth(fw.eta.date)}</b>. Это математика твоих последних 30 дней.`:fw.perWeek<-0.05?'Темп рабочий. Главное — не ускоряться голодом: −0.5..−0.7 кг/нед сохраняет мышцы.':'Вес стоит. Загляни на вкладку «Вес» — там разбор, почему.'}</div>`});
+  }
+  // 3б) твоя история — когда есть чем гордиться
+  const ss = (typeof successStory === 'function') ? successStory() : null;
+  if (ss && ss.show){
+    out.push({emo:'🏆', lb:'История', kick:'Твоя история', t: ss.dW != null && ss.dW <= -1 ? `−${Math.abs(ss.dW).toFixed(1)} кг от старта` : `${ss.doneN} тренировок позади`,
+      body:`<div class="srow"><div><div class="tiny2">Тренировки</div><b>${ss.doneN}</b></div>
+        <div><div class="tiny2">Поднято</div><b>${ss.ton >= 1000 ? (ss.ton/1000).toFixed(1)+' т' : ss.ton+' кг'}</b></div>
+        ${ss.stk > 1 ? `<div><div class="tiny2">Серия</div><b>${ss.stk} нед</b></div>` : ''}</div>
+        <div class="stxt" style="margin-top:16px">${ss.lifts.length ? `Сила: ${ss.lifts.slice(0,2).map(l=>esc(l.name)+' '+l.txt).join(' · ')}.<br><br>` : ''}Это не пост из чужой ленты — это твои цифры. В «Ещё → Аналитика» карточка скачивается картинкой.</div>`});
   }
   // 4-5) наука: ротация из пула по выпуску
   const seed = storySeed();
@@ -5947,7 +6196,7 @@ function vMore(){
   let h = `<div class="seg">` + secs.map(s=>`<button class="${moreSec===s[0]?'on':''}" onclick="moreSec='${s[0]}';render()">${s[1]}</button>`).join('') + `</div>`;
   if (moreSec==='insights'){
     const ins = insights();
-    h += questsCard() + forecastCard();
+    h += questsCard() + forecastCard() + successCard();
     h += ins.length ? ins.map(insightHTML).join('') : `<div class="card small">Пока нечего советовать — записывай вес, еду и тренировки.</div>`;
     h += bodyMapWeekCard() + weekVolumeCard() + monthReportCard() + achCard();
     if (DB.kcalLog && DB.kcalLog.length){
@@ -6046,7 +6295,7 @@ function vMore(){
       <div class="kv"><span>${PROF.place==='home' ? 'Дом · '+(['db','band','bar'].filter(k=>PROF.equip&&PROF.equip[k]).map(k=>({db:'гантели',band:'резинка',bar:'турник'})[k]).join(', ')||'вес тела') : 'Зал'} · ${PROF.split==='fb'?'Фулбади':'PPL'} · Старт ${PROF.startWeight} кг → ~${Math.round(TARGETS[WEEKS()])} кг к ${fmtD(PROG_END)} (${WEEKS()} нед.)</span></div>
       <button class="btn sec full" style="margin-top:10px" onclick="adjustDlg()">Настройка: уровень · травмы · разнообразие</button>
       <button class="btn sec full" style="margin-top:8px" onclick="if(confirm('Пересоздать программу заново через анкету? Вес, еда и шаги сохранятся, а журнал тренировок и замены очистятся.')){DB.profile=null;DB.sessions={};DB.swaps={};DB.skips={};DB.dateOv={};save();location.reload();}">Пересоздать программу (анкета)</button></div>`;
-    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 4.8 (микронутриенты: 10 витаминов и минералов у всех 175 продуктов, отчёт «Нутриенты недели», серийное добавление еды) · собрано для Егора и друзей · 25.08.2026. Фото — Free Exercise DB; нутриенты — USDA + Скурихин.</div>`;
+    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 4.9 (топы продуктов «в 100 ккал», свои привычки, карточка «Твоя история» с выгрузкой PNG, дневник давления и пульса) · собрано для Егора и друзей · 26.08.2026. Фото — Free Exercise DB; нутриенты — USDA + Скурихин.</div>`;
   }
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }

@@ -1808,6 +1808,7 @@ const HELP = {
   weektype: {t:'Лёгкие и тяжёлые недели', b:'<p>Программа волнами: лёгкая → средняя → тяжёлая. На лёгкой неделе веса ниже — это специально: мышцы растут в восстановлении, а не на каждом максимуме. Идёшь по плану — прогрессируешь без выгорания.</p>'},
   forecast: {t:'Как считаются прогнозы', b:'<p>Берём твои реальные записи (вес за 30 дней, силу за 12 сессий) и строим линейный тренд. Это математика, не гадание: «при текущем темпе будет так». Изменится темп — изменится прогноз. Данных мало — прогноз не показывается.</p>'},
   quests: {t:'Задачи недели', b:'<p>Три задачи на неделю, считаются автоматически из твоих данных: тренировки, белок, взвешивания, вода. Понедельник — новый набор. Закрыл все три — неделя прожита правильно.</p>'},
+  nutr: {t:'Нутриенты недели', b:'<p>Для каждого продукта из базы мы знаем 10 ключевых витаминов и минералов (данные USDA и справочника Скурихина). Когда ты записываешь еду с граммовкой, считается среднее за неделю против суточной нормы.</p><p><b>Жёлтый бар (&lt;60%)</b> — вероятный дефицит: под карточкой совет, какими продуктами добрать. Не хватает хронически — тема для разговора с врачом об анализах, добавки сами себе не назначаем.</p><p>Записи «своё блюдо» без привязки к базе в расчёт не входят.</p>'},
   level: {t:'Уровень и XP', b:'<p>XP начисляется за всё: тренировка +50, подход +2, взвешивание +3, день с едой +6, замеры +8, фото +12, серия — бонус. Уровень открывает продвинутые упражнения в заменах и новые темы оформления. Это твой стаж, переведённый в цифру.</p>'},
 };
 window.helpDlg = function(key){
@@ -4261,6 +4262,58 @@ window.eatRecipe = function(rid, q, mid){
   save(); closeModal(); render(); toast(r.n+' — в дневнике: '+((MEAL_DEF.find(m=>m.id===mid)||{}).n||'приём').toLowerCase());
 };
 /* ---- добавление модулей в приём ---- */
+/* Микронутриенты на 100 г: [клетчатка г, кальций мг, железо мг, магний мг, цинк мг, калий мг, витD мкг, B12 мкг, витC мг, омега-3 г] */
+const NUTR = {
+egg:[0,56,1.8,12,1.3,138,2.0,0.9,0,0.07], eggc0:[0,56,1.8,12,1.3,138,2.0,0.9,0,0.07], eggquail:[0,64,3.7,13,1.5,132,1.4,1.6,0,0.05], eggwhite:[0,7,0.1,11,0.03,163,0,0.1,0,0],
+chicken:[0,5,0.4,29,0.7,330,0.1,0.2,0,0.05], chthigh:[0,9,0.9,23,1.8,230,0.1,0.4,0,0.1], chwings:[0,13,0.9,19,1.5,180,0.1,0.3,0,0.1], chfarsh:[0,8,0.8,25,1.3,280,0.1,0.3,0,0.08],
+turkey:[0,7,0.9,30,1.6,300,0.1,0.6,0,0.05], tfarsh:[0,9,1.1,27,2.2,270,0.1,0.7,0,0.06],
+beef:[0,10,2.4,20,5.0,300,0.1,2.2,0,0.05], pork:[0,8,0.9,22,2.2,300,0.5,0.6,0,0.05], porkneck:[0,7,0.8,18,1.9,270,0.5,0.6,0,0.06], porkloin:[0,6,1.0,25,1.9,350,0.4,0.5,0,0.04], pfarsh:[0,8,1.0,20,2.4,290,0.5,0.7,0,0.06],
+bacon:[0,6,0.5,12,1.3,180,0.4,0.5,0,0.1], ham:[0,7,0.8,18,1.6,270,0.4,0.4,0,0.05], buzhenina:[0,8,1.2,20,2.3,260,0.4,0.5,0,0.05],
+liver:[0,8,9.0,19,3.0,230,0.2,17,18,0.1], beefliver:[0,5,6.5,18,4.0,320,1.2,60,1.3,0.05], tongue:[0,6,2.9,16,3.5,200,0.3,3.8,1,0.05],
+sausage:[0,25,1.4,18,1.6,220,0.3,0.9,0,0.05], smsausage:[0,20,1.6,18,2.2,250,0.5,1.2,0,0.08], sosiski:[0,30,1.2,16,1.3,200,0.3,0.8,0,0.05],
+cod:[0,16,0.4,32,0.5,340,0.9,0.9,1,0.2], mintai:[0,40,0.8,55,0.9,420,0.5,1.6,0,0.5], hek:[0,30,0.7,35,0.9,335,1.5,2.1,0,0.4],
+salmon:[0,12,0.5,29,0.5,380,11,3.2,1,2.2], trout:[0,20,0.7,27,0.7,400,10,4.5,1,1.8], herring:[0,60,1.1,32,1.0,310,17,10,1,2.0], shproty:[0,300,3.0,35,1.2,260,10,8,0,1.7],
+tuna:[0,10,1.0,27,0.8,230,2.0,2.9,0,0.3], redcaviar:[0,90,1.8,30,1.0,180,17,20,1,6.8],
+shrimp:[0,70,0.5,35,1.4,200,0.1,1.5,0,0.3], squid:[0,40,1.1,38,1.5,280,0,1.3,1,0.5], mussels:[0,50,4.0,37,1.6,260,0.1,12,8,0.7], crabsticks:[0,15,0.4,25,0.3,90,0,0.4,0,0.1],
+tvorog:[0,164,0.4,23,0.4,112,0.1,1.0,0,0.03], tvorog0:[0,120,0.3,24,0.4,117,0,1.3,0,0], tvorog9:[0,164,0.4,23,0.4,112,0.2,1.0,0,0.05],
+gyogurt:[0,110,0.1,11,0.5,141,0.1,0.7,0,0.03], yogdrink:[0,110,0.1,12,0.4,140,0.3,0.4,1,0.02],
+cheese:[0,880,0.7,35,4.0,100,0.6,1.4,0,0.15], mozzarella:[0,505,0.4,20,2.9,76,0.4,2.3,0,0.1], suluguni:[0,650,0.6,25,3.5,100,0.5,1.5,0,0.12], parmesan:[0,1184,0.8,44,2.9,92,0.5,1.2,0,0.1], feta:[0,493,0.6,19,2.9,62,0.4,1.7,0,0.2], creamcheese:[0,98,0.4,9,0.5,132,0.3,0.3,0,0.1],
+tofu:[0.9,350,2.7,58,1.6,150,0,0,0,0.2], protein:[0.5,150,1.0,40,1.5,300,0.5,1.0,0,0],
+milk:[0,120,0.1,14,0.4,146,0.1,0.4,1,0.02], milk15:[0,120,0.1,14,0.4,150,0.05,0.4,1,0.01], kefir:[0,120,0.1,14,0.4,146,0.1,0.4,1,0.02], ryazhenka:[0,124,0.1,14,0.4,146,0.1,0.4,0,0.03],
+smetana:[0,88,0.2,9,0.3,116,0.15,0.3,0,0.05], cream10:[0,90,0.1,10,0.3,124,0.1,0.4,1,0.04], cream20:[0,86,0.1,8,0.3,109,0.2,0.4,0,0.08],
+rice:[1.3,8,0.8,25,1.1,100,0,0,0,0.03], ricebrown:[3.5,23,1.5,143,2.0,223,0,0,0,0.04], buckwheat:[10,18,2.2,231,2.4,460,0,0,0,0.08], oats:[10,54,4.7,177,4.0,429,0,0,0,0.11],
+pasta:[3.2,21,1.3,53,1.4,223,0,0,0,0.02], bulgur:[12.5,35,2.5,164,1.9,410,0,0,0,0.03], quinoa:[7,47,4.6,197,3.1,563,0,0,0,0.26], couscous:[5,24,1.1,44,0.8,166,0,0,0,0.01],
+perlovka:[15.6,29,2.5,79,2.1,280,0,0,0,0.05], psheno:[8.5,8,3.0,114,1.7,195,0,0,0,0.06], manka:[3.6,17,1.2,47,1.1,186,0,0,0,0.02],
+ricenoodle:[1.6,18,0.7,12,0.7,30,0,0,0,0.01], soba:[3,35,2.7,95,1.8,252,0,0,0,0.03],
+potato:[2.1,12,0.8,23,0.4,425,0,0,20,0.01], bread:[6,54,2.5,82,1.8,250,0,0,0,0.05], breadwhite:[2.7,26,1.1,13,0.7,100,0,0,0,0.03], lavash:[2.7,86,1.3,26,0.8,120,0,0,0,0.02], pita:[2.2,86,1.3,26,0.8,120,0,0,0,0.02], hlebtsy:[15,25,3.5,120,2.4,300,0,0,0,0.07],
+granola:[7,60,3.5,110,2.5,350,0,0,0,0.4], cornflakes:[3,5,7.9,15,0.3,120,3.3,0.8,15,0.01],
+beans:[6.3,60,2.0,40,0.9,300,0,0,1,0.1], chickpea:[7.6,49,2.9,48,1.5,291,0,0,1,0.06], corn:[2.4,5,0.5,26,0.6,218,0,0,5,0.02], peas:[5.5,25,1.6,33,1.1,244,0,0,15,0.03],
+tomato:[1.2,10,0.3,11,0.2,237,0,0,14,0.01], cucumber:[0.5,16,0.3,13,0.2,147,0,0,3,0.01], pepper:[2.1,7,0.4,12,0.3,211,0,0,128,0.03], onion:[1.7,23,0.2,10,0.2,146,0,0,7,0.01], garlic:[2.1,181,1.7,25,1.2,401,0,0,31,0.02],
+carrot:[2.8,33,0.3,12,0.2,320,0,0,6,0.01], cabbage:[2.5,48,0.5,12,0.2,170,0,0,37,0.02], broccoli:[2.6,47,0.7,21,0.4,316,0,0,89,0.1], zucchini:[1,16,0.4,18,0.3,261,0,0,18,0.06],
+mushroom:[1,3,0.5,9,0.5,318,0.2,0.04,2,0], spinach:[2.2,99,2.7,79,0.5,558,0,0,28,0.14], salad:[1.3,36,0.9,13,0.2,194,0,0,9,0.06], frozenveg:[3.5,35,0.9,20,0.4,230,0,0,25,0.05],
+beet:[2.8,16,0.8,23,0.4,325,0,0,5,0.01], radish:[1.6,25,0.3,10,0.3,233,0,0,15,0.03], eggplant:[3,9,0.2,14,0.2,229,0,0,2,0.01], pumpkin:[0.5,21,0.8,12,0.3,340,0,0,9,0.01],
+celery:[1.6,40,0.2,11,0.1,260,0,0,3,0], asparagus:[2.1,24,2.1,14,0.5,202,0,0,6,0.01], greenbeans:[2.7,37,1.0,25,0.2,211,0,0,12,0.07],
+sauerkraut:[2.9,30,1.5,13,0.2,170,0,0,15,0.03], kimchi:[1.6,33,0.5,14,0.2,151,0,0,4,0.02], greenonion:[2.6,72,1.5,20,0.4,276,0,0,19,0.05], olives:[3.2,88,3.3,4,0.2,8,0,0,1,0.06],
+banana:[2.6,5,0.3,27,0.2,358,0,0,9,0.03], apple:[2.4,6,0.1,5,0,107,0,0,5,0.01], berries:[3,20,0.5,15,0.3,120,0,0,30,0.1],
+orange:[2.4,40,0.1,10,0.1,181,0,0,53,0.01], mandarin:[1.8,37,0.2,12,0.1,166,0,0,27,0.02], pear:[3.1,9,0.2,7,0.1,116,0,0,4,0], kiwi:[3,34,0.3,17,0.1,312,0,0,93,0.04],
+grapes:[0.9,10,0.4,7,0.1,191,0,0,3,0.01], peach:[1.5,6,0.3,9,0.2,190,0,0,7,0], pineapple:[1.4,13,0.3,12,0.1,109,0,0,48,0.02], watermelon:[0.4,7,0.2,10,0.1,112,0,0,8,0],
+melon:[0.9,9,0.2,12,0.2,267,0,0,37,0.03], pomegranate:[4,10,0.3,12,0.4,236,0,0,10,0], persimmon:[3.6,8,0.2,9,0.1,161,0,0,7,0], mango:[1.6,11,0.2,10,0.1,168,0,0,36,0.05], grapefruit:[1.6,22,0.1,9,0.1,135,0,0,31,0.01],
+driedapricot:[7.3,55,2.7,32,0.4,1162,0,0,1,0], prunes:[7.1,43,0.9,41,0.4,732,0,0,1,0.02], raisins:[3.7,50,1.9,32,0.2,749,0,0,2,0.01], dates:[6.7,64,0.9,54,0.4,696,0,0,0,0],
+oil:[0,0,0,0,0,0,0,0,0,7.0], oliveoil:[0,1,0.6,0,0,1,0,0,0,0.76], butter:[0,24,0,2,0.1,24,1.5,0.2,0,0.3],
+nuts:[7,100,2.8,180,2.6,600,0,0,1,2.5], pb:[6,49,1.9,168,2.5,649,0,0,0,0.03], seeds:[8.6,78,5.2,325,5.0,645,0,0,1,0.06], chia:[34,631,7.7,335,4.6,407,0,0,1,17.8], flax:[27,255,5.7,392,4.3,813,0,0,1,22.8],
+avocado:[6.7,12,0.6,29,0.6,485,0,0,10,0.11], coconutmilk:[2.2,16,1.6,37,0.6,263,0,0,3,0],
+mayo:[0,8,0.2,1,0.1,20,0.2,0.1,0,4.0], pesto:[1.5,180,1.0,40,0.8,150,0,0.1,3,1.2], ketchup:[0.4,15,0.4,13,0.2,281,0,0,4,0.03], mustard:[4,58,1.6,48,0.6,152,0,0,1,0.9], hummus:[6,38,2.4,71,1.8,228,0,0,0,0.26], soy:[0.8,20,1.5,40,0.4,180,0,0,0,0.01],
+tompaste:[4.1,36,2.9,42,0.6,1014,0,0,22,0.03], honey:[0.2,6,0.4,2,0.2,52,0,0,0.5,0], sugar:[0,1,0,0,0,2,0,0,0,0], condmilk:[0,284,0.2,26,0.9,371,0.2,0.4,2,0.03],
+icecream:[0.7,128,0.1,14,0.7,199,0.2,0.4,1,0.05], chocolate:[10.9,73,11.9,228,3.3,715,0,0.3,0,0.03], milkchoc:[3.4,189,2.4,63,2.3,372,0.3,0.7,0,0.06],
+marshmallow:[0.1,3,0.2,2,0,5,0,0,0,0], cookies:[2,25,2.1,20,0.6,110,0,0.1,0,0.1], candy:[1,40,1.5,40,0.8,200,0,0.1,0,0.05], pastila:[0.8,11,1.6,7,0.1,55,0,0,0,0],
+croissant:[2.6,37,2.0,16,0.7,118,0.8,0.2,0,0.15], bun:[2.2,35,2.3,20,0.7,120,0.2,0.1,0,0.06], suhari:[3,30,2.5,30,1.0,150,0,0,0,0.05],
+syrniki:[0.8,120,0.6,18,0.6,150,0.3,0.7,0,0.1], kotlety:[1,25,1.5,20,2.0,230,0.3,0.8,1,0.1], pelmeni:[1.5,20,1.5,18,1.5,180,0.2,0.5,0,0.08], vareniki:[2,15,0.9,18,0.5,220,0.1,0.1,2,0.03],
+shawarma:[1.8,50,1.4,25,1.3,230,0.2,0.3,5,0.15], pizza:[2.3,150,1.8,22,1.5,180,0.3,0.5,3,0.15], burger:[1.6,90,2.3,22,2.4,240,0.3,1.0,2,0.15], sushi:[1,15,0.8,20,0.7,120,1.2,0.8,1,0.35],
+bliny:[1.2,80,1.1,15,0.6,150,0.6,0.3,0,0.1], olady:[1.5,60,1.2,15,0.6,160,0.4,0.2,0,0.08],
+juice:[0.3,10,0.3,10,0,150,0,0,30,0.01], cola:[0,2,0,0,0,2,0,0,0,0], colazero:[0,2,0,0,0,10,0,0,0,0], kvass:[0.2,10,0.3,8,0,80,0,0,0,0],
+beer:[0,4,0.02,6,0,27,0,0.02,0,0], wine:[0,8,0.4,10,0.1,71,0,0,0,0], kompot:[0.4,12,0.3,6,0.1,90,0,0,3,0], coffee31:[0.3,40,0.2,10,0.2,120,0,0.1,0,0], cacao:[1.5,110,1.2,30,0.7,300,0.1,0.4,0,0.05],
+};
+const NUTR_DEF = [['fib','Клетчатка','г',30],['ca','Кальций','мг',1000],['fe','Железо','мг',10],['mg','Магний','мг',400],['zn','Цинк','мг',12],['k','Калий','мг',3500],['d','Витамин D','мкг',15],['b12','B12','мкг',3],['c','Витамин C','мг',90],['o3','Омега-3','г',1.6]];
 const ING_CATS = [['prot','🥩 Мясо, рыба, яйца'],['carb','🍚 Крупы и гарниры'],['veg','🥦 Овощи и зелень'],['fruit','🍎 Фрукты и ягоды'],['dairy','🥛 Молочное'],['fat','🥑 Масла и орехи'],['ready','🍲 Готовые блюда'],['sweet','🍫 Сладкое'],['drink','🥤 Напитки'],['misc','🧂 Прочее']];
 let _ingCatOpen = null;
 function prodRow(x, mid){
@@ -4268,6 +4321,66 @@ function prodRow(x, mid){
       ${prodThumb(x, 34)}
       <span class="grow" style="text-align:left"><b style="font-size:14px">${x.my?'★ ':''}${esc(x.n)}</b>
       <span style="display:block">${x.kcal} ккал · Б${x.p} на 100 г${x.unitG?' · шт ≈ '+x.unitG+' г':''}</span></span></button>`;
+}
+/* — микронутриенты: суммы дня, отчёт недели, «чем добрать» — */
+function itemGrams(x){
+  if (x.g) return x.g;
+  const m = /(\d+)\s*г/.exec(x.n || '');
+  return m ? +m[1] : null;
+}
+function dayNutr(k){
+  const sums = NUTR_DEF.map(()=>0);
+  let counted = 0, total = 0;
+  for (const x of (DB.food[k]?.items || [])){
+    total++;
+    const nu = x.prod && NUTR[x.prod];
+    const g = itemGrams(x);
+    if (!nu || !g) continue;
+    counted++;
+    nu.forEach((v, i) => { sums[i] += v * g / 100 * (x.q || 1); });
+  }
+  return { sums, counted, total };
+}
+function nutrTop(idx, n){
+  return Object.entries(NUTR)
+    .filter(([id]) => ING_BY[id])
+    .sort((a,b) => b[1][idx] - a[1][idx])
+    .slice(0, n)
+    .map(([id]) => ING_BY[id][1]);
+}
+function weekNutrCard(){
+  const days = [];
+  for (let i = 0; i < 7; i++){
+    const d = new Date(today()); d.setDate(d.getDate()-i);
+    const r = dayNutr(key(d));
+    if (r.counted > 0) days.push(r.sums);
+  }
+  if (days.length < 2) return `<div class="card"><h3>Нутриенты недели <button class="hbtn" onclick="helpDlg('nutr')">?</button></h3>
+    <div class="small" style="margin-top:6px">Записывай еду из базы продуктов (с граммами) 2+ дня — и здесь появится разбор по 10 витаминам и минералам: что в норме, а чего не хватает.</div></div>`;
+  const avg = NUTR_DEF.map((_,i) => days.reduce((a,s)=>a+s[i],0) / days.length);
+  const rows = NUTR_DEF.map((def, i) => {
+    const pct = Math.round(avg[i] / def[3] * 100);
+    return { i, def, pct, val: avg[i] };
+  });
+  const worst = rows.filter(r=>r.pct < 60).sort((a,b)=>a.pct-b.pct).slice(0,2);
+  let h = `<div class="card"><h3>Нутриенты недели <button class="hbtn" onclick="helpDlg('nutr')">?</button></h3>
+    <div class="tiny" style="margin:2px 0 8px">Среднее за ${days.length} дн. с записями · % от суточной нормы</div>`;
+  h += rows.map(r => `<div class="kv" style="margin-top:7px"><span>${r.def[1]}</span>
+      <span class="num"><b>${r.val < 10 ? r.val.toFixed(1) : Math.round(r.val)}</b> ${r.def[2]} · ${r.pct}%</span></div>
+    <div class="bar"><i class="${r.pct>=90?'good':r.pct<60?'over':''}" style="width:${Math.min(100,r.pct)}%${r.pct<60?';background:var(--warn)':''}"></i></div>`).join('');
+  if (worst.length){
+    h += `<div class="wlab" style="margin-top:12px">Чем добрать</div>` +
+      worst.map(r => `<div class="coach" style="margin-top:6px">${ic('bulb',17)}<span><b>${r.def[1]} (${r.pct}%)</b>: ${nutrTop(r.i, 3).join(', ')}</span></div>`).join('');
+  }
+  h += `<div class="tiny" style="margin-top:8px">Считается по продуктам из базы с граммовкой. Данные: USDA + Скурихин.</div></div>`;
+  return h;
+}
+function richLine(id){
+  const nu = NUTR[id];
+  if (!nu) return '';
+  const rich = NUTR_DEF.map((def,i) => ({name: def[1], pct: Math.round(nu[i]/def[3]*100)}))
+    .filter(x => x.pct >= 15).sort((a,b)=>b.pct-a.pct).slice(0,3);
+  return rich.length ? `<div class="tiny" style="margin-top:4px">Богат: ${rich.map(x=>x.name+' '+x.pct+'%').join(' · ')} (на 100 г)</div>` : '';
 }
 window.toggleIngCat = function(cat){
   _ingCatOpen = _ingCatOpen === cat ? null : cat;
@@ -4389,6 +4502,7 @@ window.psPick = function(id, mid){
     : [[50,'50 г'],[100,'100 г'],[150,'150 г'],[200,'200 г'],[300,'300 г']];
   openModal(`<h2 style="display:flex;align-items:center;gap:10px">${x.img?`<img src="${x.img}" style="width:42px;height:42px;object-fit:cover;border-radius:11px;flex:none;background:var(--card2)" onerror="this.style.display='none'">`:`<span>${prodEmo(x)}</span>`}<span>${esc(x.n)}</span></h2>
     <div class="tiny">${x.kcal} ккал · Б${x.p} · Ж${x.f} · У${x.c} — на 100 г</div>
+    ${richLine(x.id)}
     <div class="stepper" style="margin-top:12px"><span class="lbl">Грамм</span>
       <button onclick="stepNum('ps-g',-10);psCalc()">−</button>
       <input id="ps-g" type="number" inputmode="numeric" value="${g0}" oninput="psCalc()">
@@ -4396,7 +4510,8 @@ window.psPick = function(id, mid){
     <div class="mods">${chips.map(c=>`<button class="chip" style="min-height:40px" onclick="document.getElementById('ps-g').value=${c[0]};psCalc()">${c[1]}</button>`).join('')}</div>
     <div id="ps-out" class="insight" style="margin-top:10px"><p style="margin:0"></p></div>
     <div class="row" style="gap:8px;margin-top:10px">
-      <button class="btn sec" onclick="modulesDlg('${mid}')">← Назад</button>
+      <button class="btn sec" onclick="modulesDlg('${mid}')">←</button>
+      <button class="btn sec grow" style="flex:1" onclick="psAdd(true)">+ Ещё</button>
       <button class="btn grow" style="flex:1" onclick="psAdd()">В дневник</button></div>`);
   psCalc();
 };
@@ -4407,14 +4522,16 @@ window.psCalc = function(){
   const o = $('#ps-out p');
   if (o) o.innerHTML = `<b>${Math.round(x.kcal*g/100)} ккал</b> · Б ${r1(x.p*g/100)} · Ж ${r1(x.f*g/100)} · У ${r1(x.c*g/100)}${x.unitG?` · ≈ ${r1(g/x.unitG)} шт`:''}`;
 };
-window.psAdd = function(){
+window.psAdd = function(stay){
   const ctx = window._psCtx; if (!ctx) return;
   const x = prodBy(ctx.id);
   const g = Math.max(1, parseFloat($('#ps-g').value)||0);
   if (!DB.food[foodDate]) DB.food[foodDate] = {items:[]};
-  DB.food[foodDate].items.push({n: x.n+' · '+Math.round(g)+' г', p:r1(x.p*g/100), f:r1(x.f*g/100), c:r1(x.c*g/100), kcal:Math.round(x.kcal*g/100), q:1, meal:ctx.mid||null, prod:x.id});
+  DB.food[foodDate].items.push({n: x.n+' · '+Math.round(g)+' г', p:r1(x.p*g/100), f:r1(x.f*g/100), c:r1(x.c*g/100), kcal:Math.round(x.kcal*g/100), q:1, meal:ctx.mid||null, prod:x.id, g:Math.round(g), t: new Date().getHours()+':'+pad(new Date().getMinutes())});
   DB.recentProds = [ctx.id, ...(DB.recentProds||[]).filter(i=>i!==ctx.id)].slice(0,12);
-  save(); closeModal(); render(); toast(x.n+' +'+Math.round(x.kcal*g/100)+' ккал');
+  save(); toast(x.n+' +'+Math.round(x.kcal*g/100)+' ккал');
+  if (stay){ modulesDlg(ctx.mid); const q = $('#ps-q'); if (q) q.focus(); }
+  else { closeModal(); render(); }
 };
 /* ---- штрихкод: Open Food Facts ---- */
 window.barcodeDlg = function(mid){
@@ -5111,6 +5228,7 @@ function vFood(){
         <button class="x" onclick="foodQty(${o.i},0.5)">+</button>
         <button class="x" onclick="foodDel(${o.i})">✕</button></div>`).join('') + `</div>`;
   }
+  h += weekNutrCard();
   h += weekFoodCard();
   h += `<button class="btn sec full" style="margin-top:8px" onclick="toggleFree()">${isFree?'Убрать свободный приём':'Отметить свободный приём'}</button>
   <div class="tiny" style="margin:10px 2px">Свободный приём — 1 раз в неделю, один приём без подсчёта. «Что приготовить» собирает рецепты из продуктов, которые ты отметил, и советует под остаток дня.</div>`;
@@ -5928,7 +6046,7 @@ function vMore(){
       <div class="kv"><span>${PROF.place==='home' ? 'Дом · '+(['db','band','bar'].filter(k=>PROF.equip&&PROF.equip[k]).map(k=>({db:'гантели',band:'резинка',bar:'турник'})[k]).join(', ')||'вес тела') : 'Зал'} · ${PROF.split==='fb'?'Фулбади':'PPL'} · Старт ${PROF.startWeight} кг → ~${Math.round(TARGETS[WEEKS()])} кг к ${fmtD(PROG_END)} (${WEEKS()} нед.)</span></div>
       <button class="btn sec full" style="margin-top:10px" onclick="adjustDlg()">Настройка: уровень · травмы · разнообразие</button>
       <button class="btn sec full" style="margin-top:8px" onclick="if(confirm('Пересоздать программу заново через анкету? Вес, еда и шаги сохранятся, а журнал тренировок и замены очистятся.')){DB.profile=null;DB.sessions={};DB.swaps={};DB.skips={};DB.dateOv={};save();location.reload();}">Пересоздать программу (анкета)</button></div>`;
-    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 4.7 (сториз, тренер во всех разделах, свои иконки, компактный RPE с пояснением, прокачка с разблокировками) · собрано для Егора и друзей · 22.08.2026. Фото упражнений — Free Exercise DB (public domain).</div>`;
+    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 4.8 (микронутриенты: 10 витаминов и минералов у всех 175 продуктов, отчёт «Нутриенты недели», серийное добавление еды) · собрано для Егора и друзей · 25.08.2026. Фото — Free Exercise DB; нутриенты — USDA + Скурихин.</div>`;
   }
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }

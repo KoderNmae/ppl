@@ -596,6 +596,16 @@ html[data-theme=dark] .coach{background:rgba(46,198,209,.08); border-color:rgba(
 #rest-full .rbtn{min-width:86px; padding:14px 18px; border-radius:16px; border:1.5px solid var(--border2);
   background:var(--card); color:var(--text); font-weight:700; font-size:15px; cursor:pointer}
 #rest-full .rbtn.main{background:var(--grad); color:#fff; border:none}
+#rest-full .rbtn.log{margin-top:14px; max-width:86vw; border-color:var(--accent); color:var(--accent); font-size:14.5px}
+/* — режим «в зале»: крупнее всё, что жмут потными пальцами — */
+html.gym .sets .chip{min-height:58px; font-size:17.5px; border-radius:15px}
+html.gym .rpe-row .rpe button{min-height:56px}
+html.gym .rpe-row .rpe button b{font-size:18px}
+html.gym .rpe-row .rpe button i{font-size:10px}
+html.gym .exname{font-size:19px}
+html.gym .exprev{font-size:14.5px}
+html.gym #timerbar .t{font-size:26px}
+html.gym .exhint, html.gym .exhist{font-size:14px}
 #rest-close{position:absolute; top:calc(14px + env(safe-area-inset-top)); right:16px; width:42px; height:42px;
   border-radius:50%; border:1.5px solid var(--border2); background:var(--card); color:var(--text); font-size:19px; cursor:pointer}
 /* чипы травм в замене */
@@ -646,6 +656,7 @@ html[data-theme=dark] .coach{background:rgba(46,198,209,.08); border-color:rgba(
     <button class="rbtn main" onclick="stopTimer();closeRestFull()">Стоп</button>
     <button class="rbtn" onclick="nudgeTimer(15)">+15 c</button>
   </div>
+  <button class="rbtn log" id="rest-log" style="display:none" onclick="restLogNext()"></button>
 </div>
 <div id="toast"></div>
 <div class="modal-wrap" id="modal-wrap"><div class="modal" id="modal"></div></div>
@@ -2032,7 +2043,30 @@ function render(){
   drawTabs();
   window.scrollTo(0,0); $('#view').scrollTop = 0;
   ({home:vHome, train:vTrain, weight:vWeight, food:vFood, more:vMore})[tab]();
+  gymApply();
 }
+/* — режим «в зале»: класс + wake lock пока открыта незавершённая тренировка — */
+let _wakeLock = null;
+async function wakeOn(){
+  try{
+    if (!('wakeLock' in navigator) || _wakeLock) return;
+    _wakeLock = await navigator.wakeLock.request('screen');
+    _wakeLock.addEventListener('release', () => { _wakeLock = null; });
+  }catch(e){ _wakeLock = null; }
+}
+function wakeOff(){ try{ if (_wakeLock){ _wakeLock.release(); _wakeLock = null; } }catch(e){} }
+function gymApply(){
+  const active = !!(DB.gymMode && tab==='train' && trainSelected !== null && !(DB.sessions[trainSelected]||{}).done);
+  document.documentElement.classList.toggle('gym', active);
+  if (active) wakeOn(); else wakeOff();
+}
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && document.documentElement.classList.contains('gym')) wakeOn();
+});
+window.gymToggle = function(){
+  DB.gymMode = DB.gymMode ? 0 : 1; save(); render();
+  toast(DB.gymMode ? '🔥 Режим зала: крупные кнопки, экран не гаснет' : 'Режим зала выключен');
+};
 /* ============ 5. ПОМОЩНИКИ ДАННЫХ ============ */
 function nextSession(){ return SESSIONS.find(s => !DB.sessions[s.id]?.done && !DB.skips[s.id]) || null; }
 function sessionState(id){ return DB.sessions[id] || null; }
@@ -2294,6 +2328,7 @@ window.stepNum = function(id, d){
 /* ============ 7. ЭКРАН «ТРЕНИРОВКА» ============ */
 function vTrain(){
   if (trainSelected === null){ return trainList(); }
+  if (trainSelected === 'str'){ return vStrength(); }
   const s = SESSIONS[trainSelected];
   const st = DB.sessions[s.id] || (DB.sessions[s.id] = {sets:{}, rpe:{}, note:''});
   st.vars = st.vars || {}; st.swapEx = st.swapEx || {};
@@ -2307,7 +2342,8 @@ function vTrain(){
   else if (!st.done)
     h += `<div class="row" style="gap:8px;margin:2px 0 6px">
       <button class="btn sec sm grow" style="flex:1" onclick="dateDlg(${s.id})">Перенести дату</button>
-      <button class="btn sec sm grow" style="flex:1" onclick="skipDlg(${s.id})">Пропустить</button></div>`;
+      <button class="btn sec sm grow" style="flex:1" onclick="skipDlg(${s.id})">Пропустить</button>
+      <button class="btn ${DB.gymMode?'':'sec '}sm" style="flex:none" title="Режим зала: крупные кнопки, экран не гаснет" onclick="gymToggle()">🔥</button></div>`;
   if (s.phase==='deload')
     h += `<div class="insight warn"><b>Разгрузочная неделя</b><p>−30% от рабочих весов, по 2 подхода, RPE ≤ 6. Это часть плана: суставы и нервная система скажут спасибо на неделе 8.</p></div>`;
   if (st.t0 && !st.done)
@@ -2376,11 +2412,116 @@ function vTrain(){
     : `<button class="btn full" onclick="finishSession(${s.id})">Завершить тренировку</button>`;
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }
+/* ============ ЭКРАН «СИЛА»: 1ПМ-графики, рекорды, стандарты ============ */
+const STR_STD = {
+  bench: {re:/жим (штанги |в смите )?лёжа(?! узк)/i, n:'Жим лёжа',
+    m:[0.50,0.75,1.00,1.50,2.00], f:[0.25,0.45,0.70,0.95,1.20]},
+  squat: {re:/присед(ания)? со штангой|фронтальн\w* присед/i, n:'Присед со штангой',
+    m:[0.75,1.00,1.50,2.00,2.50], f:[0.50,0.75,1.15,1.55,2.00]},
+  dead: {re:/станов|сумо-тяга/i, n:'Становая тяга',
+    m:[1.00,1.25,1.75,2.25,2.75], f:[0.55,0.90,1.30,1.75,2.20]},
+  ohp: {re:/жим штанги (стоя|сидя)|армейский/i, n:'Жим стоя',
+    m:[0.35,0.55,0.80,1.05,1.30], f:[0.20,0.35,0.50,0.70,0.85]},
+};
+const STR_LVLS = ['Новичок','Начальный','Средний','Продвинутый','Элита'];
+function strengthData(){
+  // все варианты всех слотов с историей ≥2 тренировок
+  const byName = {};
+  for (const s of SESSIONS){
+    const st = DB.sessions[s.id];
+    if (!st || !st.done) continue;
+    for (const ei in (st.sets||{})){
+      const sets = (st.sets[ei]||[]).filter(x=>x && x.w!=null && x.r);
+      if (!sets.length) continue;
+      const used = (st.vars && st.vars[ei] != null) ? st.vars[ei] : 0;
+      let nm;
+      try {
+        if (typeof used === 'string') nm = used.slice(2); // 'x:Название' из каталога
+        else if (used === 0) nm = EXDB[s.type][ei].n;
+        else nm = (ALTS[s.type][ei].a[used-1]||{}).n || EXDB[s.type][ei].n;
+      } catch(e){ continue; }
+      if (!nm) continue;
+      const e1 = Math.max(...sets.map(x=>x.w*(1+x.r/30)));
+      const top = sets.reduce((a,x)=> (x.w>((a&&a.w)||0) ? x : a), null);
+      (byName[nm] = byName[nm] || []).push({date: st.done, e1, top, deload: s.phase==='deload'});
+    }
+  }
+  return Object.entries(byName)
+    .map(([n, arr]) => ({n, arr: arr.sort((a,b)=>a.date<b.date?-1:1)}))
+    .filter(x => x.arr.length >= 2)
+    .sort((a,b) => b.arr.length - a.arr.length);
+}
+function e1chart(arr){
+  const W = 320, H = 72, pad = 4;
+  const vals = arr.map(x=>x.e1);
+  const mn = Math.min(...vals), mx = Math.max(...vals), sp = Math.max(1, mx-mn);
+  const pts = vals.map((v,i) => {
+    const x = pad + i*(W-2*pad)/Math.max(1, vals.length-1);
+    const y = H-pad - (v-mn)/sp*(H-2*pad);
+    return [x.toFixed(1), y.toFixed(1)];
+  });
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:${H}px;display:block">
+    <polyline points="${pts.map(p=>p.join(',')).join(' ')}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+    ${pts.map((p,i)=>`<circle cx="${p[0]}" cy="${p[1]}" r="${i===pts.length-1?4:2.4}" fill="${arr[i].deload?'var(--warn)':'var(--accent)'}"/>`).join('')}
+  </svg>`;
+}
+function vStrength(){
+  header('Сила', 'расчётный максимум · рекорды · стандарты');
+  const data = strengthData();
+  const bw = lastWeight() ? lastWeight().v : PROF.startWeight;
+  let h = `<button class="btn ghost" onclick="trainSelected=null;render()">← Все тренировки</button>`;
+  if (!data.length){
+    h += `<div class="card small">Пока мало данных: закрой 2-3 тренировки с весами — здесь появятся графики расчётного максимума (1ПМ), личные рекорды и сравнение со стандартами силы для твоего веса.</div>`;
+    $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
+    return;
+  }
+  // стандарты: по распознанным движениям
+  const stdRows = [];
+  for (const k in STR_STD){
+    const std = STR_STD[k];
+    const hit = data.find(x => std.re.test(x.n));
+    if (!hit) continue;
+    const best = Math.max(...hit.arr.map(x=>x.e1));
+    const coefs = PROF.sex==='f' ? std.f : std.m;
+    const ratio = best/bw;
+    let li = -1;
+    for (let i = 0; i < coefs.length; i++){ if (ratio >= coefs[i]) li = i; }
+    const next = li < coefs.length-1 ? coefs[li+1] : null;
+    stdRows.push({n: hit.n, best, ratio, li, next, nextKg: next ? Math.round(next*bw) : null, rMax: coefs[coefs.length-1]});
+  }
+  if (stdRows.length){
+    h += `<div class="card"><h3>Стандарты силы · при весе ${Math.round(bw)} кг</h3>
+      <div class="tiny" style="margin:2px 0 4px">Расчётный 1ПМ против типичных уровней для твоего веса тела (мировая статистика силовых). Ориентир, не приговор.</div>` +
+      stdRows.map(r => `<div style="margin-top:10px">
+        <div class="kv"><span><b>${esc(r.n)}</b> · ${Math.round(r.best)} кг ≈ ${r.ratio.toFixed(2)}×вес</span>
+          <b class="${r.li>=2?'c-good':''}">${r.li>=0?STR_LVLS[r.li]:'до «Новичка»'}</b></div>
+        <div class="bar" style="margin-top:4px"><i class="${r.li>=2?'good':''}" style="width:${Math.min(100, Math.round(r.ratio/r.rMax*100))}%"></i></div>
+        ${r.next ? `<div class="tiny" style="margin-top:3px">До «${STR_LVLS[r.li+1]}»: ${r.nextKg} кг (ещё +${Math.max(1, r.nextKg-Math.round(r.best))} кг к 1ПМ)</div>` : `<div class="tiny" style="margin-top:3px">Максимальный уровень — красавец</div>`}
+      </div>`).join('') + `</div>`;
+  }
+  // графики и рекорды по упражнениям
+  for (const x of data.slice(0, 8)){
+    const best = x.arr.reduce((a,b)=> b.e1>a.e1?b:a);
+    const last = x.arr[x.arr.length-1];
+    const first = x.arr[0];
+    const d30 = x.arr.filter(y => (today()-fromKey(y.date))/864e5 <= 35);
+    const trend = d30.length>=2 ? d30[d30.length-1].e1 - d30[0].e1 : null;
+    h += `<div class="card">
+      <div class="kv"><b style="font-size:15px">${esc(x.n)}</b><span class="tiny">${x.arr.length} трен.</span></div>
+      ${e1chart(x.arr)}
+      <div class="kv" style="margin-top:6px"><span class="tiny">Расчётный 1ПМ</span><b>${Math.round(last.e1)} кг${trend!=null?` <span class="${trend>=0?'c-good':'c-warn'}" style="font-weight:700">(${trend>=0?'+':''}${Math.round(trend)} за месяц)</span>`:''}</b></div>
+      <div class="kv"><span class="tiny">Рекорд</span><b>${best.top ? best.top.w+' кг × '+best.top.r : '—'} · ${fmtD(fromKey(best.date))}</b></div>
+      <div class="kv"><span class="tiny">Путь</span><b>${Math.round(first.e1)} → ${Math.round(last.e1)} кг (${last.e1>=first.e1?'+':''}${Math.round((last.e1-first.e1)/Math.max(first.e1,1)*100)}%)</b></div>
+    </div>`;
+  }
+  h += `<div class="card tiny">1ПМ считается по формуле Эпли (вес × (1 + повторы/30)) по лучшему подходу тренировки — сравнивать можно подходы с разным числом повторов, без опасных одноповторных проходок. Оранжевые точки — разгрузочные недели.</div>`;
+  $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
+}
 function trainList(){
   const skippedList = SESSIONS.filter(s=>DB.skips[s.id] && !DB.sessions[s.id]?.done);
   header('Тренировки', SESSIONS.length+' тренировок за '+WEEKS()+' недель · очередь важнее дат');
   const next = nextSession();
-  let h = '';
+  let h = `<button class="btn sec full" style="margin-bottom:4px" onclick="trainSelected='str';render()">💪 Сила: графики, рекорды и стандарты</button>`;
   let shown = 0;
   const done = SESSIONS.filter(s=>DB.sessions[s.id]?.done);
   if (done.length){
@@ -2943,8 +3084,26 @@ window.saveSet = function(sid, ei, si, rest){
   }
   achCheck();
   const nDone = st.sets[ei].filter(Boolean).length;
-  if (nDone < ex.sets) startTimer(rest, esc(ex.n)+' · подход '+(nDone+1)+' из '+ex.sets);
-  else startTimer(Math.min(rest, 120), esc(ex.n)+' — сделано · отдохни перед следующим');
+  if (nDone < ex.sets){
+    window._restCtx = {sid, ei, si: nDone, rest, sugW: (st.sets[ei][si]&&st.sets[ei][si].w)||0, n: variantOf(sid,ei).n, no: nDone+1, of: ex.sets};
+    startTimer(rest, esc(ex.n)+' · подход '+(nDone+1)+' из '+ex.sets);
+  } else {
+    // упражнение закрыто — следующий подход будет у следующего упражнения дня
+    let nxt = null;
+    for (const e2 of s.exs){
+      if ((st.skipEx||{})[e2.ei]) continue;
+      const cnt = (st.sets[e2.ei]||[]).filter(Boolean).length;
+      if (cnt < e2.sets){ nxt = {sid, ei: e2.ei, si: cnt, rest: e2.rest, sugW: 0, n: variantOf(sid, e2.ei).n, no: cnt+1, of: e2.sets}; break; }
+    }
+    window._restCtx = nxt;
+    startTimer(Math.min(rest, 120), esc(ex.n)+' — сделано · отдохни перед следующим');
+  }
+};
+window.restLogNext = function(){
+  const c = window._restCtx; if (!c) return;
+  closeRestFull();
+  const sg = (()=>{ try { const s = SESSIONS[c.sid]; const ex = s.exs.find(e=>e.ei===c.ei); return exSuggest(s, ex).w || 0; } catch(e){ return 0; } })();
+  logSet(c.sid, c.ei, c.si, c.rest, c.sugW || sg);
 };
 window.finishSession = function(sid){
   const st = DB.sessions[sid];
@@ -4090,11 +4249,29 @@ function startTimer(sec, label){
   $('#timerbar').classList.add('show');
   clearInterval(timerTick);
   timerTick = setInterval(tickTimer, 250); tickTimer();
+  restLogBtn();
+  // разовый запрос на уведомления — прямо из жеста «Готово», чтобы будили при погасшем экране
+  try{
+    if ('Notification' in window && Notification.permission === 'default' && !DB.notifAsked){
+      DB.notifAsked = 1; save();
+      Notification.requestPermission().catch(()=>{});
+    }
+  }catch(e){}
+}
+function restLogBtn(){
+  const b = document.getElementById('rest-log'); if (!b) return;
+  const c = window._restCtx;
+  if (c){ b.style.display = ''; b.textContent = '✍ Записать: '+c.n+' · подход '+c.no+' из '+c.of; }
+  else b.style.display = 'none';
 }
 function tickTimer(){
   const left = Math.ceil((timerEnd - Date.now())/1000);
   if (left <= 0){
     $('#timer-t').textContent = '0:00'; stopTimer(); closeRestFull(); beep();
+    try{
+      if (document.hidden && 'Notification' in window && Notification.permission === 'granted')
+        new Notification('⏱ Отдых окончен', {body: (window._restCtx ? 'Дальше: '+window._restCtx.n+' · подход '+window._restCtx.no : 'Следующий подход'), tag:'ppl-rest', silent:false});
+    }catch(e){}
     toast('Отдых окончен — следующий подход'); return;
   }
   const txt = Math.floor(left/60)+':'+pad(left%60);
@@ -4112,6 +4289,7 @@ function stopTimer(){ clearInterval(timerTick); $('#timerbar').classList.remove(
 window.openRestFull = function(){
   if (timerEnd == null || timerEnd - Date.now() <= 0) return;
   $('#rest-full-l').textContent = $('#timer-l').textContent;
+  restLogBtn();
   $('#rest-full').classList.add('show'); tickTimer();
 };
 window.closeRestFull = function(){ $('#rest-full').classList.remove('show'); };
@@ -8582,6 +8760,10 @@ function vMore(){
         <button class="btn sec sm" onclick="adjProt(5)">+5</button></div>
       <button class="btn sec full" style="margin-top:10px" onclick="goalDlg()">${PROF.goal ? '🎯 '+PROF.goal.w+' кг к '+fmtD(fromKey(PROF.goal.date))+' — изменить' : '🎯 Поставить целевой вес и срок'}</button></div>`;
     h += fastCard();
+    h += `<div class="card"><h3>Шаги из телефона</h3>
+      <div class="small" style="margin-bottom:8px">PWA не пускают в Google Fit/Health Connect напрямую, но шаги можно занести пачкой: выгрузи CSV из Samsung Health (Настройки → Скачать данные), Google Takeout (Fit → Daily activity metrics) или любой файл со столбцами «дата, шаги» — я разберу формат сам.</div>
+      <button class="btn sec full" onclick="stepsImport()">📥 Импорт шагов из CSV</button>
+      <div class="tiny" style="margin-top:6px">Дни сравниваются: берётся большее из ручного и импортированного. Записей шагов сейчас: ${Object.keys(DB.steps||{}).length}.</div></div>`;
     h += `<div class="card"><h3>Резервная копия</h3>
       <div class="small" style="margin-bottom:10px">Записей: ${n} · последний экспорт: ${DB.lastExport?fmtD(fromKey(DB.lastExport)):'ещё не делал'}</div>
       <div class="row" style="gap:8px">
@@ -8599,7 +8781,7 @@ function vMore(){
       <button class="btn sec full" style="margin-top:10px" onclick="adjustDlg()">Настройка: уровень · травмы · разнообразие</button>
       <button class="btn sec full" style="margin-top:8px" onclick="tourDlg(0)">🧭 Показать тур по приложению</button>
       <button class="btn sec full" style="margin-top:8px" onclick="if(confirm('Пересоздать программу заново через анкету? Вес, еда и шаги сохранятся, а журнал тренировок и замены очистятся.')){DB.profile=null;DB.sessions={};DB.swaps={};DB.skips={};DB.dateOv={};save();location.reload();}">Пересоздать программу (анкета)</button></div>`;
-    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 6.6 (три цели — похудеть, поддерживать, набрать: свои калории, белок, траектория и советы; отчёт недели скачивается картинкой; парный режим — обменяйтесь кодом прогресса и соревнуйтесь без всяких серверов) · собрано для Егора и друзей · 26.08.2026. Фото — Free Exercise DB; нутриенты — USDA + Скурихин.</div>`;
+    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 6.8 (сила и удобство: экран «Сила» — графики 1ПМ, рекорды и мировые стандарты под твой вес; таймер будит уведомлением и записывает подход со своего экрана; режим «В зале» 🔥; ярлыки на иконке; импорт шагов из CSV Samsung Health / Google Takeout) · собрано для Егора и друзей · 26.08.2026. Фото — Free Exercise DB; нутриенты — USDA + Скурихин.</div>`;
   }
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }
@@ -8641,6 +8823,73 @@ window.copyData = function(){
   try{ navigator.clipboard.writeText(JSON.stringify(DB)).then(()=>toast('Скопировано')); }
   catch(e){ toast('Не удалось — используй экспорт в файл'); }
 };
+/* — импорт шагов: Samsung Health / Google Takeout / generic CSV — */
+window.stepsImport = function(){
+  let f = document.getElementById('steps-file');
+  if (!f){
+    f = document.createElement('input');
+    f.type = 'file'; f.id = 'steps-file'; f.accept = '.csv,.txt,text/csv,text/plain';
+    f.style.cssText = 'position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0.01';
+    document.body.appendChild(f);
+  }
+  f.onchange = () => {
+    const file = f.files[0]; if (!file) return;
+    const rd = new FileReader();
+    rd.onload = () => { stepsParse(String(rd.result||'')); };
+    rd.readAsText(file);
+  };
+  f.click();
+};
+function stepsParse(txt){
+  const lines = txt.split(/\r?\n/).filter(l=>l.trim());
+  if (lines.length < 2) return toast('Файл пустой или не читается');
+  // найти строку заголовка: содержит колонку с шагами
+  let hi = -1, sep = ',';
+  for (let i = 0; i < Math.min(5, lines.length); i++){
+    const l = lines[i].toLowerCase();
+    if (/step|шаг|count/.test(l) && /date|day|time|дата|день/.test(l)){
+      hi = i; sep = (lines[i].match(/;/g)||[]).length > (lines[i].match(/,/g)||[]).length ? ';' : ','; break;
+    }
+  }
+  if (hi < 0) return toast('Не нашёл колонки даты и шагов — проверь, что это CSV с заголовком');
+  const head = lines[hi].split(sep).map(s=>s.trim().toLowerCase().replace(/"/g,''));
+  const di = head.findIndex(hh => /^(date|day|день|дата)$|day_time|start.?time|create.?time/.test(hh));
+  const si = head.findIndex(hh => /step/.test(hh) && !/goal|target|speed/.test(hh))
+           !== -1 ? head.findIndex(hh => /step/.test(hh) && !/goal|target|speed/.test(hh))
+           : head.findIndex(hh => /шаг/.test(hh));
+  if (di < 0 || si < 0) return toast('Не нашёл колонки даты и шагов в заголовке');
+  const parseD = v => {
+    v = String(v||'').trim().replace(/"/g,'');
+    if (/^\d{13}$/.test(v)) { const d = new Date(+v); return isFinite(d) ? {k:key(d), ts:1} : null; }        // ms epoch
+    if (/^\d{10}$/.test(v)) { const d = new Date(+v*1000); return isFinite(d) ? {k:key(d), ts:1} : null; }   // s epoch
+    let m = v.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return {k:m[1]+'-'+m[2]+'-'+m[3]};
+    m = v.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})/); if (m) return {k:m[3]+'-'+pad(+m[2])+'-'+pad(+m[1])};
+    m = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/); if (m) return {k:m[3]+'-'+pad(+m[1])+'-'+pad(+m[2])}; // US
+    const d = new Date(v); return isFinite(d) && d.getFullYear() > 2000 ? {k:key(d)} : null;
+  };
+  DB.steps = DB.steps || {};
+  const acc = {};
+  for (let i = hi+1; i < lines.length; i++){
+    const cells = lines[i].split(sep);
+    if (cells.length <= Math.max(di, si)) continue;
+    const pd = parseD(cells[di]);
+    const v = parseInt(String(cells[si]).replace(/[^\d]/g,''), 10);
+    if (!pd || !isFinite(v) || v <= 0 || v > 200000) continue;
+    // куски дня (timestamp-строки, как у Samsung) суммируем; дневные строки — берём максимум
+    acc[pd.k] = pd.ts ? (acc[pd.k]||0) + v : Math.max(acc[pd.k]||0, v);
+  }
+  const days = Object.keys(acc);
+  if (!days.length) return toast('Строки не распознались — пришли мне кусочек файла, научу парсер');
+  let added = 0, upd = 0;
+  for (const k of days){
+    const v = Math.min(acc[k], 200000);
+    if (DB.steps[k] == null){ DB.steps[k] = v; added++; }
+    else if (v > +DB.steps[k]){ DB.steps[k] = v; upd++; }
+  }
+  save(); render(); achCheck();
+  const srt = days.sort();
+  toast(`Шаги: +${added} новых дней${upd?`, обновлено ${upd}`:''} (${fmtD(fromKey(srt[0]))} — ${fmtD(fromKey(srt[srt.length-1]))})`);
+}
 /* ============ 13. PWA + СТАРТ ============ */
 const ICON192 = 'iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAIAAADdvvtQAAAEJElEQVR42u3dMU8bZxzAYewygOSNBdsSyYSYIJU6mYmpWaApeEinRI3E1IrsfASWSO2ESEvkoVEzBDcd0i9gkqgsCEuxJypIUyExIMuGpbgDS4VwRUJ9d+/xPBs6zN9+7yf7fMZ2plDID8DHyloCBISAEBACAgEhIASEgEBACAgBISAQEAJCQAgIBISAEBACQkAgIASEgBAQCAgBISAEBAJCQAgIAYGAEBACInSD0Y+88e3vH3GpP7777LrtmyAWKhvEolzlgteqnugXKhvEoly3hgJaKMdACAgBISAEBAJCQARjMKyre8kzHIk9bZ2+U1npvAdK5n5K5YnQ1D6EJW1vpfU0umMgBISAEBACAgEhIASEgEBACAgBISAQEAJCQAgIBISAiFmmUMj3768/fPjNv398/vf9KG/bl5+sJ2eh473tjx59H9490Ll6iFH/9kVWPRpKXEDquT4NZdWjIc/C8DQeASEgiDug/p2zIoF7JxvEtSSx+yUb0HUlgXskG9w1JlH7or8vpp4T8YcsJeqD7tJ62z0LQ0AICAEhIBAQAkJACAgEhIAQEAICASEgBISAQEAICAH1R9K++Tux30QuoGD2ViobGlRGAq9/QN8R7hgIASEgBISAQEAICAFd5IpncdJ6MjfohcqGsjTXp56wFirSzwfCQxgICAEhIASEgCwBAkJACAgBgYAQEKFI9Nt6nj37eWpq6jK/2e122+12q9U6Ojp6+7ZRr+9sbr5qNptJGPEfU969+3NmZkZA8ctkMrlcLpfL5fP5iYmJO3e+GBgY2N7erlQq1eovoYzwEJYsk5OTKysr6+s/FgqFcEcIKGalUunp05+KxWLQIwQUp9HR0SdP1oeHh4MeIaA4jY2NLS4uhj7CQfT/49yTl7PD2/Hx8fn5+XJ5IZPJXHipBw++Xltba7fbCRnhHigput1uq9Xa2tpaXl5eWlo6PT298NeGhoZKpVJiRwgoEV6+/K1arfbaOj09HcQIAcXpxYtfe23K50dDGSGg2Ozu7vbaNDIyEsoIAcWm1xHu2aFMKCMEFJubN2/02nR4eBjKCAHFZnZ2ttem9+//CmWEgOJx+/bnc3NzvbbWarUgRgQkJa/Gn53lW1iYL5fLvQ5QTk5OrrJ3IxghoIgUi4Vms/Ghl3r8+IfLnyOOYISHsJDs7e2trq6GPkJA8Tg4OLh37/7x8XHQIwQUj9ev39y9+9X+/n7QIxwDxWBnp16pVDY2Nvp3ci+CEQKKQrfb7XQ6Z//x3mg06/WdWm2z0WiENUJAEYngzQwpeL+EYyAEhIBAQAgIz8I450Nfcbt169NOp+MeCA9hICAEhIAIma97wj0QAkJACAgEhIAQEAICASEgBISAQEAICAEhIBAQAkJACAgBgYAQEAJCQCAgBISAEBD08g+yTqu4u8MOyQAAAABJRU5ErkJggg==';
 const ICON512 = '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';
@@ -9142,12 +9391,14 @@ window.tourDlg = function(i){
       ${i>0?`<button class="btn sec" onclick="tourDlg(${i-1})">←</button>`:`<button class="btn sec" onclick="DB.tourDone=1;save();closeModal()">Пропустить</button>`}
       <button class="btn grow" onclick="${i<TOUR.length-1?`tourDlg(${i+1})`:'DB.tourDone=1;save();closeModal()'}">${i<TOUR.length-1?'Дальше':'Погнали 🚀'}</button></div>`);
 };
-const APP_VER = '6.6';
+const APP_VER = '6.8';
 const WHATS_NEW = [
-  '🎯 Три цели: похудеть / поддерживать / набрать — свои калории, белок, траектория и советы тренера. Менять — в «Ещё → ⚙️ → Настройка»',
-  '👫 Парный режим: обменяйтесь кодом недели с женой или другом — карточка «Дуэт» в «Успехах» сравнит тренировки, серии, задачи и тоннаж',
-  '📸 Отчёт недели картинкой — кнопка в «Тренере», удобно кидать в чат',
-  '🏅 Из прошлых обновлений: 110 достижений, 14 тем, ротация упражнений, сдвиг графика, скан штрихкодов',
+  '💪 Экран «Сила» (кнопка над списком тренировок): графики 1ПМ, рекорды и стандарты силы под твой вес',
+  '⏱ Таймер отдыха: будит уведомлением при погасшем экране, а следующий подход записывается прямо с его экрана',
+  '🔥 Режим «В зале» (кнопка в тренировке): крупные кнопки, экран не гаснет',
+  '📱 Долгое нажатие на иконку приложения — ярлыки: тренировка, +250 воды, вес, еда',
+  '📥 Импорт шагов из CSV (Samsung Health / Google Takeout) — в «Ещё → ⚙️»',
+  '🎯 Из прошлого: три цели (похудеть/поддерживать/набрать), парный режим, отчёт недели картинкой',
 ];
 function whatsNewCheck(){
   if (!DB.profile) { DB.seenVer = APP_VER; save(); return; }
@@ -9212,9 +9463,22 @@ window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); window
     const hasData = (Object.keys(DB.weights||{}).length + Object.keys(DB.sessions||{}).length + Object.keys(DB.food||{}).length) > 0;
     if (hasData){ DB.profile = EGOR; save(); }   // миграция существующего пользователя
   }
-  if (DB.profile){ PROF = DB.profile; buildProgram(); render(); whatsNewCheck(); }
+  if (DB.profile){ PROF = DB.profile; buildProgram(); render(); whatsNewCheck(); goShortcut(); }
   else wizard();
 })();
+/* — ярлыки с иконки приложения: ./?go=train|water|weight|food — */
+function goShortcut(){
+  let go = null;
+  try{ go = new URLSearchParams(location.search).get('go'); }catch(e){}
+  if (!go) return;
+  try{ history.replaceState(null, '', location.pathname); }catch(e){}
+  setTimeout(() => {
+    if (go === 'water'){ tab='home'; render(); waterAdd(250); toast('💧 +250 мл записано'); }
+    else if (go === 'train'){ tab='train'; const ns = nextSession(); trainSelected = ns ? ns.id : null; render(); }
+    else if (go === 'weight'){ tab='home'; render(); askWeight(); }
+    else if (go === 'food'){ tab='food'; render(); }
+  }, 150);
+}
 /*@JS@*/
 </script>
 </body>

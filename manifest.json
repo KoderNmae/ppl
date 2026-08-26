@@ -21,5 +21,31 @@
    "type": "image/png",
    "purpose": "any maskable"
   }
+ ],
+ "shortcuts": [
+  {
+   "name": "Начать тренировку",
+   "short_name": "Тренировка",
+   "url": "./?go=train",
+   "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+  },
+  {
+   "name": "Вода +250 мл",
+   "short_name": "Вода",
+   "url": "./?go=water",
+   "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+  },
+  {
+   "name": "Записать вес",
+   "short_name": "Вес",
+   "url": "./?go=weight",
+   "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+  },
+  {
+   "name": "Добавить еду",
+   "short_name": "Еда",
+   "url": "./?go=food",
+   "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+  }
  ]
 }

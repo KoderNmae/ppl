@@ -54,6 +54,17 @@ html[data-theme=dark] body::before{background:
     radial-gradient(56% 38% at 10% -6%, rgba(23,178,194,.13), transparent 62%),
     radial-gradient(48% 32% at 106% 10%, rgba(34,207,157,.09), transparent 62%),
     var(--bg)}
+html[data-theme=neon] body::before, html[data-theme=gold] body::before, html[data-theme=ocean] body::before,
+html[data-theme=royal] body::before, html[data-theme=crimson] body::before, html[data-theme=midnight] body::before,
+html[data-theme=steel] body::before{background:
+    radial-gradient(56% 40% at 12% -8%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 62%),
+    radial-gradient(50% 34% at 104% 12%, color-mix(in srgb, var(--accent2) 8%, transparent), transparent 62%),
+    var(--bg)}
+html[data-theme=forest] body::before, html[data-theme=sunset] body::before, html[data-theme=sakura] body::before,
+html[data-theme=retro] body::before, html[data-theme=arctic] body::before{background:
+    radial-gradient(56% 40% at 12% -8%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 62%),
+    radial-gradient(50% 34% at 104% 12%, color-mix(in srgb, var(--accent2) 10%, transparent), transparent 62%),
+    var(--bg)}
 ::-webkit-scrollbar{width:0; height:0}
 #app{display:flex; flex-direction:column; height:100dvh; max-width:560px; margin:0 auto}
 /* ---------- шапка ---------- */
@@ -176,7 +187,118 @@ html[data-theme=gold]{
   --good:#b7cf6a; --warn:#e8a13c; --bad:#e57373;
   --shadow:0 14px 34px rgba(0,0,0,.55); --ringtrack:rgba(232,193,90,.1);
 }
-html[data-theme=neon] body, html[data-theme=gold] body{background:var(--bg)}
+html[data-theme=forest]{
+  --bg:#eef4ea; --card:rgba(255,255,255,.75); --card2:rgba(255,255,255,.95);
+  --border:rgba(30,74,32,.12); --border2:rgba(30,74,32,.2);
+  --text:#1c3a20; --text2:#48644c; --muted:#71876f;
+  --accent:#2e7d32; --accent2:#558b2f; --accent-dim:#a5c9a7;
+  --grad:linear-gradient(135deg,#2e7d32 0%,#7cb342 100%);
+  --push:#c66a1e; --pull:#2d6fb8; --legs:#2e7d32;
+  --good:#2e7d32; --warn:#a8770a; --bad:#c65045;
+  --shadow:0 14px 34px rgba(30,74,32,.12); --fig:#234a28; --glassbr:rgba(255,255,255,.85);
+}
+html[data-theme=sunset]{
+  --bg:#fdf1e7; --card:rgba(255,255,255,.78); --card2:rgba(255,255,255,.96);
+  --border:rgba(122,49,22,.12); --border2:rgba(122,49,22,.2);
+  --text:#4a2416; --text2:#7a4a34; --muted:#a07862;
+  --accent:#e85d3d; --accent2:#f2913d; --accent-dim:#f5c6a8;
+  --grad:linear-gradient(135deg,#e85d3d 0%,#f2a03d 100%);
+  --push:#d9541f; --pull:#8a5ad4; --legs:#2f9d70;
+  --good:#2f9d70; --warn:#b06f08; --bad:#d44545;
+  --shadow:0 14px 34px rgba(122,49,22,.13); --fig:#5a2d1a; --glassbr:rgba(255,255,255,.88);
+}
+html[data-theme=sakura]{
+  --bg:#fdeef3; --card:rgba(255,255,255,.8); --card2:rgba(255,255,255,.97);
+  --border:rgba(122,22,62,.11); --border2:rgba(122,22,62,.19);
+  --text:#4a1630; --text2:#7a3a56; --muted:#a06880;
+  --accent:#d4447c; --accent2:#e8639b; --accent-dim:#f0b5cc;
+  --grad:linear-gradient(135deg,#d4447c 0%,#f27daf 100%);
+  --push:#d9611f; --pull:#5a7ad4; --legs:#2f9d70;
+  --good:#2f9d70; --warn:#ad7407; --bad:#d44545;
+  --shadow:0 14px 34px rgba(122,22,62,.12); --fig:#57203c; --glassbr:rgba(255,255,255,.9);
+}
+html[data-theme=retro]{
+  --bg:#f3ead9; --card:rgba(255,252,242,.85); --card2:rgba(255,252,244,.98);
+  --border:rgba(74,52,12,.14); --border2:rgba(74,52,12,.24);
+  --text:#3a2c14; --text2:#64543a; --muted:#8a7a5e;
+  --accent:#a0652a; --accent2:#c08a3e; --accent-dim:#d9c09a;
+  --grad:linear-gradient(135deg,#a0652a 0%,#cf9c48 100%);
+  --push:#b05a1e; --pull:#4a6a9d; --legs:#5e7d3a;
+  --good:#5e7d3a; --warn:#a8770a; --bad:#b8503f;
+  --shadow:0 14px 30px rgba(74,52,12,.14); --fig:#453516; --glassbr:rgba(255,252,242,.92);
+}
+html[data-theme=arctic]{
+  --bg:#eaf3fb; --card:rgba(255,255,255,.82); --card2:rgba(255,255,255,.97);
+  --border:rgba(12,52,94,.11); --border2:rgba(12,52,94,.19);
+  --text:#0f2e4a; --text2:#3d5a76; --muted:#6b869e;
+  --accent:#1e78c8 ; --accent2:#3d9be0; --accent-dim:#a8cdea;
+  --grad:linear-gradient(135deg,#1e78c8 0%,#4db3e8 100%);
+  --push:#d9611f; --pull:#1e78c8; --legs:#128d60;
+  --good:#128d60; --warn:#ad7407; --bad:#d45555;
+  --shadow:0 14px 34px rgba(12,52,94,.12); --fig:#14344f; --glassbr:rgba(255,255,255,.9);
+}
+html[data-theme=ocean]{
+  --bg:#07131d; --card:rgba(64,190,220,.06); --card2:rgba(64,190,220,.11);
+  --border:rgba(64,190,220,.13); --border2:rgba(64,190,220,.23);
+  --text:#e2f2f8; --text2:#a8c5d2; --muted:#6f8d9c;
+  --accent:#40bedc; --accent2:#4dd8c4; --accent-dim:#1e5a6e;
+  --grad:linear-gradient(135deg,#2ba3c4 0%,#4dd8c4 100%);
+  --push:#f0955f; --pull:#6aaef0; --legs:#4bcd9b;
+  --good:#4bcd9b; --warn:#f2b53d; --bad:#f07a6a;
+  --shadow:0 14px 34px rgba(0,0,0,.5); --ringtrack:rgba(64,190,220,.1); --fig:#cfe8f2; --glassbr:rgba(64,190,220,.14);
+}
+html[data-theme=royal]{
+  --bg:#0e0a1a; --card:rgba(168,120,255,.065); --card2:rgba(168,120,255,.12);
+  --border:rgba(168,120,255,.14); --border2:rgba(168,120,255,.25);
+  --text:#efe8fc; --text2:#c2b2e2; --muted:#8d7cab;
+  --accent:#a878ff; --accent2:#c89bff; --accent-dim:#503380;
+  --grad:linear-gradient(135deg,#8a5ae0 0%,#c89bff 100%);
+  --push:#f0955f; --pull:#7fb3f0; --legs:#4bcd9b;
+  --good:#7ed48a; --warn:#f2b53d; --bad:#f07a6a;
+  --shadow:0 14px 34px rgba(0,0,0,.55); --ringtrack:rgba(168,120,255,.1); --fig:#e2d6f8; --glassbr:rgba(168,120,255,.15);
+}
+html[data-theme=crimson]{
+  --bg:#150a0c; --card:rgba(240,90,100,.06); --card2:rgba(240,90,100,.11);
+  --border:rgba(240,90,100,.14); --border2:rgba(240,90,100,.25);
+  --text:#fae8ea; --text2:#dcb2b6; --muted:#a57c80;
+  --accent:#f05a64; --accent2:#ff8a5f; --accent-dim:#7a2a30;
+  --grad:linear-gradient(135deg,#e04450 0%,#ff8a5f 100%);
+  --push:#ff9a5f; --pull:#7fa8e8; --legs:#5fcf9f;
+  --good:#5fcf9f; --warn:#f2b53d; --bad:#ff6b6b;
+  --shadow:0 14px 34px rgba(0,0,0,.55); --ringtrack:rgba(240,90,100,.1); --fig:#f2dadd; --glassbr:rgba(240,90,100,.15);
+}
+html[data-theme=midnight]{
+  --bg:#000000; --card:rgba(255,255,255,.045); --card2:rgba(255,255,255,.09);
+  --border:rgba(255,255,255,.1); --border2:rgba(255,255,255,.18);
+  --text:#e8eef4; --text2:#aab8c4; --muted:#71818e;
+  --accent:#4d9fff; --accent2:#6ab8ff; --accent-dim:#1e4a78;
+  --grad:linear-gradient(135deg,#2d7de0 0%,#6ab8ff 100%);
+  --push:#f0955f; --pull:#6ab8ff; --legs:#4bcd9b;
+  --good:#4bcd9b; --warn:#f2b53d; --bad:#f07a6a;
+  --shadow:0 10px 28px rgba(0,0,0,.7); --ringtrack:rgba(255,255,255,.08); --fig:#dde6ee; --glassbr:rgba(255,255,255,.1);
+}
+html[data-theme=steel]{
+  --bg:#101315; --card:rgba(200,215,225,.055); --card2:rgba(200,215,225,.1);
+  --border:rgba(200,215,225,.12); --border2:rgba(200,215,225,.2);
+  --text:#e8edf0; --text2:#b2bec6; --muted:#7d8a92;
+  --accent:#8fa8b8; --accent2:#a8c4d4; --accent-dim:#455a66;
+  --grad:linear-gradient(135deg,#6f8a9c 0%,#a8c4d4 100%);
+  --push:#e09a6a; --pull:#8fb3d4; --legs:#7ab88f;
+  --good:#7ab88f; --warn:#d4a44d; --bad:#d47a6a;
+  --shadow:0 14px 30px rgba(0,0,0,.5); --ringtrack:rgba(200,215,225,.09); --fig:#dae2e8; --glassbr:rgba(200,215,225,.12);
+}
+html[data-theme=neon] body, html[data-theme=gold] body, html[data-theme=ocean] body, html[data-theme=royal] body,
+html[data-theme=crimson] body, html[data-theme=midnight] body, html[data-theme=steel] body,
+html[data-theme=forest] body, html[data-theme=sunset] body, html[data-theme=sakura] body,
+html[data-theme=retro] body, html[data-theme=arctic] body{background:var(--bg)}
+/* сетка выбора тем */
+.thgrid{display:grid; grid-template-columns:repeat(3,1fr); gap:9px; margin-top:10px}
+.thcell{border:2px solid var(--border2); border-radius:14px; padding:9px 6px 8px; text-align:center; cursor:pointer; background:var(--card); position:relative}
+.thcell.on{border-color:var(--accent); box-shadow:0 4px 14px rgba(11,147,164,.25)}
+.thcell.lk{opacity:.55}
+.thsw{width:42px; height:42px; border-radius:50%; margin:0 auto 5px; border:2.5px solid rgba(255,255,255,.7); box-shadow:0 3px 10px rgba(0,0,0,.18)}
+.thcell .nm{font-size:11.5px; font-weight:800}
+.thcell .st{font-size:9px; color:var(--muted); margin-top:1px; line-height:1.25}
 .ringrow{display:flex; align-items:center; gap:16px}
 .ringrow .rside{flex:1; min-width:0}
 @keyframes cfall{to{transform:translateY(108vh) rotate(720deg); opacity:.95}}
@@ -417,7 +539,7 @@ html[data-theme=dark] .coach{background:rgba(46,198,209,.08); border-color:rgba(
 #stories::-webkit-scrollbar{display:none}
 .sto{flex:none; width:64px; background:none; border:none; padding:0; cursor:pointer; text-align:center}
 .sto .ring{display:block; width:58px; height:58px; margin:0 auto; border-radius:50%; padding:2.5px;
-  background:conic-gradient(from 210deg, #0b93a4, #2ec6d1, #7fe3c4, #0b93a4)}
+  background:conic-gradient(from 210deg, var(--accent), var(--accent2), var(--accent-dim), var(--accent))}
 .sto.seen .ring{background:var(--border2)}
 .sto .inn{width:100%; height:100%; border-radius:50%; background:var(--card); display:grid; place-items:center; font-size:22px; border:2.5px solid var(--bg)}
 .sto .lb{display:block; font-size:10px; color:var(--muted); font-weight:700; margin-top:4px; line-height:1.15; height:23px; overflow:hidden}
@@ -1852,7 +1974,7 @@ const HELP = {
   deload: {t:'Разгрузочная неделя', b:'<p>Каждые 4-6 недель нагрузка снижается: −30% веса, по 2 подхода, RPE ≤ 6. Это не потерянная неделя — суставы и нервная система восстанавливаются, и следующий блок идёт с новыми силами. Пропускать разгрузку — путь к застою и травме.</p>'},
   weektype: {t:'Лёгкие и тяжёлые недели', b:'<p>Программа волнами: лёгкая → средняя → тяжёлая. На лёгкой неделе веса ниже — это специально: мышцы растут в восстановлении, а не на каждом максимуме. Идёшь по плану — прогрессируешь без выгорания.</p>'},
   forecast: {t:'Как считаются прогнозы', b:'<p>Берём твои реальные записи (вес за 30 дней, силу за 12 сессий) и строим линейный тренд. Это математика, не гадание: «при текущем темпе будет так». Изменится темп — изменится прогноз. Данных мало — прогноз не показывается.</p>'},
-  quests: {t:'Задачи недели', b:'<p>Три задачи на неделю, считаются автоматически из твоих данных: тренировки, белок, взвешивания, вода. Понедельник — новый набор. Закрыл все три — неделя прожита правильно.</p>'},
+  quests: {t:'Задачи недели', b:'<p>Четыре задачи на неделю. Первая — всегда тренировки, остальные три приложение подбирает под тебя: смотрит, что на прошлой неделе просело (белок, вода, шаги, взвешивания, дневник, замеры, фото, здоровье, привычки, готовка), и ставит в работу самое нужное. Понедельник — новый набор. Прогресс считается сам из твоих записей.</p>'},
   nutr: {t:'Нутриенты недели', b:'<p>Для каждого из 410 продуктов базы мы знаем 16 витаминов и минералов — от клетчатки и омега-3 до йода, селена и фолатов (данные USDA и справочника Скурихина). Когда ты записываешь еду с граммовкой, считается среднее за неделю против суточной нормы.</p><p><b>Жёлтый бар (&lt;60%)</b> — вероятный дефицит: под карточкой совет, какими продуктами добрать. Не хватает хронически — тема для разговора с врачом об анализах, добавки сами себе не назначаем.</p><p>Записи «своё блюдо» без привязки к базе в расчёт не входят.</p>'},
   level: {t:'Уровень и XP', b:'<p>XP начисляется за всё: тренировка +50, подход +2, взвешивание +3, день с едой +6, замеры +8, фото +12, отметка привычки +2, запись давления +2, серия — бонус. Уровень открывает продвинутые упражнения в заменах и новые темы оформления. Это твой стаж, переведённый в цифру.</p>'},
   dens: {t:'Нутриенты: на 100 ккал или на 100 г', b:'<p>«В 100 г» — классика этикеток, но она льстит калорийным продуктам. «В 100 ккал» отвечает на вопрос дефицита: <b>сколько пользы я получу за эти калории</b>.</p><p>Пример с кальцием: в 100 г сыра его больше, чем в зелени. Но 100 ккал сыра — это 27 г, а 100 ккал шпината — 435 г, и кальция в этой порции втрое больше. Поэтому на похудении топ «в 100 ккал» — честнее. На наборе массы, наоборот, удобнее смотреть «в 100 г».</p>'},
@@ -3342,40 +3464,221 @@ window.photoDel = function(k, angle){
   else if (v){ delete v[angle]; if (!v.f && !v.s && !v.b) delete DB.photos[k]; }
   save(); closeModal(); render();
 };
-/* --- достижения, установка приложения --- */
+/* --- достижения (110): 7 коллекций, каждая проверяется из данных --- */
+const ACH_CATS = [['trn','💪 Тренировки'],['str','🔥 Серии'],['pwr','🏋️ Сила и объём'],['wgt','⚖️ Вес и тело'],['eat','🍽 Питание'],['lif','🌿 Образ жизни'],['exp','🚀 Прогресс']];
 const ACH = [
-  {id:'t1',  e:'🏁', n:'Первая тренировка', d:'заверши 1 тренировку', f:s=>s.done>=1},
-  {id:'t10', e:'🔟', n:'10 тренировок', d:'заверши 10 тренировок', f:s=>s.done>=10},
-  {id:'t25', e:'🥉', n:'25 тренировок', d:'заверши 25 тренировок', f:s=>s.done>=25},
-  {id:'tall', e:'🏆', n:'Вся программа', d:'заверши все тренировки программы', f:s=>s.total>0&&s.done>=s.total},
-  {id:'s4',  e:'🔥', n:'Серия 4', d:'4 тренировки подряд без пропусков', f:s=>s.streak>=4},
-  {id:'s12', e:'⚡', n:'Серия 12', d:'12 тренировок подряд', f:s=>s.streak>=12},
-  {id:'set100', e:'💪', n:'100 подходов', d:'запиши 100 подходов', f:s=>s.sets>=100},
-  {id:'set1000', e:'🦾', n:'1000 подходов', d:'запиши 1000 подходов', f:s=>s.sets>=1000},
-  {id:'ton10', e:'🚚', n:'10 тонн', d:'подними суммарно 10 000 кг', f:s=>s.ton>=10000},
-  {id:'ton100', e:'🚀', n:'100 тонн', d:'подними суммарно 100 000 кг', f:s=>s.ton>=100000},
-  {id:'kg3', e:'⚖️', n:'−3 кг', d:'минус 3 кг от старта', f:s=>s.loss>=3},
-  {id:'kg7', e:'🎯', n:'−7 кг', d:'минус 7 кг от старта', f:s=>s.loss>=7},
-  {id:'kg15', e:'👑', n:'−15 кг', d:'минус 15 кг от старта', f:s=>s.loss>=15},
-  {id:'meas1', e:'📏', n:'Первые замеры', d:'запиши замеры тела', f:s=>s.meas>=1},
-  {id:'photo1', e:'📷', n:'Фото «до»', d:'добавь первое фото прогресса', f:s=>s.photos>=1},
+  // тренировки
+  {c:'trn', id:'t1',  e:'🏁', n:'Первая тренировка', d:'заверши 1 тренировку', f:s=>s.done>=1},
+  {c:'trn', id:'t5',  e:'✋', n:'5 тренировок', d:'заверши 5 тренировок', f:s=>s.done>=5},
+  {c:'trn', id:'t10', e:'🔟', n:'10 тренировок', d:'заверши 10 тренировок', f:s=>s.done>=10},
+  {c:'trn', id:'t25', e:'🥉', n:'25 тренировок', d:'заверши 25 тренировок (откроет тему «Ретро»)', f:s=>s.done>=25},
+  {c:'trn', id:'t50', e:'🥈', n:'50 тренировок', d:'заверши 50 тренировок', f:s=>s.done>=50},
+  {c:'trn', id:'t75', e:'🎖', n:'75 тренировок', d:'заверши 75 тренировок', f:s=>s.done>=75},
+  {c:'trn', id:'t100',e:'💯', n:'Сотня', d:'заверши 100 тренировок', f:s=>s.done>=100},
+  {c:'trn', id:'t150',e:'🦁', n:'150 тренировок', d:'заверши 150 тренировок', f:s=>s.done>=150},
+  {c:'trn', id:'t200',e:'🐘', n:'200 тренировок', d:'заверши 200 тренировок', f:s=>s.done>=200},
+  {c:'trn', id:'t300',e:'🗿', n:'300 тренировок', d:'это уже спарта', f:s=>s.done>=300},
+  {c:'trn', id:'tall',e:'🏆', n:'Вся программа', d:'заверши все тренировки программы', f:s=>s.total>0&&s.done>=s.total},
+  {c:'trn', id:'deload1', e:'🌿', n:'Умная разгрузка', d:'пройди разгрузочную неделю, не пропустив её', f:s=>s.deloadDone},
+  {c:'trn', id:'early', e:'🌅', n:'Ранняя пташка', d:'начни тренировку до 8 утра', f:s=>s.early},
+  {c:'trn', id:'owl',  e:'🦉', n:'Сова железа', d:'начни тренировку после 21:00', f:s=>s.owl},
+  {c:'trn', id:'wknd', e:'🪖', n:'Воин выходных', d:'тренировки в субботу и воскресенье одной недели', f:s=>s.weekend},
+  {c:'trn', id:'swap1', e:'⇄', n:'Первая замена', d:'замени упражнение на аналог', f:s=>s.swapN>=1},
+  {c:'trn', id:'swap5', e:'🔀', n:'Конструктор', d:'5 постоянных замен упражнений', f:s=>s.swapN>=5},
+  {c:'trn', id:'note10', e:'📝', n:'Летописец', d:'10 заметок к тренировкам', f:s=>s.noteN>=10},
+  // серии и стрики
+  {c:'str', id:'s3',  e:'🕯', n:'Серия 3', d:'3 тренировки подряд без пропусков', f:s=>s.streak>=3},
+  {c:'str', id:'s6',  e:'🔥', n:'Серия 6', d:'6 тренировок подряд', f:s=>s.streak>=6},
+  {c:'str', id:'s9',  e:'⚡', n:'Серия 9', d:'9 тренировок подряд', f:s=>s.streak>=9},
+  {c:'str', id:'s12', e:'💥', n:'Серия 12', d:'12 тренировок подряд', f:s=>s.streak>=12},
+  {c:'str', id:'s20', e:'🌋', n:'Серия 20', d:'20 тренировок подряд', f:s=>s.streak>=20},
+  {c:'str', id:'s30', e:'☄️', n:'Серия 30', d:'30 тренировок подряд', f:s=>s.streak>=30},
+  {c:'str', id:'s50', e:'🌟', n:'Серия 50', d:'50 тренировок подряд — легенда', f:s=>s.streak>=50},
+  {c:'str', id:'w4',  e:'📅', n:'Месяц в ритме', d:'4 недели подряд по 3+ тренировки', f:s=>s.weeks3>=4},
+  {c:'str', id:'wst7', e:'⚖️', n:'Весы: 7 подряд', d:'взвешивайся 7 дней подряд', f:s=>s.weighStreak>=7},
+  {c:'str', id:'wst14',e:'📈', n:'Весы: 14 подряд', d:'взвешивайся 14 дней подряд', f:s=>s.weighStreak>=14},
+  {c:'str', id:'wst30',e:'🗓', n:'Весы: месяц подряд', d:'взвешивайся 30 дней подряд', f:s=>s.weighStreak>=30},
+  // сила и объём
+  {c:'pwr', id:'set50',  e:'🎯', n:'50 подходов', d:'запиши 50 подходов', f:s=>s.sets>=50},
+  {c:'pwr', id:'set100', e:'💪', n:'100 подходов', d:'запиши 100 подходов', f:s=>s.sets>=100},
+  {c:'pwr', id:'set250', e:'🚴', n:'250 подходов', d:'запиши 250 подходов', f:s=>s.sets>=250},
+  {c:'pwr', id:'set500', e:'🚀', n:'500 подходов', d:'запиши 500 подходов', f:s=>s.sets>=500},
+  {c:'pwr', id:'set1000',e:'🦾', n:'1000 подходов', d:'запиши 1000 подходов', f:s=>s.sets>=1000},
+  {c:'pwr', id:'set2500',e:'⚙️', n:'2500 подходов', d:'запиши 2500 подходов', f:s=>s.sets>=2500},
+  {c:'pwr', id:'set5000',e:'🏭', n:'5000 подходов', d:'запиши 5000 подходов', f:s=>s.sets>=5000},
+  {c:'pwr', id:'ton5',  e:'🛻', n:'5 тонн', d:'подними суммарно 5 000 кг', f:s=>s.ton>=5000},
+  {c:'pwr', id:'ton10', e:'🚚', n:'10 тонн', d:'подними 10 000 кг (откроет тему «Сталь»)', f:s=>s.ton>=10000},
+  {c:'pwr', id:'ton25', e:'🚛', n:'25 тонн', d:'подними 25 000 кг', f:s=>s.ton>=25000},
+  {c:'pwr', id:'ton50', e:'🚜', n:'50 тонн', d:'подними 50 000 кг', f:s=>s.ton>=50000},
+  {c:'pwr', id:'ton100',e:'🚂', n:'100 тонн', d:'подними 100 000 кг', f:s=>s.ton>=100000},
+  {c:'pwr', id:'ton250',e:'🛳', n:'250 тонн', d:'подними 250 000 кг', f:s=>s.ton>=250000},
+  {c:'pwr', id:'ton500',e:'✈️', n:'500 тонн', d:'подними 500 000 кг', f:s=>s.ton>=500000},
+  {c:'pwr', id:'ton1000',e:'🚀', n:'1000 тонн', d:'мегатонна за плечами', f:s=>s.ton>=1000000},
+  {c:'pwr', id:'rpe10', e:'📊', n:'Слушаю тело', d:'отметь тяжесть (RPE) 10 раз', f:s=>s.rpeN>=10},
+  {c:'pwr', id:'rpe50', e:'🧠', n:'Тонкая настройка', d:'50 отметок тяжести', f:s=>s.rpeN>=50},
+  {c:'pwr', id:'rpe150',e:'🎓', n:'Мастер RPE', d:'150 отметок тяжести', f:s=>s.rpeN>=150},
+  // вес и тело
+  {c:'wgt', id:'kg1', e:'🌱', n:'Первый килограмм', d:'минус 1 кг от старта', f:s=>s.loss>=1},
+  {c:'wgt', id:'kg3', e:'⚖️', n:'−3 кг', d:'минус 3 кг от старта', f:s=>s.loss>=3},
+  {c:'wgt', id:'kg5', e:'🎯', n:'−5 кг', d:'минус 5 кг от старта', f:s=>s.loss>=5},
+  {c:'wgt', id:'kg7', e:'🏹', n:'−7 кг', d:'минус 7 кг (откроет тему «Арктика»)', f:s=>s.loss>=7},
+  {c:'wgt', id:'kg10',e:'💎', n:'−10 кг', d:'минус 10 кг от старта', f:s=>s.loss>=10},
+  {c:'wgt', id:'kg15',e:'👑', n:'−15 кг', d:'минус 15 кг от старта', f:s=>s.loss>=15},
+  {c:'wgt', id:'kg20',e:'🦅', n:'−20 кг', d:'минус 20 кг от старта', f:s=>s.loss>=20},
+  {c:'wgt', id:'kg25',e:'🏔', n:'−25 кг', d:'минус 25 кг от старта', f:s=>s.loss>=25},
+  {c:'wgt', id:'kg30',e:'🌠', n:'−30 кг', d:'минус 30 кг — новая жизнь', f:s=>s.loss>=30},
+  {c:'wgt', id:'wn7',  e:'📝', n:'7 взвешиваний', d:'7 записей веса', f:s=>s.weighN>=7},
+  {c:'wgt', id:'wn30', e:'📚', n:'30 взвешиваний', d:'30 записей веса', f:s=>s.weighN>=30},
+  {c:'wgt', id:'wn100',e:'🗄', n:'100 взвешиваний', d:'100 записей веса', f:s=>s.weighN>=100},
+  {c:'wgt', id:'wn365',e:'🏛', n:'Год на весах', d:'365 записей веса', f:s=>s.weighN>=365},
+  {c:'wgt', id:'meas1', e:'📏', n:'Первые замеры', d:'запиши замеры тела', f:s=>s.meas>=1},
+  {c:'wgt', id:'meas5', e:'🧵', n:'Лента не врёт', d:'5 дней замеров', f:s=>s.meas>=5},
+  {c:'wgt', id:'meas15',e:'🧬', n:'Картограф тела', d:'15 дней замеров', f:s=>s.meas>=15},
+  {c:'wgt', id:'photo1',e:'📷', n:'Фото «до»', d:'добавь первое фото прогресса', f:s=>s.photos>=1},
+  {c:'wgt', id:'photo3',e:'🎬', n:'Три ракурса', d:'фото спереди, сбоку и со спины в один день', f:s=>s.photoAll3},
+  {c:'wgt', id:'photo5',e:'🖼', n:'Киноплёнка', d:'фото прогресса в 5 разных дней', f:s=>s.photos>=5},
+  // питание
+  {c:'eat', id:'fd3',  e:'🍽', n:'3 дня дневника', d:'веди дневник еды 3 дня', f:s=>s.foodDaysN>=3},
+  {c:'eat', id:'fd7',  e:'🥗', n:'Неделя дневника', d:'7 дней с записями еды', f:s=>s.foodDaysN>=7},
+  {c:'eat', id:'fd14', e:'🍱', n:'2 недели дневника', d:'14 дней с записями еды', f:s=>s.foodDaysN>=14},
+  {c:'eat', id:'fd30', e:'👨‍🍳', n:'Месяц дневника', d:'30 дней с записями еды', f:s=>s.foodDaysN>=30},
+  {c:'eat', id:'fd60', e:'🍲', n:'2 месяца дневника', d:'60 дней с записями еды', f:s=>s.foodDaysN>=60},
+  {c:'eat', id:'fd100',e:'🥇', n:'100 дней дневника', d:'учёт как дыхание', f:s=>s.foodDaysN>=100},
+  {c:'eat', id:'prot3', e:'🥚', n:'Белковый старт', d:'белок в цель 3 дня', f:s=>s.protDaysN>=3},
+  {c:'eat', id:'prot7', e:'🍗', n:'Белковая неделя', d:'белок в цель 7 дней', f:s=>s.protDaysN>=7},
+  {c:'eat', id:'prot14',e:'🥩', n:'Белковый постоянник', d:'белок в цель 14 дней', f:s=>s.protDaysN>=14},
+  {c:'eat', id:'prot30',e:'🧀', n:'Белковый месяц', d:'белок в цель 30 дней', f:s=>s.protDaysN>=30},
+  {c:'eat', id:'rec1', e:'📖', n:'Свой рецепт', d:'собери рецепт в конструкторе', f:s=>s.myRecN>=1},
+  {c:'eat', id:'rec5', e:'📗', n:'Домашняя книга', d:'5 своих рецептов', f:s=>s.myRecN>=5},
+  {c:'eat', id:'rec15',e:'📚', n:'Шеф', d:'15 своих рецептов', f:s=>s.myRecN>=15},
+  {c:'eat', id:'cook10',e:'🍳', n:'10 готовок', d:'запиши 10 блюд по рецептам', f:s=>s.cookedN>=10},
+  {c:'eat', id:'cook50',e:'🥘', n:'50 готовок', d:'запиши 50 блюд по рецептам', f:s=>s.cookedN>=50},
+  {c:'eat', id:'scan1', e:'📱', n:'Первый скан', d:'добавь продукт по штрихкоду', f:s=>s.scanN>=1},
+  {c:'eat', id:'scan5', e:'🛒', n:'Сканер корзины', d:'5 отсканированных продуктов', f:s=>s.scanN>=5},
+  {c:'eat', id:'scan20',e:'🏪', n:'Магазин в кармане', d:'20 отсканированных продуктов', f:s=>s.scanN>=20},
+  {c:'eat', id:'kcal7', e:'🎯', n:'Снайпер калорий', d:'7 дней подряд в ±5% от цели', f:s=>s.kcalStreak7},
+  // образ жизни
+  {c:'lif', id:'wat3', e:'💧', n:'Вода: старт', d:'вода в норме 3 дня', f:s=>s.waterDaysN>=3},
+  {c:'lif', id:'wat7', e:'🌊', n:'Вода: неделя', d:'вода в норме 7 дней', f:s=>s.waterDaysN>=7},
+  {c:'lif', id:'wat14',e:'🚰', n:'Вода: 2 недели', d:'вода в норме 14 дней', f:s=>s.waterDaysN>=14},
+  {c:'lif', id:'wat30',e:'⛲', n:'Вода: месяц', d:'вода в норме 30 дней', f:s=>s.waterDaysN>=30},
+  {c:'lif', id:'st10', e:'👟', n:'10 000 шагов', d:'10 тысяч шагов за день', f:s=>s.stepsMax>=10000},
+  {c:'lif', id:'st15', e:'🥾', n:'15 000 шагов', d:'15 тысяч шагов за день', f:s=>s.stepsMax>=15000},
+  {c:'lif', id:'st20', e:'🏃', n:'20 000 шагов', d:'20 тысяч шагов за день', f:s=>s.stepsMax>=20000},
+  {c:'lif', id:'stsum100', e:'🛤', n:'100к шагов', d:'100 000 шагов суммарно', f:s=>s.stepsSum>=100000},
+  {c:'lif', id:'stsum500', e:'🗺', n:'полмиллиона шагов', d:'500 000 шагов суммарно', f:s=>s.stepsSum>=500000},
+  {c:'lif', id:'stsum1m',  e:'🌍', n:'Миллион шагов', d:'1 000 000 шагов суммарно', f:s=>s.stepsSum>=1000000},
+  {c:'lif', id:'hab10', e:'✅', n:'10 отметок', d:'10 отметок привычек', f:s=>s.habitT>=10},
+  {c:'lif', id:'hab50', e:'📋', n:'50 отметок', d:'50 отметок привычек', f:s=>s.habitT>=50},
+  {c:'lif', id:'hab200',e:'🧱', n:'200 отметок', d:'привычка стала характером', f:s=>s.habitT>=200},
+  {c:'lif', id:'habW', e:'🌈', n:'Идеальная неделя', d:'привычка отмечена все 7 дней недели', f:s=>s.habitFullW},
+  {c:'lif', id:'hp1',  e:'❤️', n:'Первая запись здоровья', d:'запиши давление, пульс или сон', f:s=>s.healthN>=1},
+  {c:'lif', id:'hp10', e:'🩺', n:'10 записей здоровья', d:'10 дней дневника здоровья', f:s=>s.healthN>=10},
+  {c:'lif', id:'hp50', e:'📊', n:'50 записей здоровья', d:'50 дней дневника здоровья', f:s=>s.healthN>=50},
+  {c:'lif', id:'all30', e:'🛡', n:'Железные 30', d:'30 дней подряд хоть одна запись в приложении', f:s=>s.allDays30},
+  // прогресс и опыт
+  {c:'exp', id:'lvl3', e:'🥉', n:'Уровень 3', d:'достигни 3 уровня', f:s=>s.lvl>=3},
+  {c:'exp', id:'lvl5', e:'🥈', n:'Уровень 5', d:'достигни 5 уровня', f:s=>s.lvl>=5},
+  {c:'exp', id:'lvl7', e:'🥇', n:'Уровень 7', d:'достигни 7 уровня', f:s=>s.lvl>=7},
+  {c:'exp', id:'lvl10',e:'👑', n:'Уровень 10', d:'максимальный уровень', f:s=>s.lvl>=10},
+  {c:'exp', id:'cyc1', e:'🔁', n:'Программа пройдена', d:'заверши программу и начни новую', f:s=>s.cycles>=1},
+  {c:'exp', id:'cyc2', e:'🔂', n:'Вторая программа', d:'заверши 2 программы', f:s=>s.cycles>=2},
+  {c:'exp', id:'cyc3', e:'🎡', n:'Три программы', d:'год дисциплины', f:s=>s.cycles>=3},
 ];
 function achStats(){
-  let done = 0, sets = 0, ton = 0;
+  let done = 0, sets = 0, ton = 0, rpeN = 0, noteN = 0, early = false, owl = false, deloadDone = false;
+  const doneDates = [];
   for (const s of SESSIONS){
     const st = DB.sessions[s.id];
     if (!st) continue;
-    if (st.done) done++;
+    if (st.done){
+      done++;
+      doneDates.push(st.done);
+      if (s.phase === 'deload') deloadDone = true;
+      if (st.t0){ const h = new Date(st.t0).getHours(); if (h < 8) early = true; if (h >= 21) owl = true; }
+    }
+    if (st.note && st.note.trim()) noteN++;
+    rpeN += Object.values(st.rpe||{}).filter(Boolean).length;
     for (const ei in (st.sets||{})){
       const arr = (st.sets[ei]||[]).filter(Boolean);
       sets += arr.length;
       ton += arr.reduce((a,x)=>a+(x.w||0)*x.r,0);
     }
   }
+  // выходные одной недели
+  let weekend = false;
+  const byW = {};
+  for (const dk of doneDates){ const d = fromKey(dk); const wk = isoWeekKey(d); (byW[wk] = byW[wk]||new Set()).add(d.getDay()); }
+  for (const wk in byW){ if (byW[wk].has(6) && byW[wk].has(0)) weekend = true; }
+  // 4 недели подряд по 3+
+  const wCnt = {};
+  for (const dk of doneDates){ const wk = isoWeekKey(fromKey(dk)); wCnt[wk] = (wCnt[wk]||0)+1; }
+  const wKeys = Object.keys(wCnt).sort();
+  let weeks3 = 0, run = 0, prev = null;
+  for (const wk of wKeys){
+    if (wCnt[wk] >= 3){ run = (prev && nextWeekKey(prev) === wk) ? run+1 : 1; weeks3 = Math.max(weeks3, run); prev = wk; }
+    else { run = 0; prev = null; }
+  }
+  // взвешивания: стрик
+  let weighStreak = 0, wrun = 0;
+  for (let i = 0; i < 60; i++){
+    const k = key(new Date(today().getTime() - i*864e5));
+    if (DB.weights[k] != null){ wrun++; weighStreak = Math.max(weighStreak, wrun); }
+    else if (i > 0) wrun = 0;
+  }
+  // еда/белок/вода/шаги/ккал
+  let foodDaysN = 0, protDaysN = 0;
+  for (const k in DB.food){
+    if ((DB.food[k].items||[]).length >= 2){ foodDaysN++; if (foodTotals(k).p >= DB.protTarget*0.95) protDaysN++; }
+  }
+  let waterDaysN = 0;
+  for (const k in (DB.water||{})){ if (DB.water[k] >= waterGoal()) waterDaysN++; }
+  let stepsMax = 0, stepsSum = 0;
+  for (const k in (DB.steps||{})){ const v = +DB.steps[k]||0; stepsMax = Math.max(stepsMax, v); stepsSum += v; }
+  let kcalStreak7 = false, krun = 0;
+  for (let i = 1; i <= 21; i++){
+    const k = key(new Date(today().getTime() - i*864e5));
+    const t = DB.food[k] && DB.food[k].items.length >= 2 ? foodTotals(k) : null;
+    if (t && Math.abs(t.kcal - DB.kcalTarget) <= DB.kcalTarget*0.05){ krun++; if (krun >= 7) kcalStreak7 = true; }
+    else krun = 0;
+  }
+  // рецепты/сканы/готовка
+  let cookedN = 0;
+  for (const k in DB.food){ for (const it of (DB.food[k].items||[])){ if (it.recipe) cookedN++; } }
+  const scanN = (DB.myProds||[]).filter(m => String(m.id).startsWith('off')).length;
+  // привычки
+  let habitT = 0, habitFullW = false;
+  for (const hb of (DB.habits||[])){
+    const dd = Object.keys(hb.d||{});
+    habitT += dd.length;
+    const byWk = {};
+    for (const dk of dd){ const wk = isoWeekKey(fromKey(dk)); byWk[wk] = (byWk[wk]||0)+1; if (byWk[wk] >= 7) habitFullW = true; }
+  }
+  // 30 дней подряд активности
+  let allDays30 = true;
+  for (let i = 0; i < 30; i++){
+    const k = key(new Date(today().getTime() - i*864e5));
+    const any = DB.weights[k] != null || (DB.food[k] && DB.food[k].items.length) || (DB.water||{})[k] ||
+      (DB.steps||{})[k] || (DB.health||{})[k] || doneDates.includes(k);
+    if (!any){ allDays30 = false; break; }
+  }
   const lw = lastWeight();
-  return { done, sets, ton, total: SESSIONS.length, streak: streakCount(),
+  return { done, sets, ton, rpeN, noteN, early, owl, deloadDone, weekend, weeks3, weighStreak,
+    total: SESSIONS.length, streak: streakCount(),
     loss: lw ? Math.max(0, (PROF.startWeight||0) - lw.v) : 0,
-    meas: Object.keys(DB.meas||{}).length, photos: Object.keys(DB.photos||{}).length };
+    weighN: Object.keys(DB.weights).length,
+    meas: Object.keys(DB.meas||{}).length,
+    photos: Object.keys(DB.photos||{}).length,
+    photoAll3: Object.values(DB.photos||{}).some(v => v && typeof v === 'object' && v.f && v.s && v.b),
+    foodDaysN, protDaysN, waterDaysN, stepsMax, stepsSum, kcalStreak7,
+    myRecN: (DB.myRecipes||[]).length, cookedN, scanN,
+    habitT, habitFullW, healthN: Object.keys(DB.health||{}).length, allDays30,
+    swapN: Object.keys(DB.swaps||{}).length,
+    lvl: levelInfo().lvl, cycles: (DB.cycles||[]).length };
+}
+function nextWeekKey(wk){
+  const [y, w] = wk.split('-').map(Number);
+  return w >= 52 ? (y+1)+'-1' : y+'-'+(w+1);
 }
 function achCheck(){
   try {
@@ -3384,21 +3687,51 @@ function achCheck(){
     DB.achSeen = DB.achSeen || {};
     const fresh = [];
     for (const a of ACH) if (!DB.achSeen[a.id] && a.f(s)){ DB.achSeen[a.id] = key(today()); fresh.push(a); }
-    if (fresh.length){ save(); setTimeout(()=>{ toast('🏅 Достижение: '+fresh.map(a=>a.e+' '+a.n).join(' · ')); confetti(); }, 900); }
+    if (fresh.length){
+      save();
+      const themed = fresh.filter(a => THEMES.some(t => t.ach === a.id));
+      const names = fresh.slice(0,3).map(a=>a.e+' '+a.n).join(' · ') + (fresh.length>3 ? ` и ещё ${fresh.length-3}` : '');
+      setTimeout(()=>{
+        toast('🏅 Достижение: ' + names + (themed.length ? ' — открыта новая тема оформления!' : ''));
+        confetti();
+      }, 900);
+    }
   } catch(e){}
 }
+window.achDlg = function(id){
+  const a = ACH.find(x=>x.id===id); if (!a) return;
+  const got = DB.achSeen && DB.achSeen[a.id];
+  const th = THEMES.find(t => t.ach === a.id);
+  openModal(`<div style="text-align:center;padding:6px 0">
+    <div style="font-size:64px;line-height:1;${got?'':'opacity:.35;filter:grayscale(1)'}">${a.e}</div>
+    <h2 style="margin-top:10px">${esc(a.n)}</h2>
+    <div class="small" style="margin-top:6px">${esc(a.d)}</div>
+    ${th?`<div class="tiny" style="margin-top:6px">${th.e} Открывает тему «${th.n}»</div>`:''}
+    <div class="${got?'insight good':'insight'}" style="margin-top:12px;text-align:left"><p style="margin:0">${got?`Получено ${fmtD(fromKey(got))} 🎉`:'Ещё не получено — всё впереди.'}</p></div>
+    <button class="btn full" style="margin-top:12px" onclick="closeModal()">Закрыть</button></div>`);
+};
 function achCard(){
   const s = achStats();
   DB.achSeen = DB.achSeen || {};
   const isOn = a => DB.achSeen[a.id] || a.f(s);
   const got = ACH.filter(isOn).length;
-  const next = ACH.find(a => !isOn(a));
+  window._achCat = window._achCat || 'trn';
+  const cat = window._achCat;
+  const inCat = ACH.filter(a=>a.c===cat);
+  const gotCat = inCat.filter(isOn).length;
+  const next = inCat.find(a => !isOn(a)) || ACH.find(a => !isOn(a));
   return `<div class="card"><h3>Достижения · ${got} из ${ACH.length}</h3>
-    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px 6px;margin-top:8px">` +
-    ACH.map(a => `<div style="text-align:center;${isOn(a)?'':'opacity:.28;filter:grayscale(1)'}">
+    <div class="bar" style="margin-top:6px"><i class="good" style="width:${Math.round(got/ACH.length*100)}%"></i></div>
+    <div class="pchips" style="margin-top:9px">` +
+    ACH_CATS.map(([c, l]) => {
+      const n = ACH.filter(a=>a.c===c).length, g = ACH.filter(a=>a.c===c && isOn(a)).length;
+      return `<button class="pchip ${cat===c?'on':''}" onclick="window._achCat='${c}';render()">${l} ${g}/${n}</button>`;
+    }).join('') + `</div>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px 6px;margin-top:10px">` +
+    inCat.map(a => `<div style="text-align:center;cursor:pointer;${isOn(a)?'':'opacity:.28;filter:grayscale(1)'}" onclick="achDlg('${a.id}')">
       <div style="font-size:25px;line-height:1">${a.e}</div>
       <div class="tiny" style="font-size:9.5px;line-height:1.15;margin-top:3px">${esc(a.n)}</div></div>`).join('') +
-    `</div>${next?`<div class="tiny" style="margin-top:10px">Следующее: <b>${next.e} ${esc(next.n)}</b> — ${esc(next.d)}.</div>`:`<div class="tiny" style="margin-top:10px">Всё собрано. Красавец.</div>`}</div>`;
+    `</div>${next?`<div class="tiny" style="margin-top:10px">Ближайшее: <b>${next.e} ${esc(next.n)}</b> — ${esc(next.d)}. Тап по значку — детали.</div>`:`<div class="tiny" style="margin-top:10px">Все ${ACH.length} собраны. Красавец.</div>`}</div>`;
 }
 function installCard(){
   let standalone = false;
@@ -7145,10 +7478,15 @@ function levelInfo(){
 }
 function encUnlockLvl(e){ return e[4] === 2 ? 5 : e[4] === 1 ? 3 : 1; }
 const UNLOCKS = [
-  {lvl:3, t:'упражнения уровня «Средний» в заменах (293 шт)'},
+  {lvl:2, t:'тема «Лес» 🌲'},
+  {lvl:3, t:'упражнения уровня «Средний» в заменах (293 шт) и тема «Закат» 🌅'},
   {lvl:4, t:'тема «Неон» ⚡'},
-  {lvl:5, t:'упражнения уровня «Эксперт» — олимпийские и стронгмен (57 шт)'},
+  {lvl:5, t:'упражнения уровня «Эксперт» (57 шт) и тема «Сакура» 🌸'},
+  {lvl:6, t:'тема «Океан» 🌊'},
   {lvl:7, t:'тема «Золото» 👑'},
+  {lvl:8, t:'тема «Королевская» 🔮'},
+  {lvl:9, t:'тема «Кримзон» 🥊'},
+  {lvl:10, t:'тема «Полночь» 🌌'},
 ];
 function nextUnlock(lvl){ return UNLOCKS.find(u => u.lvl > lvl); }
 function levelCard(compact){
@@ -7185,19 +7523,38 @@ function weekQuests(){
   const d = today();
   const mon = new Date(d); mon.setDate(d.getDate() - (d.getDay()+6)%7); mon.setHours(0,0,0,0);
   const keys = []; for (let i=0;i<7;i++){ const x = new Date(mon); x.setDate(mon.getDate()+i); keys.push(key(x)); }
+  const prevKeys = keys.map(k => key(new Date(fromKey(k).getTime() - 7*864e5)));
   const doneSess = Object.entries(DB.sessions).filter(([id,s])=>s && s.done && keys.includes(s.done));
   const planN = Math.min(3, Array.isArray(PROF.days) ? PROF.days.length : (+PROF.days || 3)) || 3;
-  const protDays = keys.filter(k => { const t = foodTotals(k); return t.p >= DB.protTarget * 0.95; }).length;
-  const weighDays = keys.filter(k => DB.weights[k] != null).length;
-  const waterDays = keys.filter(k => ((DB.water||{})[k]||0) >= waterGoal()).length;
-  const seed = parseInt(isoWeekKey(d).replace(/\D/g,''),10) || 1;
+  const cnt = (ks, f) => ks.filter(f).length;
+  const protF = k => (DB.food[k] && DB.food[k].items.length ? foodTotals(k).p : 0) >= DB.protTarget * 0.95;
+  const foodF = k => DB.food[k] && DB.food[k].items.length >= 2;
+  const weighF = k => DB.weights[k] != null;
+  const waterF = k => ((DB.water||{})[k]||0) >= waterGoal();
+  const stepF = k => (+(DB.steps||{})[k]||0) >= STEP_GOAL(Math.min(weekOf(d), WEEKS()));
+  const hlF = k => (DB.health||{})[k];
+  const habitToday = k => (DB.habits||[]).some(hb => hb.d && hb.d[k]);
+  const cookedW = keys.reduce((a,k)=>a + ((DB.food[k]&&DB.food[k].items)||[]).filter(it=>it.recipe).length, 0);
+  const measThisW = keys.some(k => (DB.meas||{})[k]);
+  const measAge = (()=>{ const ks = Object.keys(DB.meas||{}).sort(); return ks.length ? (d - fromKey(ks[ks.length-1]))/864e5 : 999; })();
+  const photoAge = (()=>{ const ks = Object.keys(DB.photos||{}).sort(); return ks.length ? (d - fromKey(ks[ks.length-1]))/864e5 : 999; })();
+  // кандидаты: score = насколько задача нужна ИМЕННО сейчас (по слабостям прошлой недели)
   const pool = [
-    {t:`Закрыть ${planN} тренировки`, cur: doneSess.length, max: planN},
-    {t:'Белок в цель 4 дня', cur: protDays, max: 4},
-    {t:'Взвеситься 3 раза', cur: weighDays, max: 3},
-    {t:'Вода в норме 4 дня', cur: waterDays, max: 4},
+    {t:'Белок в цель 4 дня', cur: cnt(keys, protF), max: 4, score: 4 - cnt(prevKeys, protF)},
+    {t:'Взвеситься 4 раза', cur: cnt(keys, weighF), max: 4, score: 4 - cnt(prevKeys, weighF)},
+    {t:'Вода в норме 4 дня', cur: cnt(keys, waterF), max: 4, score: 4 - cnt(prevKeys, waterF)},
+    {t:'Шаги в цель 4 дня', cur: cnt(keys, stepF), max: 4, score: Object.keys(DB.steps||{}).length ? 4 - cnt(prevKeys, stepF) : -1},
+    {t:'Дневник еды 5 дней', cur: cnt(keys, foodF), max: 5, score: 5 - cnt(prevKeys, foodF) - 1},
+    {t:'Сделать замеры тела', cur: measThisW ? 1 : 0, max: 1, score: measAge > 12 ? 3.5 : -5},
+    {t:'Обновить фото прогресса', cur: keys.some(k=>(DB.photos||{})[k]) ? 1 : 0, max: 1, score: photoAge > 25 ? 3.5 : -5},
+    {t:'2 записи в дневник здоровья', cur: cnt(keys, hlF), max: 2, score: Object.keys(DB.health||{}).length ? 2 - cnt(prevKeys, hlF) : -1},
+    {t:'Приготовить 2 блюда по рецептам', cur: Math.min(cookedW, 2), max: 2, score: (DB.myRecipes||[]).length || cookedW ? 1.5 : -1},
+    {t:'Привычки: 5 дней с отметкой', cur: cnt(keys, habitToday), max: 5, score: (DB.habits||[]).length ? 5 - cnt(prevKeys, habitToday) - 1 : -5},
   ];
-  const qs = [pool[0], pool[1 + seed % 3], pool[1 + (seed+1) % 3]].filter((q,i,arr)=>arr.findIndex(x=>x.t===q.t)===i).slice(0,3);
+  const seed = parseInt(isoWeekKey(d).replace(/\D/g,''),10) || 1;
+  pool.forEach((q, i) => q.score += ((seed + i*7) % 5) * 0.1); // лёгкая ротация при равных
+  const picked = pool.filter(q=>q.score > 0).sort((a,b)=>b.score-a.score).slice(0,3);
+  const qs = [{t:`Закрыть ${planN} тренировки`, cur: doneSess.length, max: planN}, ...picked];
   return qs.map(q => ({...q, cur: Math.min(q.cur, q.max), done: q.cur >= q.max}));
 }
 function questsCard(){
@@ -7977,15 +8334,15 @@ function vMore(){
   if (moreSec==='data'){
     const n = Object.keys(DB.weights).length + SESSIONS.filter(s=>DB.sessions[s.id]?.done).length + Object.keys(DB.food).length;
     const L = levelInfo();
-    h += `<div class="card"><h3>Тема оформления</h3>
-      <div class="seg" style="margin:8px 0 0">
-        <button class="${(DB.theme||'light')==='light'?'on':''}" onclick="setTheme('light')">☀️ Светлая</button>
-        <button class="${DB.theme==='dark'?'on':''}" onclick="setTheme('dark')">🌙 Тёмная</button>
-        <button class="${DB.theme==='auto'?'on':''}" onclick="setTheme('auto')">Авто</button></div>
-      <div class="seg" style="margin:8px 0 0">
-        <button class="${DB.theme==='neon'?'on':''}" style="${L.lvl<4?'opacity:.55':''}" onclick="setTheme('neon')">${L.lvl>=4?'⚡ Неон':'🔒 Неон · ур. 4'}</button>
-        <button class="${DB.theme==='gold'?'on':''}" style="${L.lvl<7?'opacity:.55':''}" onclick="setTheme('gold')">${L.lvl>=7?'👑 Золото':'🔒 Золото · ур. 7'}</button></div>
-      <div class="tiny" style="margin-top:8px">Темы «Неон» и «Золото» открываются с ростом уровня — качайся.</div></div>`;
+    h += `<div class="card"><h3>Тема оформления · открыто ${themesUnlockedN()} из ${THEMES.length-1}</h3>
+      <div class="thgrid">` + THEMES.map(t => {
+        const ok = themeAllowed(t.id), cur = (DB.theme||'light')===t.id;
+        return `<div class="thcell ${cur?'on':''} ${ok?'':'lk'}" onclick="setTheme('${t.id}')">
+          <div class="thsw" style="background:${t.sw}"></div>
+          <div class="nm">${ok?t.e:'🔒'} ${t.n}</div>
+          <div class="st">${ok ? (cur?'сейчас':'') : t.lvl ? 'уровень '+t.lvl : t.achT}</div></div>`;
+      }).join('') + `</div>
+      <div class="tiny" style="margin-top:9px">Новые темы открываются уровнями и достижениями — тренировки, дисциплина и минус-килограммы работают на гардероб приложения.</div></div>`;
     h += installCard();
     h += `<div class="card"><h3>Цели</h3>
       <div class="row" style="margin-bottom:8px"><div class="grow small">Калории, ккал</div>
@@ -8014,7 +8371,7 @@ function vMore(){
       <div class="kv"><span>${PROF.place==='home' ? 'Дом · '+(['db','band','bar'].filter(k=>PROF.equip&&PROF.equip[k]).map(k=>({db:'гантели',band:'резинка',bar:'турник'})[k]).join(', ')||'вес тела') : 'Зал'} · ${PROF.split==='fb'?'Фулбади':'PPL'} · Старт ${PROF.startWeight} кг → ~${Math.round(TARGETS[WEEKS()])} кг к ${fmtD(PROG_END)} (${WEEKS()} нед.)</span></div>
       <button class="btn sec full" style="margin-top:10px" onclick="adjustDlg()">Настройка: уровень · травмы · разнообразие</button>
       <button class="btn sec full" style="margin-top:8px" onclick="if(confirm('Пересоздать программу заново через анкету? Вес, еда и шаги сохранятся, а журнал тренировок и замены очистятся.')){DB.profile=null;DB.sessions={};DB.swaps={};DB.skips={};DB.dateOv={};save();location.reload();}">Пересоздать программу (анкета)</button></div>`;
-    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 6.3 (программа задышала: ротация вспомогательных упражнений блоками по 2 недели, перенос тренировки со сдвигом всего графика, «Тренер» — недельный разбор объёма по группам мышц, баланса жим/тяга, трендов силы, калорий и белка) · собрано для Егора и друзей · 26.08.2026. Фото — Free Exercise DB; нутриенты — USDA + Скурихин.</div>`;
+    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 6.4 (большая геймификация: 110 достижений в 7 коллекциях с деталями по тапу, 14 тем оформления — открываются уровнями и достижениями, задачи недели теперь подбираются под твои слабые места прошлой недели) · собрано для Егора и друзей · 26.08.2026. Фото — Free Exercise DB; нутриенты — USDA + Скурихин.</div>`;
   }
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }
@@ -8492,25 +8849,50 @@ window.wizardGo = function(){
   toast('Программа готова. Старт — '+fmtD(W1)+', а вес уже записан.');
 };
 /* ============ 15. ЗАГРУЗКА ============ */
-const THEME_UNLOCK = {neon:4, gold:7};
-function themeAllowed(t){ return !THEME_UNLOCK[t] || levelInfo().lvl >= THEME_UNLOCK[t]; }
+/* 14 тем: 3 базовые + 11 разблокируемых (уровни и достижения) */
+const THEMES = [
+  {id:'light',   n:'Светлая',  e:'☀️', sw:'linear-gradient(135deg,#eef6f6 50%,#0aa2b4 50%)', bar:'#eef6f6'},
+  {id:'dark',    n:'Тёмная',   e:'🌙', sw:'linear-gradient(135deg,#0a1215 50%,#17b2c2 50%)', bar:'#0a1215'},
+  {id:'auto',    n:'Как в системе', e:'🌗', sw:'linear-gradient(90deg,#eef6f6 50%,#0a1215 50%)', bar:null},
+  {id:'forest',  n:'Лес',      e:'🌲', sw:'linear-gradient(135deg,#eef4ea 50%,#2e7d32 50%)', bar:'#eef4ea', lvl:2},
+  {id:'sunset',  n:'Закат',    e:'🌅', sw:'linear-gradient(135deg,#fdf1e7 50%,#e85d3d 50%)', bar:'#fdf1e7', lvl:3},
+  {id:'neon',    n:'Неон',     e:'⚡', sw:'linear-gradient(135deg,#0b0f14 50%,#b7f24d 50%)', bar:'#0b0f14', lvl:4},
+  {id:'sakura',  n:'Сакура',   e:'🌸', sw:'linear-gradient(135deg,#fdeef3 50%,#d4447c 50%)', bar:'#fdeef3', lvl:5},
+  {id:'ocean',   n:'Океан',    e:'🌊', sw:'linear-gradient(135deg,#07131d 50%,#40bedc 50%)', bar:'#07131d', lvl:6},
+  {id:'gold',    n:'Золото',   e:'👑', sw:'linear-gradient(135deg,#0f0d0a 50%,#e8c15a 50%)', bar:'#0f0d0a', lvl:7},
+  {id:'royal',   n:'Королевская', e:'🔮', sw:'linear-gradient(135deg,#0e0a1a 50%,#a878ff 50%)', bar:'#0e0a1a', lvl:8},
+  {id:'crimson', n:'Кримзон',  e:'🥊', sw:'linear-gradient(135deg,#150a0c 50%,#f05a64 50%)', bar:'#150a0c', lvl:9},
+  {id:'midnight',n:'Полночь',  e:'🌌', sw:'linear-gradient(135deg,#000 50%,#4d9fff 50%)', bar:'#000000', lvl:10},
+  {id:'retro',   n:'Ретро',    e:'📼', sw:'linear-gradient(135deg,#f3ead9 50%,#a0652a 50%)', bar:'#f3ead9', ach:'t25', achT:'25 тренировок'},
+  {id:'arctic',  n:'Арктика',  e:'❄️', sw:'linear-gradient(135deg,#eaf3fb 50%,#1e78c8 50%)', bar:'#eaf3fb', ach:'kg7', achT:'−7 кг от старта'},
+  {id:'steel',   n:'Сталь',    e:'🛠', sw:'linear-gradient(135deg,#101315 50%,#8fa8b8 50%)', bar:'#101315', ach:'ton10', achT:'10 тонн тоннажа'},
+];
+function themeAllowed(t){
+  const th = THEMES.find(x=>x.id===t);
+  if (!th) return true;
+  if (th.lvl && levelInfo().lvl < th.lvl) return false;
+  if (th.ach && !(DB.achSeen && DB.achSeen[th.ach])) return false;
+  return true;
+}
 function applyTheme(){
   let t = DB.theme || 'light';
-  if (THEME_UNLOCK[t] && !themeAllowed(t)) t = 'dark';
+  if (!themeAllowed(t)) t = 'dark';
   if (t === 'auto') t = (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
   document.documentElement.dataset.theme = t;
   const mt = document.querySelector('meta[name=theme-color]');
-  const colors = {dark:'#0a1215', neon:'#0b0f14', gold:'#0f0d0a'};
-  if (mt) mt.setAttribute('content', colors[t] || '#eef6f6');
+  const th = THEMES.find(x=>x.id===t);
+  if (mt) mt.setAttribute('content', (th && th.bar) || '#eef6f6');
 }
 window.setTheme = function(t){
-  if (THEME_UNLOCK[t] && !themeAllowed(t)){
-    return toast('🔒 Тема откроется на уровне '+THEME_UNLOCK[t]+' — сейчас '+levelInfo().lvl+'-й');
+  const th = THEMES.find(x=>x.id===t);
+  if (th && !themeAllowed(t)){
+    return toast(th.lvl ? `🔒 «${th.n}» откроется на уровне ${th.lvl} — сейчас ${levelInfo().lvl}-й`
+                        : `🔒 «${th.n}» откроется за достижение: ${th.achT}`);
   }
   DB.theme = t; save(); applyTheme(); render();
-  const names = {light:'Светлая тема', dark:'Тёмная тема', auto:'Тема как в системе', neon:'⚡ Тема «Неон»', gold:'👑 Тема «Золото»'};
-  toast(names[t] || 'Тема применена');
+  toast(th ? (t==='auto' ? 'Тема как в системе' : `${th.e} Тема «${th.n}»`) : 'Тема применена');
 };
+function themesUnlockedN(){ return THEMES.filter(t=>t.id!=='auto' && themeAllowed(t.id)).length; }
 try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if ((DB.theme||'light') === 'auto'){ applyTheme(); render(); } }); } catch(e){}
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); window._instPrompt = e; });
 (function boot(){

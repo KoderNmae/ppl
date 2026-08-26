@@ -662,6 +662,31 @@ html.gym .exhint, html.gym .exhist{font-size:14px}
 <div class="modal-wrap" id="modal-wrap"><div class="modal" id="modal"></div></div>
 <script>
 "use strict";
+/* — чёрный ящик: копим реальные ошибки с устройства, чтобы чинить не вслепую — */
+(function(){
+  const KEY = 'ppl_errlog';
+  const put = (rec) => {
+    try{
+      const log = JSON.parse(localStorage.getItem(KEY) || '[]');
+      const last = log[log.length-1];
+      if (last && last.m === rec.m){ last.n = (last.n||1)+1; last.t = rec.t; }
+      else log.push(rec);
+      while (log.length > 25) log.shift();
+      localStorage.setItem(KEY, JSON.stringify(log));
+    }catch(e){}
+  };
+  window.addEventListener('error', e => {
+    const m = String(e.message||'').slice(0,180);
+    if (!m || /Script error/i.test(m) && !e.filename) return;
+    put({t: Date.now(), m, s: String(e.filename||'').split('/').pop().slice(0,40), l: e.lineno||0});
+  });
+  window.addEventListener('unhandledrejection', e => {
+    const m = String((e.reason && (e.reason.message||e.reason)) || '').slice(0,180);
+    if (m) put({t: Date.now(), m: 'promise: '+m});
+  });
+  window._errlog = () => { try{ return JSON.parse(localStorage.getItem(KEY)||'[]'); }catch(e){ return []; } };
+  window._errclear = () => { try{ localStorage.removeItem(KEY); }catch(e){} };
+})();
 /* ============ 1. ПРОГРАММА (данные) ============ */
 /* Профиль: у Егора — исходная программа (миграция), у новых — анкета первого запуска */
 const EGOR = {
@@ -1952,7 +1977,10 @@ function loadDB(){
 function defaultDB(){
   return { profile:null, weights:{}, steps:{}, waist:{}, food:{}, sessions:{},
            kcalTarget:2500, protTarget:180, kcalLog:[], freeMeals:{}, lastExport:null, notes:{},
-           swaps:{}, skips:{}, dateOv:{} };
+           swaps:{}, skips:{}, dateOv:{},
+           water:{}, meas:{}, measGoals:{}, photos:{}, health:{}, habits:[],
+           myProds:[], myRecipes:[], pantry:{}, pantryUse:{}, exclude:{},
+           recentProds:[], favProds:[], shopping:{}, weekMenu:{}, cycles:[], achSeen:{}, storySeen:null };
 }
 let DB = loadDB();
 function save(){
@@ -2062,7 +2090,17 @@ function gymApply(){
 }
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden && document.documentElement.classList.contains('gym')) wakeOn();
+  // PWA живёт днями: при возврате в новый день не писать еду «во вчера» и обновить экраны
+  if (!document.hidden && PROF){
+    const tk = key(today());
+    if (window._lastDay && window._lastDay !== tk){
+      if (foodDate === window._lastDay) foodDate = tk;  // сам листал в прошлое — не трогаем
+      try{ render(); }catch(e){}
+    }
+    window._lastDay = tk;
+  }
 });
+window._lastDay = key(today());
 window.gymToggle = function(){
   DB.gymMode = DB.gymMode ? 0 : 1; save(); render();
   toast(DB.gymMode ? '🔥 Режим зала: крупные кнопки, экран не гаснет' : 'Режим зала выключен');
@@ -2227,7 +2265,7 @@ function vHome(){
   h += `</div>`;
   // тренировка
   const stk = streakCount();
-  h += `<div class="card"><h3>Тренировка</h3>${stk>=2?`<div class="tiny" style="margin:-2px 0 8px">🔥 Серия: ${stk} тренировок подряд — не рви цепочку</div>`:''}`;
+  h += `<div class="card"><h3>Тренировка</h3>${stk>=2?`<div class="tiny" style="margin:-2px 0 8px">🔥 Серия: ${stk} ${ruPl(stk,'тренировка','тренировки','тренировок')} подряд — не рви цепочку</div>`:''}`;
   if (ns){
     const nd = sessDate(ns);
     const overdue = nd < d, todayIs = key(nd) === k;
@@ -2288,7 +2326,7 @@ function vHome(){
     h += `<div class="section-t">Рекомендации</div>` + ins.map(insightHTML).join('');
     if (ins.length < 3) h += `<div class="card tiny">Тренер следит за ~20 сигналами: темп веса, объём по группам мышц, баланс жим/тяга, тренды силы, белок, калории, вода, усталость по RPE и другие. Советы появляются, когда в данных есть что сказать.</div>`;
     const ct = coachCardHTML().total;
-    h += `<button class="btn ghost" onclick="tab='more';moreSec='insights';render()">Тренер: полный разбор недели${ct?` · ${ct} наблюдений`:''} →</button>`;
+    h += `<button class="btn ghost" onclick="tab='more';moreSec='insights';render()">Тренер: полный разбор недели${ct?` · ${ct} ${ruPl(ct,'наблюдение','наблюдения','наблюдений')}`:''} →</button>`;
   }
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }
@@ -2519,7 +2557,7 @@ function vStrength(){
 }
 function trainList(){
   const skippedList = SESSIONS.filter(s=>DB.skips[s.id] && !DB.sessions[s.id]?.done);
-  header('Тренировки', SESSIONS.length+' тренировок за '+WEEKS()+' недель · очередь важнее дат');
+  header('Тренировки', SESSIONS.length+' '+ruPl(SESSIONS.length,'тренировка','тренировки','тренировок')+' за '+WEEKS()+' '+ruPl(WEEKS(),'неделю','недели','недель')+' · очередь важнее дат');
   const next = nextSession();
   let h = `<button class="btn sec full" style="margin-bottom:4px" onclick="trainSelected='str';render()">💪 Сила: графики, рекорды и стандарты</button>`;
   let shown = 0;
@@ -3115,7 +3153,7 @@ window.finishSession = function(sid){
   const s = SESSIONS[sid];
   const tonnage = Object.values(st.sets).flat().filter(Boolean).reduce((a,x)=>a+(x.w||0)*x.r,0);
   trainSelected = null; render();
-  toast(typeLabel(s.type)+' готово: '+total+' подходов'+(tonnage>0?', тоннаж '+Math.round(tonnage).toLocaleString('ru-RU')+' кг':'')+(st.dur?' · '+durTxt(st.dur):''));
+  toast(typeLabel(s.type)+' готово: '+total+' '+ruPl(total,'подход','подхода','подходов')+(tonnage>0?', тоннаж '+Math.round(tonnage).toLocaleString('ru-RU')+' кг':'')+(st.dur?' · '+durTxt(st.dur):''));
 };
 /* --- разминка, блины, прогресс упражнения --- */
 const r25 = x => Math.round(x/2.5)*2.5;
@@ -4301,10 +4339,13 @@ window.nudgeTimer = function(ds){
 };
 $('#timer-x').onclick = stopTimer;
 $('#timer-plus').onclick = () => { nudgeTimer(30); };
+let _audioCtx = null; // один контекст на всё приложение: iOS убивает звук после 4-6 созданных
 function beep(){
   try{ if (navigator.vibrate) navigator.vibrate([180,90,180]); }catch(e){}
   try{
-    const ctx = new (window.AudioContext||window.webkitAudioContext)();
+    if (!_audioCtx) _audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    const ctx = _audioCtx;
+    if (ctx.state === 'suspended') ctx.resume().catch(()=>{});
     [0,.22,.44].forEach(t => {
       const o = ctx.createOscillator(), g = ctx.createGain();
       o.frequency.value = 880; o.connect(g); g.connect(ctx.destination);
@@ -4597,7 +4638,8 @@ function weightChart(){
   for (let j=0;j<nx;j++){
     const i = Math.round(j*(days-1)/(nx-1));
     const dd = new Date(d0.getTime()+i*864e5);
-    g += `<text x="${xs(i)}" y="${H-7}" fill="${CC().axis}" font-size="10.5" text-anchor="middle">${fmtD(dd)}</text>`;
+    const anch = j===0 ? 'start' : j===nx-1 ? 'end' : 'middle'; // края не режутся о границу svg
+    g += `<text x="${xs(i)}" y="${H-7}" fill="${CC().axis}" font-size="10.5" text-anchor="${anch}">${fmtD(dd)}</text>`;
   }
   const planPath = plan.map((v,i)=>(i?'L':'M')+xs(i).toFixed(1)+' '+ys(v).toFixed(1)).join('');
   const factPath = pts.map((p,j)=>(j?'L':'M')+xs(p.i).toFixed(1)+' '+ys(p.v).toFixed(1)).join('');
@@ -5759,6 +5801,14 @@ const ING4 = [
 const ING_ALL = [...ING, ...ING2, ...ING3, ...ING4];
 const ING_BY = Object.fromEntries(ING_ALL.map(x=>[x[0],x]));
 const ING_CAT_N = {pack:'Магазин: товары со штрихкодом', prot:'Мясо, птица, яйца', fish:'Рыба и морепродукты', carb:'Крупы и гарниры', veg:'Овощи', fruit:'Фрукты и ягоды', dairy:'Молочное', fat:'Жиры и сыр', sweet:'Сладкое и выпечка', ready:'Готовые блюда', drink:'Напитки', misc:'Прочее'};
+/* русские склонения: ruPl(3,'тренировка','тренировки','тренировок') */
+function ruPl(n, one, few, many){
+  const a = Math.abs(n) % 100, b = a % 10;
+  if (a > 10 && a < 20) return many;
+  if (b === 1) return one;
+  if (b >= 2 && b <= 4) return few;
+  return many;
+}
 /* лёгкий поиск по-русски: «яйцо» найдёт «Яйцо куриное С1» и «Яйца» */
 function ruStem(w){ return w.replace(/[аяоеиыуюьйъэ]+$/,''); }
 /* фонетический мост кириллица↔латиница: «кока» найдёт Coca-Cola, «сникерс» — Snickers */
@@ -6117,6 +6167,7 @@ function rcIngMatch(r, q){
   return r.ing.some(s => { const ing = prodBy(s[0]); return ing && prodMatch(ing.n, q); });
 }
 window.rcList = function(mid, q){
+  if (!$('#rc-list')) return; // модалка рецептов уже закрыта/заменена — не падать
   q = (q||'').trim().toLowerCase();
   const key = mid[0]==='s' ? 's' : mid;
   let list, note = '';
@@ -8773,6 +8824,11 @@ function vMore(){
       <div class="row" style="gap:8px;margin-top:6px">
         <button class="btn ghost grow" onclick="expCSVtrain()">CSV тренировок</button>
         <button class="btn ghost grow" onclick="expCSVweight()">CSV веса</button></div></div>`;
+    const errN = (window._errlog ? window._errlog() : []).length;
+    h += `<div class="card"><h3>Диагностика ${errN?`· <span class="c-warn">${errN} ошиб${errN===1?'ка':errN<5?'ки':'ок'}</span>`:'· чисто ✅'}</h3>
+      <div class="small" style="margin-bottom:8px">Приложение записывает свои ошибки прямо на устройстве. Поймал баг — жми кнопку и пришли отчёт мне в чат: починю не вслепую, а точно.</div>
+      <button class="btn sec full" onclick="diagCopy()">📋 Скопировать отчёт для разработчика</button>
+      ${errN?`<button class="btn ghost full sm" style="margin-top:6px" onclick="if(confirm('Очистить журнал ошибок?')){_errclear();render();}">Очистить журнал</button>`:''}</div>`;
     h += `<div class="card"><h3>Опасная зона</h3>
       <button class="btn danger full" onclick="if(confirm('Точно стереть все записи? Экспорт сделал?')){DB=defaultDB();save();location.reload();}">Стереть все данные</button></div>`;
     h += `<div class="card"><h3>Профиль</h3>
@@ -8781,7 +8837,7 @@ function vMore(){
       <button class="btn sec full" style="margin-top:10px" onclick="adjustDlg()">Настройка: уровень · травмы · разнообразие</button>
       <button class="btn sec full" style="margin-top:8px" onclick="tourDlg(0)">🧭 Показать тур по приложению</button>
       <button class="btn sec full" style="margin-top:8px" onclick="if(confirm('Пересоздать программу заново через анкету? Вес, еда и шаги сохранятся, а журнал тренировок и замены очистятся.')){DB.profile=null;DB.sessions={};DB.swaps={};DB.skips={};DB.dateOv={};save();location.reload();}">Пересоздать программу (анкета)</button></div>`;
-    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 6.8 (сила и удобство: экран «Сила» — графики 1ПМ, рекорды и мировые стандарты под твой вес; таймер будит уведомлением и записывает подход со своего экрана; режим «В зале» 🔥; ярлыки на иконке; импорт шагов из CSV Samsung Health / Google Takeout) · собрано для Егора и друзей · 26.08.2026. Фото — Free Exercise DB; нутриенты — USDA + Скурихин.</div>`;
+    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 6.9 (большая чистка: журнал ошибок прямо на устройстве и кнопка «отчёт разработчику» в ⚙️, дата еды больше не залипает во вчера у долго открытого приложения, звук таймера не умирает на iOS, склонения, оси графиков, десятки мелких заноз) · собрано для Егора и друзей · 26.08.2026. Фото — Free Exercise DB; нутриенты — USDA + Скурихин.</div>`;
   }
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }
@@ -8822,6 +8878,23 @@ window.impData = function(){
 window.copyData = function(){
   try{ navigator.clipboard.writeText(JSON.stringify(DB)).then(()=>toast('Скопировано')); }
   catch(e){ toast('Не удалось — используй экспорт в файл'); }
+};
+window.diagCopy = function(){
+  const errs = (window._errlog ? window._errlog() : []).map(e =>
+    new Date(e.t).toISOString().slice(0,16).replace('T',' ') + ' · ' + e.m + (e.l?` (${e.s}:${e.l})`:'') + (e.n>1?` ×${e.n}`:''));
+  const rep = [
+    'PPL диагностика · версия ' + (typeof APP_VER!=='undefined'?APP_VER:'?') + ' · ' + new Date().toISOString().slice(0,16).replace('T',' '),
+    'UA: ' + navigator.userAgent,
+    'Экран: ' + screen.width + '×' + screen.height + ' · окно ' + innerWidth + '×' + innerHeight + ' · standalone: ' + (matchMedia('(display-mode: standalone)').matches),
+    'Данные: вес ' + Object.keys(DB.weights||{}).length + ' · сессий done ' + Object.values(DB.sessions||{}).filter(s=>s&&s.done).length +
+      ' · еда ' + Object.keys(DB.food||{}).length + ' дн · myProds ' + (DB.myProds||[]).length + ' · myRec ' + (DB.myRecipes||[]).length +
+      ' · размер ' + Math.round(JSON.stringify(DB).length/1024) + ' КБ · тема ' + (DB.theme||'light') + ' · цель ' + goalMode(),
+    'Профиль: ' + (PROF ? [PROF.split, PROF.place, PROF.weeks+'нед', PROF.legacyWeek0?'legacy':'new', 'вариety:'+(PROF.variety||'rotate')].join(' · ') : 'нет'),
+    errs.length ? ('Ошибки ('+errs.length+'):\n' + errs.join('\n')) : 'Ошибок в журнале нет.',
+  ].join('\n');
+  const done = () => toast('Отчёт скопирован — пришли его мне в чат');
+  try{ navigator.clipboard.writeText(rep).then(done).catch(()=>{ prompt('Скопируй вручную:', rep); }); }
+  catch(e){ prompt('Скопируй вручную:', rep); }
 };
 /* — импорт шагов: Samsung Health / Google Takeout / generic CSV — */
 window.stepsImport = function(){
@@ -9391,14 +9464,13 @@ window.tourDlg = function(i){
       ${i>0?`<button class="btn sec" onclick="tourDlg(${i-1})">←</button>`:`<button class="btn sec" onclick="DB.tourDone=1;save();closeModal()">Пропустить</button>`}
       <button class="btn grow" onclick="${i<TOUR.length-1?`tourDlg(${i+1})`:'DB.tourDone=1;save();closeModal()'}">${i<TOUR.length-1?'Дальше':'Погнали 🚀'}</button></div>`);
 };
-const APP_VER = '6.8';
+const APP_VER = '6.9';
 const WHATS_NEW = [
-  '💪 Экран «Сила» (кнопка над списком тренировок): графики 1ПМ, рекорды и стандарты силы под твой вес',
-  '⏱ Таймер отдыха: будит уведомлением при погасшем экране, а следующий подход записывается прямо с его экрана',
-  '🔥 Режим «В зале» (кнопка в тренировке): крупные кнопки, экран не гаснет',
-  '📱 Долгое нажатие на иконку приложения — ярлыки: тренировка, +250 воды, вес, еда',
+  '💪 Экран «Сила»: графики 1ПМ, рекорды и стандарты силы под твой вес (кнопка над списком тренировок)',
+  '⏱ Таймер: уведомление при погасшем экране + запись следующего подхода прямо с экрана таймера',
+  '🔥 Режим «В зале» — крупные кнопки, негаснущий экран · 📱 ярлыки на иконке приложения',
   '📥 Импорт шагов из CSV (Samsung Health / Google Takeout) — в «Ещё → ⚙️»',
-  '🎯 Из прошлого: три цели (похудеть/поддерживать/набрать), парный режим, отчёт недели картинкой',
+  '🛠 Большая чистка багов + журнал ошибок: поймал глюк — «Ещё → ⚙️ → Диагностика», кнопка отчёта, и я чиню точно',
 ];
 function whatsNewCheck(){
   if (!DB.profile) { DB.seenVer = APP_VER; save(); return; }

@@ -1899,9 +1899,16 @@ function variantOf(sid, ei){
   const s = SESSIONS[sid];
   const perSess = DB.sessions[sid] && DB.sessions[sid].swapEx ? DB.sessions[sid].swapEx[ei] : undefined;
   const val = perSess != null ? perSess : (DB.swaps[s.type+':'+ei] != null ? DB.swaps[s.type+':'+ei] : 0);
-  if (val === 0 && perSess == null && (PROF.variety||'stable') === 'alt' && ei !== 0 && s.w % 2 === 0){
-    const a0 = ALTS[s.type][ei] && ALTS[s.type][ei].a[0];
-    if (a0) return {idx:1, n:a0.n, inc:a0.inc||0, bw:a0.bw||0};
+  // ротация вспомогательных: блоками по 2 недели идём по кругу аналогов слота
+  // (якорь не трогаем — там линейная прогрессия; разгрузочные недели вариант не сдвигают)
+  if (val === 0 && perSess == null && (PROF.variety||'rotate') !== 'stable' && ei !== (anchorsOf()[s.type] ?? 0)){
+    const slotAlts = (ALTS[s.type][ei] && ALTS[s.type][ei].a) || [];
+    if (slotAlts.length){
+      let wEff = 0;
+      for (let i = 1; i <= s.w; i++){ if (phaseOf(i) !== 'deload') wEff++; }
+      const pick = Math.floor(Math.max(0, wEff-1)/2) % (slotAlts.length + 1);
+      if (pick > 0){ const a = slotAlts[pick-1]; return {idx:pick, n:a.n, inc:a.inc||0, bw:a.bw||0, rot:1}; }
+    }
   }
   if (val && typeof val === 'object')
     return {idx:'x:'+val.n, n:val.n, inc:val.inc||2.5, bw:val.bw||0, cat:1};
@@ -2102,8 +2109,9 @@ function vHome(){
   // рекомендации
   if (ins.length){
     h += `<div class="section-t">Рекомендации</div>` + ins.map(insightHTML).join('');
-    if (ins.length < 3) h += `<div class="card tiny">Тренер следит за ~15 сигналами: темп веса и траектория, белок, шаги, вода, застой и ротация упражнений, разгрузка, свободные приёмы, чек-поинты, резервные копии. Советы появляются, когда в данных есть что сказать — чем полнее записи, тем чаще.</div>`;
-    h += `<button class="btn ghost" onclick="tab='more';render()">Вся аналитика →</button>`;
+    if (ins.length < 3) h += `<div class="card tiny">Тренер следит за ~20 сигналами: темп веса, объём по группам мышц, баланс жим/тяга, тренды силы, белок, калории, вода, усталость по RPE и другие. Советы появляются, когда в данных есть что сказать.</div>`;
+    const ct = coachCardHTML().total;
+    h += `<button class="btn ghost" onclick="tab='more';moreSec='insights';render()">Тренер: полный разбор недели${ct?` · ${ct} наблюдений`:''} →</button>`;
   }
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }
@@ -2192,7 +2200,7 @@ function vTrain(){
       <div class="row"><div class="grow">
         <div class="exname">${xi+1}. ${esc(v.n)}</div>
         <div class="exmeta">${grp?esc(grp)+' · ':''}${ex.sets}×${ex.reps} · отдых ${Math.floor(ex.rest/60)}:${pad(ex.rest%60)}</div>
-        ${v.idx!==0?`<div class="exhist">аналог вместо: ${esc(ex.n)}</div>`:''}
+        ${v.rot?`<div class="exhist">🔄 ротация блока: сейчас этот вариант, база «${esc(ex.n)}» вернётся через неделю-две (⇄ — закрепить любой)</div>`:v.idx!==0?`<div class="exhist">аналог вместо: ${esc(ex.n)}</div>`:''}
       </div><div class="row" style="gap:6px;flex:none">
         <button class="qbtn" title="Техника" onclick="techDlg(${s.id},${ex.ei})">${ic('help',19)}</button>
         <button class="qbtn" title="История и заметка" onclick="exStatsDlg(${s.id},${ex.ei})">${ic('stats',19)}</button>
@@ -2669,8 +2677,11 @@ window.applySwap = function(sid, ei, forever){
 window.dateDlg = function(sid){
   const s = SESSIONS[sid];
   openModal(`<h2>Дата тренировки</h2>
-    <div class="small">${s.type} · неделя ${s.w}. Дата — ориентир: очередь всё равно идёт по порядку, просто планируй под свою жизнь.</div>
+    <div class="small">${s.type} · неделя ${s.w}. Не идёшь в этот день — перенеси: весь график поедет следом, ничего не сгорит.</div>
     <input type="date" id="dt-in" value="${key(sessDate(s))}" style="margin:12px 0">
+    <label class="row" style="gap:9px;margin-bottom:12px;cursor:pointer;align-items:flex-start">
+      <input type="checkbox" id="dt-shift" checked style="width:20px;height:20px;margin:2px 0 0;flex:none">
+      <span class="small">Сдвинуть и все следующие тренировки на столько же дней — график просто поедет за этой датой</span></label>
     <div class="row" style="gap:8px">
       ${DB.dateOv[sid]?`<button class="btn sec" onclick="saveDate(${sid},null)">Сбросить</button>`:''}
       <button class="btn grow" style="flex:1" onclick="saveDate(${sid})">Сохранить</button>
@@ -2680,8 +2691,23 @@ window.saveDate = function(sid, reset){
   if (reset === null){ delete DB.dateOv[sid]; save(); closeModal(); render(); return; }
   const val = $('#dt-in').value;
   if (!val) return toast('Выбери дату');
+  const shiftAll = !!($('#dt-shift') && $('#dt-shift').checked);
+  const cur = sessDate(SESSIONS[sid]);
+  const delta = Math.round((fromKey(val) - cur)/864e5);
   if (key(SESSIONS[sid].date) === val) delete DB.dateOv[sid]; else DB.dateOv[sid] = val;
-  save(); closeModal(); render(); toast('Дата обновлена');
+  let moved = 0;
+  if (shiftAll && delta !== 0){
+    for (const s2 of SESSIONS){
+      if (s2.id === sid || DB.sessions[s2.id]?.done || DB.skips[s2.id]) continue;
+      const d2 = sessDate(s2);
+      if (d2 < cur) continue;
+      const nd = new Date(d2.getTime() + delta*864e5);
+      if (key(s2.date) === key(nd)) delete DB.dateOv[s2.id]; else DB.dateOv[s2.id] = key(nd);
+      moved++;
+    }
+  }
+  save(); closeModal(); render();
+  toast(moved ? `График сдвинут на ${delta>0?'+':''}${delta} дн: эта и ещё ${moved}` : 'Дата обновлена');
 };
 window.skipDlg = function(sid){
   const s = SESSIONS[sid];
@@ -7778,12 +7804,118 @@ window.guideDlg = function(i){
 };
 /* ============ 12. ЭКРАН «ЕЩЁ» ============ */
 let moreSec = 'insights';
+/* ============ ТРЕНЕР: спортивная и питательная сводка недели ============ */
+const MUS_BIG = [
+  ['Грудь', /грудь|груди/i], ['Спина', /спина|широчайш|середин|поясниц|задняя дельта/i],
+  ['Плечи', /плеч|дельта/i], ['Ноги', /квадрицепс|ягодиц|бедра|бедро|икры|приводящ|ноги|задняя поверхность|задняя цепь/i],
+  ['Руки', /бицепс|трицепс|предплечь/i], ['Пресс', /пресс|косые/i]];
+function bigGroup(m){ for (const [g, re] of MUS_BIG){ if (re.test(m||'')) return g; } return null; }
+function coachData(){
+  const d = today();
+  const in7 = k => (d - fromKey(k))/864e5 < 7, in14 = k => (d - fromKey(k))/864e5 < 14;
+  const done = SESSIONS.filter(s => DB.sessions[s.id]?.done);
+  const sets7 = {}, pp = {push:0, pull:0};
+  let rpe7 = [], rpePrev = [], dur7 = [], n7 = 0;
+  for (const s of done){
+    const st = DB.sessions[s.id];
+    const recent7 = in7(st.done), recent14 = in14(st.done);
+    if (!recent14) continue;
+    for (const ex of s.exs){
+      const cnt = (st.sets[ex.ei]||[]).filter(Boolean).length;
+      if (!cnt) continue;
+      const m = ALTS[s.type][ex.ei] ? ALTS[s.type][ex.ei].m : '';
+      const g = bigGroup(m);
+      if (recent7 && g) sets7[g] = (sets7[g]||0) + cnt;
+      if (/Груд|Плеч|Трицепс|дельта/i.test(m) || s.type==='Push') pp.push += cnt;
+      else if (/Спин|Широчайш|Бицепс(?! бедра)|Середин/i.test(m) || s.type==='Pull') pp.pull += cnt;
+    }
+    const rs = Object.values(st.rpe||{}).filter(Boolean);
+    if (recent7){ n7++; rpe7.push(...rs); if (st.dur) dur7.push(st.dur); }
+    else rpePrev.push(...rs);
+  }
+  return { sets7, pp, n7,
+    rpe7: rpe7.length ? rpe7.reduce((a,b)=>a+b,0)/rpe7.length : null,
+    rpePrev: rpePrev.length ? rpePrev.reduce((a,b)=>a+b,0)/rpePrev.length : null,
+    dur7: dur7.length ? dur7.reduce((a,b)=>a+b,0)/dur7.length : null };
+}
+function anchorTrend(tp){
+  const ei = anchorsOf()[tp];
+  const sm = swapMeta(tp, ei);
+  const hist = exHistory(tp, ei, 6, sm.vIdx).filter(h=>!h.deload);
+  if (hist.length < 3) return null;
+  const e1 = h => Math.max(...h.sets.map(x => (x.w||0) * (1 + (x.r||0)/30)));
+  const a = e1(hist[0]), b = e1(hist[hist.length-1]);
+  if (!isFinite(a) || !isFinite(b) || b <= 0) return null;
+  return { n: sm.ex.n, pct: Math.round((a-b)/b*100), latest: Math.round(a) };
+}
+function coachCardHTML(){
+  const cd = coachData();
+  const T = [], F = [], R = [];
+  const row = (arr, cls, txt) => arr.push(`<div class="kv"><span class="${cls==='warn'?'c-warn':cls==='good'?'c-good':''}" style="max-width:100%">${txt}</span></div>`);
+  // объём по группам
+  const gs = Object.entries(cd.sets7).sort((a,b)=>b[1]-a[1]);
+  if (gs.length){
+    row(T, '', 'Подходы за 7 дней: ' + gs.map(([g,n])=>`${g} ${n}`).join(' · '));
+    const bigs = ['Грудь','Спина','Ноги'];
+    const low = bigs.filter(g => cd.n7 >= 2 && (cd.sets7[g]||0) < 6);
+    if (low.length) row(T, 'warn', low.join(', ') + ': меньше 6 подходов за неделю — группа недогружена, следи чтобы тренировки этого типа не выпадали');
+    const over = gs.filter(([g,n]) => n > 24).map(([g])=>g);
+    if (over.length) row(T, 'warn', over.join(', ') + ': больше 24 подходов — перебор объёма, восстановление дороже');
+  }
+  // баланс жим/тяга
+  if (cd.pp.push + cd.pp.pull >= 20){
+    const r = cd.pp.pull ? cd.pp.push/cd.pp.pull : 9;
+    if (r > 1.6) row(T, 'warn', `Жима заметно больше, чем тяги (${cd.pp.push}:${cd.pp.pull} за 14 дней) — для осанки и плеч держи ближе к 1:1`);
+    else if (r < 0.6) row(T, 'warn', `Тяги заметно больше, чем жима (${cd.pp.pull}:${cd.pp.push} за 14 дней)`);
+    else row(T, 'good', `Баланс жим/тяга здоровый: ${cd.pp.push}:${cd.pp.pull} за 14 дней`);
+  }
+  // тренды якорей
+  for (const tp of TYPES()){
+    const tr = anchorTrend(tp);
+    if (!tr) continue;
+    if (tr.pct >= 3) row(T, 'good', `${tr.n}: сила растёт, ~+${tr.pct}% к расчётному максимуму (сейчас ≈${tr.latest} кг)`);
+    else if (tr.pct <= -3) row(T, 'warn', `${tr.n}: расчётный максимум просел на ${Math.abs(tr.pct)}% — проверь сон, еду и не слишком ли часто RPE 9-10`);
+  }
+  // усталость по RPE
+  if (cd.rpe7 && cd.rpePrev && cd.rpe7 - cd.rpePrev >= 0.8)
+    row(R, 'warn', `Средняя тяжесть подходов выросла: ${cd.rpePrev.toFixed(1)} → ${cd.rpe7.toFixed(1)} — накапливается усталость. Один-два дня отдыха или лёгкая неделя решают`);
+  if (cd.dur7 && cd.dur7 > 100) row(R, '', `Тренировки в среднем ${Math.round(cd.dur7)} мин — длинновато: следи за отдыхом между подходами (таймер сам подсказывает)`);
+  const nsD = nextSession();
+  if (nsD && nsD.phase === 'deload') row(R, '', 'Впереди разгрузочная неделя — это часть плана, не пропускай её');
+  // питание
+  const d = today();
+  let kc = [], pr = [], late = 0, tot = 0;
+  for (let i = 1; i <= 7; i++){
+    const kk = key(new Date(d.getTime()-i*864e5));
+    if (DB.food[kk] && DB.food[kk].items.length >= 2){
+      const t = foodTotals(kk); kc.push(t.kcal); pr.push(t.p);
+      for (const it of DB.food[kk].items){ tot += it.kcal||0; if (it.t && parseInt(it.t,10) >= 21) late += it.kcal||0; }
+    }
+  }
+  if (kc.length >= 3){
+    const ak = Math.round(kc.reduce((a,b)=>a+b,0)/kc.length), ap = Math.round(pr.reduce((a,b)=>a+b,0)/pr.length);
+    const dev = (ak - DB.kcalTarget)/DB.kcalTarget;
+    row(F, Math.abs(dev)<=0.08 ? 'good' : 'warn', `Калории: в среднем ${ak} при цели ${DB.kcalTarget}${Math.abs(dev)<=0.08?' — в коридоре':dev>0?' — перебор '+Math.round(dev*100)+'%':' — недобор '+Math.round(-dev*100)+'%, слишком мало тоже тормозит (мышцы, гормоны, срывы)'}`);
+    const wNow = lastWeight() ? lastWeight().v : PROF.startWeight;
+    row(F, ap >= Math.round(wNow*1.4) ? 'good' : 'warn', `Белок: ${ap} г/день ≈ ${(ap/wNow).toFixed(1)} г/кг${ap >= Math.round(wNow*1.4) ? ' — защита мышц работает' : ' — на дефиците нужно 1.6-2 г/кг: добери творогом, курицей или протеином'}`);
+    if (tot > 0 && late/tot > 0.4) row(F, '', `${Math.round(late/tot*100)}% калорий — после 21:00. Само по себе не страшно, но поздние приёмы часто = переедание на автомате и хуже сон`);
+  } else row(F, '', 'Запиши еду хотя бы 3 дня — тренер начнёт разбирать калории, белок и режим');
+  const wtr7 = avg7(DB.water||{}, d);
+  if (wtr7 != null && wtr7 < waterGoal()*0.7) row(F, '', `Вода: в среднем ${(wtr7/1000).toFixed(1)} л при цели ${(waterGoal()/1000).toFixed(1)} — держи бутылку на виду, кнопки на «Сегодня» помнят твой объём`);
+  const sec = (t, arr) => arr.length ? `<div class="wlab" style="margin-top:10px">${t}</div>` + arr.join('') : '';
+  const total = T.length + F.length + R.length;
+  return { total, html: `<div class="card"><h3>Тренер · разбор недели</h3>
+    ${total ? sec('Тренировки', T) + sec('Питание', F) + sec('Восстановление', R)
+      : '<div class="small">Пока мало данных: закрой пару тренировок и запиши еду за 2-3 дня — разбор соберётся сам.</div>'}
+    <div class="tiny" style="margin-top:8px">Обновляется каждый день по твоим записям за 7-14 дней.</div></div>` };
+}
 function vMore(){
-  header('Ещё', 'аналитика · план · база · настройки');
-  const secs = [['insights','Аналитика'],['plan','План'],['base','База'],['data','Настройки']];
+  header('Ещё', 'тренер · план · база · настройки');
+  const secs = [['insights','Тренер'],['plan','План'],['base','База'],['data','Настройки']];
   let h = `<div class="seg">` + secs.map(s=>`<button class="${moreSec===s[0]?'on':''}" onclick="moreSec='${s[0]}';render()">${s[1]}</button>`).join('') + `</div>`;
   if (moreSec==='insights'){
     const ins = insights();
+    h += coachCardHTML().html;
     h += questsCard() + weekMatrixCard() + forecastCard() + successCard();
     h += ins.length ? ins.map(insightHTML).join('') : `<div class="card small">Пока нечего советовать — записывай вес, еду и тренировки.</div>`;
     h += bodyMapWeekCard() + weekVolumeCard() + monthReportCard() + achCard();
@@ -7882,7 +8014,7 @@ function vMore(){
       <div class="kv"><span>${PROF.place==='home' ? 'Дом · '+(['db','band','bar'].filter(k=>PROF.equip&&PROF.equip[k]).map(k=>({db:'гантели',band:'резинка',bar:'турник'})[k]).join(', ')||'вес тела') : 'Зал'} · ${PROF.split==='fb'?'Фулбади':'PPL'} · Старт ${PROF.startWeight} кг → ~${Math.round(TARGETS[WEEKS()])} кг к ${fmtD(PROG_END)} (${WEEKS()} нед.)</span></div>
       <button class="btn sec full" style="margin-top:10px" onclick="adjustDlg()">Настройка: уровень · травмы · разнообразие</button>
       <button class="btn sec full" style="margin-top:8px" onclick="if(confirm('Пересоздать программу заново через анкету? Вес, еда и шаги сохранятся, а журнал тренировок и замены очистятся.')){DB.profile=null;DB.sessions={};DB.swaps={};DB.skips={};DB.dateOv={};save();location.reload();}">Пересоздать программу (анкета)</button></div>`;
-    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 6.2 (по фидбеку: починено восстановление копии, живые фильтры травм с фото в заменах, крупная шкала тяжести, вода одним тапом под свою бутылку, кликабельная разминка под снаряд дня, понятные этапы и тоннаж) · собрано для Егора и друзей · 26.08.2026. Фото — Free Exercise DB; нутриенты — USDA + Скурихин.</div>`;
+    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 6.3 (программа задышала: ротация вспомогательных упражнений блоками по 2 недели, перенос тренировки со сдвигом всего графика, «Тренер» — недельный разбор объёма по группам мышц, баланса жим/тяга, трендов силы, калорий и белка) · собрано для Егора и друзей · 26.08.2026. Фото — Free Exercise DB; нутриенты — USDA + Скурихин.</div>`;
   }
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }
@@ -8067,9 +8199,9 @@ window.adjustDlg = function(){
     <div class="tiny">«С нуля» — щадящие варианты (отжимания от стены/с колен вместо полных) и на подход меньше в тяжёлых фазах.</div>
     <div class="wlab" style="margin-top:10px">Разнообразие</div>
     <div class="seg" id="adj-var">
-      <button data-v="stable" class="${(PROF.variety||'stable')==='stable'?'on':''}" onclick="adjSeg(this,'adj-var')">Стабильная</button>
-      <button data-v="alt" class="${PROF.variety==='alt'?'on':''}" onclick="adjSeg(this,'adj-var')">Чередование</button></div>
-    <div class="tiny">Чередование: по чётным неделям вспомогательные упражнения меняются на аналоги — базовое (первое) остаётся для прогресса. История весов у каждого варианта своя.</div>
+      <button data-v="rotate" class="${(PROF.variety||'rotate')!=='stable'?'on':''}" onclick="adjSeg(this,'adj-var')">Ротация</button>
+      <button data-v="stable" class="${(PROF.variety||'rotate')==='stable'?'on':''}" onclick="adjSeg(this,'adj-var')">Стабильная</button></div>
+    <div class="tiny">Ротация: вспомогательные упражнения меняются каждые 2 недели по кругу аналогов — например грудь: штанга → гантели → тренажёр. Якорное упражнение не меняется — там идёт линейная прогрессия. История весов у каждого варианта своя, разгрузочная неделя блок не сдвигает.</div>
     <div class="wlab" style="margin-top:10px">Ограничения</div>
     <div class="seg" id="adj-inj">
       <button data-i="knee" class="${inj.knee?'on':''}" onclick="this.classList.toggle('on')">Колени</button>
@@ -8097,7 +8229,7 @@ window.adjustSave = function(){
   const actChanged = act !== (PROF.activity||'mid');
   PROF.inj = inj; PROF.activity = act;
   PROF.level = document.querySelector('#adj-lvl button.on')?.dataset.l || PROF.level || 'some';
-  PROF.variety = document.querySelector('#adj-var button.on')?.dataset.v || PROF.variety || 'stable';
+  PROF.variety = document.querySelector('#adj-var button.on')?.dataset.v || PROF.variety || 'rotate';
   if (actChanged){
     const w = lastWeight() ? lastWeight().v : PROF.startWeight;
     const c = calcPlan({...PROF, startWeight:w});

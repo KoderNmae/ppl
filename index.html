@@ -8000,7 +8000,7 @@ function storySet(){
       body:`<div class="srow"><div><div class="tiny2">Тренировки</div><b>${ss.doneN}</b></div>
         <div><div class="tiny2">Поднято</div><b>${ss.ton >= 1000 ? (ss.ton/1000).toFixed(1)+' т' : ss.ton+' кг'}</b></div>
         ${ss.stk > 1 ? `<div><div class="tiny2">Серия</div><b>${ss.stk} нед</b></div>` : ''}</div>
-        <div class="stxt" style="margin-top:16px">${ss.lifts.length ? `Сила: ${ss.lifts.slice(0,2).map(l=>esc(l.name)+' '+l.txt).join(' · ')}.<br><br>` : ''}Это не пост из чужой ленты — это твои цифры. В «Ещё → Аналитика» карточка скачивается картинкой.</div>`});
+        <div class="stxt" style="margin-top:16px">${ss.lifts.length ? `Сила: ${ss.lifts.slice(0,2).map(l=>esc(l.name)+' '+l.txt).join(' · ')}.<br><br>` : ''}Это не пост из чужой ленты — это твои цифры. В «Ещё → Успехи» карточка скачивается картинкой.</div>`});
   }
   // 4-5) наука: ротация из пула по выпуску
   const seed = storySeed();
@@ -8267,20 +8267,24 @@ function coachCardHTML(){
     <div class="tiny" style="margin-top:8px">Обновляется каждый день по твоим записям за 7-14 дней.</div></div>` };
 }
 function vMore(){
-  header('Ещё', 'тренер · план · база · настройки');
-  const secs = [['insights','Тренер'],['plan','План'],['base','База'],['data','Настройки']];
+  header('Ещё', 'тренер · успехи · план · база · настройки');
+  const secs = [['insights','Тренер'],['wins','Успехи'],['plan','План'],['base','База'],['data','⚙️']];
   let h = `<div class="seg">` + secs.map(s=>`<button class="${moreSec===s[0]?'on':''}" onclick="moreSec='${s[0]}';render()">${s[1]}</button>`).join('') + `</div>`;
   if (moreSec==='insights'){
+    // только анализ и советы — геймификация живёт в «Успехах»
     const ins = insights();
     h += coachCardHTML().html;
-    h += questsCard() + weekMatrixCard() + forecastCard() + successCard();
     h += ins.length ? ins.map(insightHTML).join('') : `<div class="card small">Пока нечего советовать — записывай вес, еду и тренировки.</div>`;
-    h += bodyMapWeekCard() + weekVolumeCard() + monthReportCard() + achCard();
+    h += forecastCard() + bodyMapWeekCard() + weekVolumeCard() + monthReportCard();
     if (DB.kcalLog && DB.kcalLog.length){
       h += `<div class="card"><h3>История корректировок</h3>` +
         DB.kcalLog.map(x=>`<div class="kv"><span>${fmtD(fromKey(x.d))} · ${esc(x.reason)}</span><span class="${x.delta<0?'c-warn':'c-good'}">${x.delta>0?'+':''}${x.delta}</span></div>`).join('') +
         `<div class="kv" style="margin-top:6px"><b>Текущая цель</b><b>${DB.kcalTarget} ккал</b></div></div>`;
     }
+  }
+  if (moreSec==='wins'){
+    // геймификация: уровень, задачи, достижения, неделя, история
+    h += levelCard(true) + questsCard() + achCard() + weekMatrixCard() + successCard();
   }
   if (moreSec==='base'){ h += guidesSection() + encSection(); }
   if (moreSec==='plan'){
@@ -8370,8 +8374,9 @@ function vMore(){
       <div class="kv"><span>${esc(PROF.name)} · ${PROF.sex==='m'?'муж':'жен'} · ${PROF.age} лет · ${PROF.height} см</span></div>
       <div class="kv"><span>${PROF.place==='home' ? 'Дом · '+(['db','band','bar'].filter(k=>PROF.equip&&PROF.equip[k]).map(k=>({db:'гантели',band:'резинка',bar:'турник'})[k]).join(', ')||'вес тела') : 'Зал'} · ${PROF.split==='fb'?'Фулбади':'PPL'} · Старт ${PROF.startWeight} кг → ~${Math.round(TARGETS[WEEKS()])} кг к ${fmtD(PROG_END)} (${WEEKS()} нед.)</span></div>
       <button class="btn sec full" style="margin-top:10px" onclick="adjustDlg()">Настройка: уровень · травмы · разнообразие</button>
+      <button class="btn sec full" style="margin-top:8px" onclick="tourDlg(0)">🧭 Показать тур по приложению</button>
       <button class="btn sec full" style="margin-top:8px" onclick="if(confirm('Пересоздать программу заново через анкету? Вес, еда и шаги сохранятся, а журнал тренировок и замены очистятся.')){DB.profile=null;DB.sessions={};DB.swaps={};DB.skips={};DB.dateOv={};save();location.reload();}">Пересоздать программу (анкета)</button></div>`;
-    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 6.4 (большая геймификация: 110 достижений в 7 коллекциях с деталями по тапу, 14 тем оформления — открываются уровнями и достижениями, задачи недели теперь подбираются под твои слабые места прошлой недели) · собрано для Егора и друзей · 26.08.2026. Фото — Free Exercise DB; нутриенты — USDA + Скурихин.</div>`;
+    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 6.5 (порядок и онбординг: «Ещё» разложен на Тренер/Успехи/План/База/⚙️, тур по приложению для новичков — и для жены, окно «Что нового» после каждого обновления) · собрано для Егора и друзей · 26.08.2026. Фото — Free Exercise DB; нутриенты — USDA + Скурихин.</div>`;
   }
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }
@@ -8847,7 +8852,50 @@ window.wizardGo = function(){
   DB.weights[key(today())] = p.startWeight;
   save(); closeModal(); buildProgram(); tab='home'; render();
   toast('Программа готова. Старт — '+fmtD(W1)+', а вес уже записан.');
+  if (!DB.tourDone) setTimeout(()=>tourDlg(0), 1400);
 };
+/* ============ ТУР ПО ПРИЛОЖЕНИЮ + ЧТО НОВОГО ============ */
+const TOUR = [
+  {e:'🏠', t:'«Сегодня» — твоя главная', b:'Сторис с планом дня, вес, вода, питание и советы тренера. Утром: тап «Записать вес» — 5 секунд, и аналитика кормится данными весь день.'},
+  {e:'🏋️', t:'Тренировка — просто идёшь по списку', b:'Тап по подходу записывает его, таймер отдыха стартует сам. После упражнения отметь тяжесть (6–10) — по ней приложение поймёт, когда добавлять вес.<br><br>Кнопка ⇄ меняет упражнение: фильтры «без колен» и «без спины» подберут безопасные замены с фото.'},
+  {e:'🔄', t:'Программа живая', b:'Вспомогательные упражнения сами меняются каждые 2 недели (штанга → гантели → тренажёр) — тело не привыкает, скучно не становится. Якорные движения не трогаем: там растёт сила.<br><br>Не идёшь в какой-то день — «Перенести»: весь график поедет следом, ничего не сгорит.'},
+  {e:'⚖️', t:'«Вес» — правда за неделю, не за утро', b:'Утренние качели ±1 кг — вода, а не жир. Приложение смотрит среднее за неделю и по нему советует калории. Там же замеры лентой, процент жира и фото-прогресс с «до/после».'},
+  {e:'🍗', t:'«Еда» — 1100 продуктов и штрихкод', b:'Скан упаковки — мгновенно, часто даже без сети. Рецепты собираются из того, что дома, свой рецепт — конструктором из любых продуктов. Белок — главная цифра дня: держи цель.'},
+  {e:'🧠', t:'«Ещё» — тренер и успехи', b:'«Тренер» разбирает неделю: объём по мышцам, баланс жим/тяга, тренды силы, калории. «Успехи» — уровень, задачи недели, 110 достижений и 14 тем оформления, которые открываются прогрессом.'},
+  {e:'🚀', t:'Главное правило', b:'Постоянство бьёт идеальность. 3 тренировки в неделю, белок в цель, сон — и через 12 недель ты другой человек.<br><br>Тур можно пересмотреть: «Ещё → ⚙️ → Показать тур».'},
+];
+window.tourDlg = function(i){
+  i = i || 0;
+  const s = TOUR[i];
+  if (!s){ DB.tourDone = 1; save(); closeModal(); return; }
+  openModal(`<div style="text-align:center;padding-top:4px">
+    <div style="font-size:56px;line-height:1">${s.e}</div>
+    <h2 style="margin-top:10px">${s.t}</h2></div>
+    <div class="small" style="margin-top:10px">${s.b}</div>
+    <div class="row" style="gap:6px;justify-content:center;margin-top:14px">${TOUR.map((_,j)=>`<span style="width:7px;height:7px;border-radius:50%;background:${j===i?'var(--accent)':'var(--border2)'}"></span>`).join('')}</div>
+    <div class="row" style="gap:8px;margin-top:12px">
+      ${i>0?`<button class="btn sec" onclick="tourDlg(${i-1})">←</button>`:`<button class="btn sec" onclick="DB.tourDone=1;save();closeModal()">Пропустить</button>`}
+      <button class="btn grow" onclick="${i<TOUR.length-1?`tourDlg(${i+1})`:'DB.tourDone=1;save();closeModal()'}">${i<TOUR.length-1?'Дальше':'Погнали 🚀'}</button></div>`);
+};
+const APP_VER = '6.5';
+const WHATS_NEW = [
+  '🛒 1100 продуктов: магазинная полка со штрихкодами, офлайн-скан, скан → рецепты',
+  '🔄 Ротация упражнений: вспомогательные меняются каждые 2 недели сами',
+  '📅 Перенос тренировки теперь сдвигает весь график',
+  '🧠 «Тренер»: недельный разбор объёма, баланса жим/тяга, силы и питания',
+  '🏅 110 достижений, 14 тем оформления, персональные задачи недели',
+  '💧 Вода — одним тапом под свою бутылку; шкала тяжести — крупно и словами',
+];
+function whatsNewCheck(){
+  if (!DB.profile) { DB.seenVer = APP_VER; save(); return; }
+  if (DB.seenVer === APP_VER) return;
+  DB.seenVer = APP_VER; save();
+  setTimeout(() => {
+    openModal(`<h2>Что нового · версия ${APP_VER}</h2>
+      <div class="small" style="margin-top:10px">${WHATS_NEW.map(x=>`<div style="margin-top:8px">${x}</div>`).join('')}</div>
+      <button class="btn full" style="margin-top:14px" onclick="closeModal()">Отлично</button>`);
+  }, 800);
+}
 /* ============ 15. ЗАГРУЗКА ============ */
 /* 14 тем: 3 базовые + 11 разблокируемых (уровни и достижения) */
 const THEMES = [
@@ -8901,7 +8949,7 @@ window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); window
     const hasData = (Object.keys(DB.weights||{}).length + Object.keys(DB.sessions||{}).length + Object.keys(DB.food||{}).length) > 0;
     if (hasData){ DB.profile = EGOR; save(); }   // миграция существующего пользователя
   }
-  if (DB.profile){ PROF = DB.profile; buildProgram(); render(); }
+  if (DB.profile){ PROF = DB.profile; buildProgram(); render(); whatsNewCheck(); }
   else wizard();
 })();
 /*@JS@*/

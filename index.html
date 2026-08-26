@@ -491,10 +491,11 @@ html[data-theme=dark] .modal::before{background:rgba(255,255,255,.18)}
 .cpulse{transform-box:fill-box; transform-origin:center; animation:cpulse 2.2s ease-out infinite}
 a{color:#6da7ec}
 /* — дизайн-система 4.7 — */
-.ic{display:inline-flex; width:20px; height:20px; vertical-align:-4px}
+.ic{display:inline-flex; width:20px; height:20px; vertical-align:-4px; pointer-events:none} /* iOS: тап по svg внутри кнопки не доходил до onclick */
 .ic svg{width:100%; height:100%; fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round}
 .ic svg [fill]:not([fill="none"]){stroke:none}
 .qbtn .ic, .swapbtn .ic{vertical-align:-3px}
+.qbtn *, .swapbtn *, .hbtn *{pointer-events:none}
 .rpe-row{display:flex; align-items:center; gap:10px; margin-top:10px}
 .rpe-lab{font-size:12px; font-weight:800; letter-spacing:.06em; color:var(--muted); display:flex; align-items:center; gap:5px; flex:none}
 .hbtn{width:20px; height:20px; border-radius:50%; border:1.5px solid var(--border2); background:var(--card);
@@ -525,10 +526,10 @@ a{color:#6da7ec}
 .hdot.today:not(.on){border-color:var(--accent); color:var(--accent)}
 .hdot:disabled{opacity:.35; cursor:default}
 .rpe-row .rpe{display:flex; gap:5px; margin:0}
-.rpe-row .rpe button{min-height:47px; padding:3px 0; flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px}
-.rpe-row .rpe button b{font-size:15.5px; line-height:1}
-.rpe-row .rpe button i{font-style:normal; font-size:8.8px; font-weight:700; color:var(--muted); letter-spacing:.02em}
-.rpe-row .rpe button.on i{color:rgba(255,255,255,.85)}
+.rpe-row .rpe button{min-height:52px; padding:4px 0 3px; flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px}
+.rpe-row .rpe button .re{font-size:19px; line-height:1; pointer-events:none}
+.rpe-row .rpe button b{font-size:12.5px; line-height:1; pointer-events:none}
+.rpe-row .rpe button.on b{color:#fff}
 .coach{display:flex; gap:9px; align-items:flex-start; margin-top:9px; padding:9px 11px; border-radius:12px;
   background:var(--accent-soft, rgba(11,147,164,.07)); border:1px solid rgba(11,147,164,.18); font-size:13px; line-height:1.45}
 .coach .ic{flex:none; color:var(--accent2); margin-top:1px}
@@ -1993,9 +1994,39 @@ function toast(msg){
   const t = $('#toast'); t.textContent = msg; t.classList.add('show');
   clearTimeout(toastT); toastT = setTimeout(()=>t.classList.remove('show'), 2200);
 }
-function openModal(html){ if (typeof stopAnim==='function') stopAnim(); $('#modal').innerHTML = html; $('#modal-wrap').classList.add('show'); }
-function closeModal(){ if (typeof stopAnim==='function') stopAnim(); if (window._bcStream) bcStop(); $('#modal-wrap').classList.remove('show'); }
+function openModal(html){ if (typeof stopAnim==='function') stopAnim(); const m = $('#modal'); m.style.transform = ''; m.style.transition = ''; m.innerHTML = html; $('#modal-wrap').classList.add('show'); }
+function closeModal(){ if (typeof stopAnim==='function') stopAnim(); if (window._bcStream) bcStop(); $('#modal-wrap').classList.remove('show'); const m = $('#modal'); if (m){ m.style.transform = ''; m.style.transition = ''; } }
 $('#modal-wrap').addEventListener('click', e => { if (e.target.id==='modal-wrap') closeModal(); });
+/* свайп-вниз закрывает шторку — как в нативных приложениях */
+(function(){
+  const m = $('#modal');
+  let y0 = null, dy = 0, active = false;
+  m.addEventListener('touchstart', e => {
+    if (m.scrollTop > 2){ y0 = null; return; }  // внутри есть что скроллить вверх — не перехватываем
+    y0 = e.touches[0].clientY; dy = 0; active = false;
+  }, {passive:true});
+  m.addEventListener('touchmove', e => {
+    if (y0 == null) return;
+    dy = e.touches[0].clientY - y0;
+    if (dy > 6 && m.scrollTop <= 0){
+      active = true;
+      m.style.transition = 'none';
+      m.style.transform = 'translateY(' + Math.max(0, dy) + 'px)';
+    } else if (!active){ y0 = null; }
+  }, {passive:true});
+  m.addEventListener('touchend', () => {
+    if (!active){ y0 = null; return; }
+    if (dy > 110){
+      m.style.transition = 'transform .18s ease-out';
+      m.style.transform = 'translateY(105%)';
+      setTimeout(closeModal, 170);
+    } else {
+      m.style.transition = 'transform .18s ease-out';
+      m.style.transform = '';
+    }
+    y0 = null; active = false;
+  }, {passive:true});
+})();
 /* ============ 4. РОУТЕР ============ */
 const ICONS = {
   help:'<svg viewBox="0 0 24 24"><path d="M9.2 9.2a2.9 2.9 0 1 1 4.4 2.5c-.9.6-1.6 1.1-1.6 2.3"/><circle cx="12" cy="17.6" r=".4"/><circle cx="12" cy="12" r="9.3" fill="none"/></svg>',
@@ -2021,9 +2052,20 @@ const TABS = [
 ];
 function ic(name, sz){ return `<span class="ic" style="${sz?`width:${sz}px;height:${sz}px`:''}">${ICONS[name]||''}</span>`; }
 /* — единая система пояснений: "?" → модалка — */
+const RPE_META = {
+  6:{e:'😎', t:'легко',   d:'мог бы сделать ещё 4+ повтора', c:'#2fa96b'},
+  7:{e:'💪', t:'уверенно',d:'ещё ~3 повтора в запасе',       c:'#7cb342'},
+  8:{e:'😤', t:'тяжело',  d:'оставалось ~2 повтора',          c:'#e8a13c'},
+  9:{e:'🥵', t:'предел',  d:'оставался 1 повтор',             c:'#e87b3c'},
+  10:{e:'🧨', t:'отказ',  d:'ещё один не сделал бы',          c:'#d45555'},
+};
 const HELP = {
   ton: {t:'Что такое тоннаж', b:'<p><b>Тоннаж</b> — сколько ты всего поднял: вес × повторы, суммой по всем подходам. Пример: 40 кг × 8 повторов × 3 подхода = 960 кг.</p><p>Это главная метрика объёма работы. Растёт тоннаж при тех же ощущениях — значит, ты реально становишься сильнее, даже если вес на штанге пока тот же (за счёт повторов и подходов).</p>'},
+  anchor: {t:'Якорь силы', b:'<p><b>Якорь</b> — главное упражнение тренировочного дня: жим лёжа в Push, тяга в Pull, жим ногами в Legs. По якорям приложение меряет твою силу.</p><p>Якорь не участвует в ротации: он один и тот же всю программу, чтобы прогрессия шла линейно и по нему было видно реальный рост. Именно якоря попадают в графики 1ПМ, стандарты силы и советы «пора добавить вес». Сменить якорь можно в настройке тренировок.</p>'},
+  cp: {t:'Чек-поинты', b:'<p><b>Чек-поинт</b> — контрольная точка веса каждые 4 недели: коридор, в котором ты должен оказаться, если программа работает.</p><p>Попал в коридор — идём дальше без изменений. Не попал — это не провал, а сигнал пересчитать калории: приложение подскажет, что подкрутить. Чек-поинты видны в таблице «по неделям» на вкладке «Вес».</p>'},
+  photos: {t:'Где хранятся фото', b:'<p>Фото прогресса хранятся <b>только на этом устройстве</b>, в памяти браузера — никуда не загружаются и не отправляются, никто кроме тебя их не видит.</p><p>Важно: они входят в резервную копию («Ещё → ⚙️ → Экспорт в файл»). Сделал экспорт — фото переедут вместе с данными на новое устройство. Без копии при чистке браузера они пропадут.</p>'},
   rpe: {t:'Тяжесть подхода (RPE)', b:`<p>После упражнения отметь, насколько тяжело зашло — по шкале от 6 до 10 (спортсмены зовут её <b>RPE</b>).</p>
+    <p><b>Почему с 6, а не с 1?</b> Всё, что легче шестёрки — разминочный уровень: на решения о весах он не влияет, поэтому в шкале его просто нет. Рабочий тренинг живёт в диапазоне 6–10 — его и меряем.</p>
     <div class="kv"><span><b>6</b></span><span>легко — мог бы сделать ещё 4+ повтора</span></div>
     <div class="kv"><span><b>7</b></span><span>уверенно — ещё 3 повтора в запасе</span></div>
     <div class="kv"><span><b>8</b></span><span>тяжело — ещё 2 повтора в запасе</span></div>
@@ -2069,8 +2111,14 @@ function header(title, sub){
 }
 function render(){
   drawTabs();
-  window.scrollTo(0,0); $('#view').scrollTop = 0;
+  // скролл сбрасываем только при СМЕНЕ экрана: отметил подход/воду — страница не прыгает вверх
+  const viewKey = tab + ':' + trainSelected + ':' + (tab==='more' ? moreSec : '') + ':' + (tab==='food' ? foodDate : '');
+  const sameView = window._viewKey === viewKey;
+  const keep = sameView ? $('#view').scrollTop : 0;
+  window._viewKey = viewKey;
   ({home:vHome, train:vTrain, weight:vWeight, food:vFood, more:vMore})[tab]();
+  if (sameView){ $('#view').scrollTop = keep; }
+  else { window.scrollTo(0,0); $('#view').scrollTop = 0; }
   gymApply();
 }
 /* — режим «в зале»: класс + wake lock пока открыта незавершённая тренировка — */
@@ -2436,8 +2484,12 @@ function vTrain(){
       `</div>
       <div class="rpe-row"><span class="rpe-lab">Тяжесть <button class="hbtn" onclick="helpDlg('rpe')">?</button></span>
       <div class="rpe grow" data-ex="${ex.ei}">` +
-        [[6,'легко'],[7,'норм'],[8,'тяжело'],[9,'предел'],[10,'отказ']].map(([v,lb])=>`<button class="${st.rpe[ex.ei]===v?'on':''}" onclick="setRPE(${s.id},${ex.ei},${v})"><b>${v}</b><i>${lb}</i></button>`).join('') +
+        [6,7,8,9,10].map(v=>{ const M = RPE_META[v]; const on = st.rpe[ex.ei]===v;
+          return `<button class="${on?'on':''}" style="${on?`background:${M.c};border-color:${M.c};box-shadow:0 4px 14px ${M.c}55`:''}" onclick="setRPE(${s.id},${ex.ei},${v})"><span class="re">${M.e}</span><b>${v}</b></button>`; }).join('') +
       `</div></div>
+      <div class="tiny rpe-cap" style="margin:5px 2px 0;${st.rpe[ex.ei]?`color:${RPE_META[st.rpe[ex.ei]].c};font-weight:700`:''}">${st.rpe[ex.ei]
+        ? `${st.rpe[ex.ei]} · ${RPE_META[st.rpe[ex.ei]].t} — ${RPE_META[st.rpe[ex.ei]].d}`
+        : 'как зашёл последний подход? от 😎 «легко» до 🧨 «отказ»'}</div>
       ${coachRPE(s, ex, st)}
     </div>`;
   });
@@ -2504,7 +2556,7 @@ function e1chart(arr){
   </svg>`;
 }
 function vStrength(){
-  header('Сила', 'расчётный максимум · рекорды · стандарты');
+  header('Сила', 'твой расчётный максимум и как он растёт от недели к неделе');
   const data = strengthData();
   const bw = lastWeight() ? lastWeight().v : PROF.startWeight;
   let h = `<button class="btn ghost" onclick="trainSelected=null;render()">← Все тренировки</button>`;
@@ -2557,7 +2609,7 @@ function vStrength(){
 }
 function trainList(){
   const skippedList = SESSIONS.filter(s=>DB.skips[s.id] && !DB.sessions[s.id]?.done);
-  header('Тренировки', SESSIONS.length+' '+ruPl(SESSIONS.length,'тренировка','тренировки','тренировок')+' за '+WEEKS()+' '+ruPl(WEEKS(),'неделю','недели','недель')+' · очередь важнее дат');
+  header('Тренировки', SESSIONS.length+' '+ruPl(SESSIONS.length,'тренировка','тренировки','тренировок')+' на '+WEEKS()+' '+ruPl(WEEKS(),'неделю','недели','недель')+'. Пропустил день — просто делай следующую по списку');
   const next = nextSession();
   let h = `<button class="btn sec full" style="margin-bottom:4px" onclick="trainSelected='str';render()">💪 Сила: графики, рекорды и стандарты</button>`;
   let shown = 0;
@@ -3572,7 +3624,7 @@ function photosCard(){
         <div class="tiny" style="margin-top:2px">${fmtD(fromKey(k))}</div></div>`).join('') + `</div>`
     : `<div class="small">Раз в 2–4 недели, в одном месте, освещении и позе. Теперь три ракурса — спереди, сбоку, сзади: со спины прогресс часто виден раньше всего. Фото сжимаются и хранятся в приложении.</div>`;
   const baCandidate = PH_ANGLES.map(x=>x[0]).find(a => keys.filter(k => phGet(k,a)).length >= 2);
-  return `<div class="card"><h3>Фото прогресса</h3>${strip}
+  return `<div class="card"><h3>Фото прогресса <button class="hbtn" onclick="helpDlg('photos')">?</button></h3>${strip}
     <div class="row" style="gap:8px;margin-top:10px">${PH_ANGLES.map(([a,l]) =>
       `<button class="btn sec sm grow" onclick="photoAdd('${a}')">📷 ${l}${phGet(key(today()),a)?' ✓':''}</button>`).join('')}</div>
     ${baCandidate ? `<button class="btn sec full" style="margin-top:8px" onclick="beforeAfterPng('${baCandidate}')">Скачать «до/после» · PNG</button>` : ''}
@@ -4358,7 +4410,7 @@ function beep(){
 /* ============ 9. ЭКРАН «ВЕС» ============ */
 let chartMode = 'all';
 function vWeight(){
-  header('Вес и прогресс', 'решения — только по средней за неделю');
+  header('Вес и прогресс', 'смотри на среднее за неделю, а не на утренние качели');
   const lw = lastWeight(), d = today();
   const a7 = avg7(DB.weights, d);
   let h = `<div class="hero">
@@ -4396,7 +4448,7 @@ function vWeight(){
       <td class="num ${cls}">${dtxt}</td><td class="num c-mut">${TARGETS[w].toFixed(1)}</td>
       <td class="num" onclick="askWaist(${w})" style="cursor:pointer">${DB.waist[w]!=null?DB.waist[w]+'':'<span class=c-mut>+</span>'}</td></tr>`;
   }
-  h += `<div class="card"><h3>По неделям</h3><table>
+  h += `<div class="card"><h3>По неделям <button class="hbtn" onclick="helpDlg('cp')">?</button></h3><table>
     <tr><th>Нед</th><th class="num">Средний</th><th class="num">Δ</th><th class="num">План</th><th class="num">Талия</th></tr>
     ${rows}</table>
     <div class="week-note">Δ: зелёный — идеальный темп (−0,5…−1,6) · оранжевый — медленно · красный — слишком быстро. Талию меряй по воскресеньям, тап по ячейке.</div></div>`;
@@ -4452,10 +4504,10 @@ function healthCard(){
     <button class="${_hlTab==='note'?'on':''}" onclick="hlTab('note')">Заметка</button></div>`;
   let form = '', chart = '', hint = '';
   if (_hlTab === 'bp'){
-    form = `<div class="row" style="gap:8px;margin-top:10px">
-      <input id="hl-s" type="number" inputmode="numeric" placeholder="верхнее" value="${tv.s||''}" style="text-align:center;min-width:0">
-      <input id="hl-d" type="number" inputmode="numeric" placeholder="нижнее" value="${tv.d||''}" style="text-align:center;min-width:0">
-      <input id="hl-p" type="number" inputmode="numeric" placeholder="пульс" value="${tv.p||''}" style="text-align:center;min-width:0">
+    form = `<div class="row" style="gap:8px;margin-top:10px;align-items:flex-end">
+      <div class="grow" style="min-width:0"><div class="tiny" style="margin:0 2px 3px">верхнее</div><input id="hl-s" type="number" inputmode="numeric" placeholder="120" value="${tv.s||''}" style="text-align:center;min-width:0"></div>
+      <div class="grow" style="min-width:0"><div class="tiny" style="margin:0 2px 3px">нижнее</div><input id="hl-d" type="number" inputmode="numeric" placeholder="80" value="${tv.d||''}" style="text-align:center;min-width:0"></div>
+      <div class="grow" style="min-width:0"><div class="tiny" style="margin:0 2px 3px">пульс</div><input id="hl-p" type="number" inputmode="numeric" placeholder="60" value="${tv.p||''}" style="text-align:center;min-width:0"></div>
       <button class="btn sm" style="flex:none" onclick="healthSave('bp')">OK</button></div>`;
     hint = 'Утром, сидя, после 5 минут покоя, до кофе.';
     const cs = ks.slice(-30).filter(k => isFinite(hs[k].s) && isFinite(hs[k].d));
@@ -4563,7 +4615,7 @@ function anchorInfo(t, ei){
 window.anchorDlg = function(){
   const anc = anchorsOf();
   const manual = PROF.anchors && PROF.anchors.mode==='manual';
-  openModal(`<h2>Якоря силы</h2>
+  openModal(`<h2>Якоря силы <button class="hbtn" onclick="helpDlg('anchor')">?</button></h2>
     <div class="small">По якорям строятся чек-поинты и советы прогрессии. «Авто» — сначала первое базовое каждого дня, а по мере записей — то, что ты делаешь чаще всего.</div>
     <div class="seg" style="margin-top:12px">
       <button class="${!manual?'on':''}" onclick="setAnchorsMode('auto')">Авто</button>
@@ -6560,9 +6612,9 @@ window.psNetPick = function(i){
   save();
   psPick(x.id, window._psMid || null);
 };
-window.psPick = function(id, mid){
+window.psPick = function(id, mid, src){
   const x = prodBy(id); if (!x) return;
-  window._psCtx = {id, mid};
+  window._psCtx = {id, mid, src};
   const g0 = x.unitG || 100;
   const chips = x.unitG
     ? [[x.unitG,'1 шт'],[x.unitG*2,'2 шт'],[x.unitG*3,'3 шт'],[100,'100 г'],[150,'150 г']]
@@ -6576,6 +6628,7 @@ window.psPick = function(id, mid){
       <button onclick="stepNum('ps-g',10);psCalc()">+</button></div>
     <div class="mods">${chips.map(c=>`<button class="chip" style="min-height:40px" onclick="document.getElementById('ps-g').value=${c[0]};psCalc()">${c[1]}</button>`).join('')}</div>
     <div id="ps-out" class="insight" style="margin-top:10px"><p style="margin:0"></p></div>
+    ${src==='scan' ? `<div class="tiny" style="margin-top:8px">Пока никуда не записано: продукт уже сохранён в твоей базе. «В дневник» добавит его в ${esc(((MEAL_DEF.find(m=>m.id===mid)||{}).n||'приём').toLowerCase())} и посчитает в съеденное — или просто закрой шторку.</div>` : ''}
     <div class="row" style="gap:8px;margin-top:10px">
       <button class="btn sec" onclick="modulesDlg('${mid}')">←</button>
       <button class="btn sec grow" style="flex:1" onclick="psAdd(true)">+ Ещё</button>
@@ -6627,8 +6680,37 @@ function bcHit(code){
   window._bcLast = code; window._bcLastT = now;
   try { if (navigator.vibrate) navigator.vibrate(80); } catch(e){}
   if ($('#bc-in')) $('#bc-in').value = code;
-  bcStop();
+  bcPause();          // камера живёт: если товар не найдётся — сканируем дальше без перезахода
   bcLookup(code);
+}
+/* пауза распознавания без остановки камеры — и обратно */
+function bcPause(){
+  clearTimeout(window._bcTmr);
+  try { if (window._bcReader) window._bcReader.reset(); } catch(e){}
+  window._bcReader = null;
+}
+function bcResume(){
+  window._bcLast = null; // тот же код можно пробовать сразу
+  const v = document.getElementById('bc-v');
+  if (window._bcStream && v && v.isConnected) bcLoop(v);
+  else if (document.getElementById('bc-video')) bcScan();
+}
+function bcLoop(v){
+  if ('BarcodeDetector' in window){
+    const det = window._bcDet || (window._bcDet = new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','code_128']}));
+    const loop = async () => {
+      if (!v.isConnected || !window._bcStream){ return; }
+      try { const codes = await det.detect(v); if (codes.length) return bcHit(codes[0].rawValue); } catch(e){}
+      window._bcTmr = setTimeout(loop, 260);
+    };
+    loop();
+  } else if (window.ZXing && window.ZXing.BrowserMultiFormatReader && window._bcStream){
+    try {
+      const reader = new window.ZXing.BrowserMultiFormatReader();
+      window._bcReader = reader;
+      reader.decodeFromStream(window._bcStream, v, res => { if (res) bcHit(res.getText()); });
+    } catch(e){}
+  }
 }
 window.bcTorch = async function(){
   try {
@@ -6691,7 +6773,9 @@ function bcNutr(nu, servG){
 function bcFail(msg){
   const out = $('#bc-out'); if (!out) return;
   out.innerHTML = `<div class="insight warn" style="margin-top:8px"><p style="margin:0">${msg}</p></div>
-    <button class="btn sec full sm" style="margin-top:8px" onclick="closeModal();foodCustom(window._bcMeal||null)">Внести вручную (КБЖУ с упаковки)</button>`;
+    <button class="btn sec full sm" style="margin-top:8px" onclick="closeModal();foodCustom(window._bcMeal||null)">Внести вручную (КБЖУ с упаковки)</button>
+    <div class="tiny" style="margin-top:6px">Камера снова сканирует — можно навести на другой товар.</div>`;
+  bcResume(); // не найден — продолжаем ловить следующий код без перезахода
 }
 window.bcLookup = async function(code){
   code = String(code || ($('#bc-in') ? $('#bc-in').value : '')).replace(/\D/g,'');
@@ -6700,7 +6784,7 @@ window.bcLookup = async function(code){
   const local = ING_BY['b'+code];
   if (local){
     closeModal(); bcStop();
-    psPick('b'+code, window._bcMeal || null);
+    psPick('b'+code, window._bcMeal || null, 'scan');
     toast('Нашёл в базе: ' + local[1]);
     return;
   }
@@ -6714,20 +6798,24 @@ window.bcLookup = async function(code){
       <div class="tiny" style="margin-top:2px">${cached.kcal} ккал · Б${cached.p} · Ж${cached.f} · У${cached.c} — на 100 г · уже в моих продуктах</div></div></div>
       <button class="btn full sm" style="margin-top:10px" onclick="bcSave()">Взвесить и в дневник</button></div>`;
     return; }
+  bcPause();
   const tok = (window._bcTok = (window._bcTok||0) + 1);   // защита от гонки двух запросов
-  out.innerHTML = '<div class="small" style="margin-top:8px">Ищу товар…</div>';
+  out.innerHTML = '<div class="small" style="margin-top:8px">Ищу товар… <span class="tiny">(до 10 секунд)</span></div>';
   let r = null, lastErr = null;
-  for (let att = 0; att < 3; att++){
+  for (let att = 0; att < 2; att++){
     try {
-      r = await fetch('https://world.openfoodfacts.org/api/v2/product/'+code+'.json?fields=product_name,product_name_ru,brands,nutriments,serving_quantity,quantity,image_front_small_url');
+      const ac = new AbortController();                    // мобильная сеть любит виснуть — обрубаем сами
+      const tmr = setTimeout(() => ac.abort(), 10000);
+      r = await fetch('https://world.openfoodfacts.org/api/v2/product/'+code+'.json?fields=product_name,product_name_ru,brands,nutriments,serving_quantity,quantity,image_front_small_url', {signal: ac.signal});
+      clearTimeout(tmr);
       lastErr = null;
       if (r.ok || r.status === 404) break;                 // 429/5xx — подождать и повторить
     } catch(e){ lastErr = e; }
     if (tok !== window._bcTok) return;
-    if (att < 2) await new Promise(res => setTimeout(res, 900*(att+1)));
+    if (att < 1) await new Promise(res => setTimeout(res, 900));
   }
   if (tok !== window._bcTok) return;
-  if (lastErr || !r){ bcFail('Нет сети. Штрихкод работает онлайн — а пока можно внести вручную.'); return; }
+  if (lastErr || !r){ bcFail('Сеть не ответила за 10 секунд. Попробуй ещё раз — или внеси вручную.'); return; }
   let j = null;
   try { j = await r.json(); } catch(e){ j = null; }
   if (tok !== window._bcTok) return;
@@ -6755,7 +6843,7 @@ window.bcSave = function(){
   DB.myProds = DB.myProds || [];
   if (!DB.myProds.some(m=>m.id===x.id)) DB.myProds.push(x);
   save(); bcStop();
-  psPick(x.id, window._bcMeal);
+  psPick(x.id, window._bcMeal, 'scan');
 };
 window.bcScan = async function(){
   const box = $('#bc-video'); if (!box) return;
@@ -6774,24 +6862,12 @@ window.bcScan = async function(){
     window._bcTrack = track; window._bcTorchOn = false;
     try { if (track.getCapabilities && track.getCapabilities().torch){ const tb = $('#bc-torch'); if (tb) tb.style.display = ''; } } catch(e){}
     if ('BarcodeDetector' in window){
-      const det = new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','code_128']});
-      const loop = async () => {
-        if (!v.isConnected){ bcStop(); return; }
-        try { const codes = await det.detect(v); if (codes.length) return bcHit(codes[0].rawValue); } catch(e){}
-        window._bcTmr = setTimeout(loop, 260);
-      };
-      v.onloadedmetadata = loop;
+      v.onloadedmetadata = () => bcLoop(v);
     } else {
       await bcLoadZXing();
       if (!v.isConnected) return;
       if (window.ZXing && window.ZXing.BrowserMultiFormatReader){
-        try {
-          const reader = new window.ZXing.BrowserMultiFormatReader();
-          window._bcReader = reader;
-          reader.decodeFromStream(stream, v, res => { if (res) bcHit(res.getText()); });
-        } catch(e){
-          box.insertAdjacentHTML('beforeend', '<div class="tiny" style="margin-top:6px">Автораспознавание не завелось — сфотографируй штрихкод или введи цифры.</div>');
-        }
+        bcLoop(v);
       } else {
         box.insertAdjacentHTML('beforeend', '<div class="tiny" style="margin-top:6px">В этом браузере нет автораспознавания — сфотографируй штрихкод (кнопка ниже) или введи цифры.</div>');
       }
@@ -7385,7 +7461,7 @@ window.weekToShop = function(){
 /* ============ 10. ЭКРАН «ЕДА» ============ */
 function vFood(){
   const k = foodDate, d = fromKey(k);
-  header('Питание', 'приёмы дня · рецепты из твоих продуктов');
+  header('Питание', 'записывай еду по приёмам — калории и белок считаются сами');
   const t = foodTotals(k);
   const kt = DB.kcalTarget, pt = DB.protTarget;
   const isFree = !!DB.freeMeals[k];
@@ -8719,7 +8795,7 @@ function coachCardHTML(){
     <div class="tiny" style="margin-top:8px">Обновляется каждый день по твоим записям за 7-14 дней.</div></div>` };
 }
 function vMore(){
-  header('Ещё', 'тренер · успехи · план · база · настройки');
+  header('Ещё', 'советы тренера · достижения · план программы · база знаний');
   const secs = [['insights','Тренер'],['wins','Успехи'],['plan','План'],['base','База'],['data','⚙️']];
   let h = `<div class="seg">` + secs.map(s=>`<button class="${moreSec===s[0]?'on':''}" onclick="moreSec='${s[0]}';render()">${s[1]}</button>`).join('') + `</div>`;
   if (moreSec==='insights'){
@@ -8837,7 +8913,7 @@ function vMore(){
       <button class="btn sec full" style="margin-top:10px" onclick="adjustDlg()">Настройка: уровень · травмы · разнообразие</button>
       <button class="btn sec full" style="margin-top:8px" onclick="tourDlg(0)">🧭 Показать тур по приложению</button>
       <button class="btn sec full" style="margin-top:8px" onclick="if(confirm('Пересоздать программу заново через анкету? Вес, еда и шаги сохранятся, а журнал тренировок и замены очистятся.')){DB.profile=null;DB.sessions={};DB.swaps={};DB.skips={};DB.dateOv={};save();location.reload();}">Пересоздать программу (анкета)</button></div>`;
-    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 6.9 (большая чистка: журнал ошибок прямо на устройстве и кнопка «отчёт разработчику» в ⚙️, дата еды больше не залипает во вчера у долго открытого приложения, звук таймера не умирает на iOS, склонения, оси графиков, десятки мелких заноз) · собрано для Егора и друзей · 26.08.2026. Фото — Free Exercise DB; нутриенты — USDA + Скурихин.</div>`;
+    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 7.0 (по твоему списку: скан больше не виснет и сканирует дальше после «не нашлось», страница не прыгает вверх при действиях, модалки закрываются свайпом вниз, «?» упражнений работает на iOS, новая шкала тяжести с эмодзи и подписью, инвентарь меняется в настройке, подписи и пояснения везде) · собрано для Егора и друзей · 26.08.2026. Фото — Free Exercise DB; нутриенты — USDA + Скурихин.</div>`;
   }
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }
@@ -9120,6 +9196,12 @@ window.adjustDlg = function(){
       <button data-i="knee" class="${inj.knee?'on':''}" onclick="this.classList.toggle('on')">Колени</button>
       <button data-i="back" class="${inj.back?'on':''}" onclick="this.classList.toggle('on')">Поясница</button>
       <button data-i="shoulder" class="${inj.shoulder?'on':''}" onclick="this.classList.toggle('on')">Плечи</button></div>
+    ${PROF.place==='home' ? `<div class="wlab" style="margin-top:10px">Инвентарь дома</div>
+    <div class="seg" id="adj-eq">
+      <button data-e="db" class="${PROF.equip&&PROF.equip.db?'on':''}" onclick="this.classList.toggle('on')">Гантели</button>
+      <button data-e="band" class="${PROF.equip&&PROF.equip.band?'on':''}" onclick="this.classList.toggle('on')">Резинка</button>
+      <button data-e="bar" class="${PROF.equip&&PROF.equip.bar?'on':''}" onclick="this.classList.toggle('on')">Турник</button></div>
+    <div class="tiny">Появилась резинка или гантели — отметь, программа тут же пересоберётся под инвентарь. На одну тренировку можно и без этого: кнопка ⇄ в упражнении, поиск по каталогу.</div>` : `<div class="tiny" style="margin-top:8px">Разовая замена под наличный инвентарь — кнопка ⇄ прямо в упражнении: «Только сегодня» не трогает программу.</div>`}
     <div class="wlab">Активность вне тренировок</div>
     <div class="seg" id="adj-act">
       <button data-a="low" class="${(PROF.activity||'mid')==='low'?'on':''}" onclick="adjAct(this)">Сидячая</button>
@@ -9142,6 +9224,11 @@ window.adjustSave = function(){
   const actChanged = act !== (PROF.activity||'mid');
   const gNew = document.querySelector('#adj-goal button.on')?.dataset.g || goalMode();
   const goalChanged = gNew !== goalMode();
+  if (document.getElementById('adj-eq')){
+    const eq = {};
+    document.querySelectorAll('#adj-eq button').forEach(b => eq[b.dataset.e] = b.classList.contains('on'));
+    PROF.equip = eq;
+  }
   PROF.inj = inj; PROF.activity = act;
   PROF.level = document.querySelector('#adj-lvl button.on')?.dataset.l || PROF.level || 'some';
   PROF.variety = document.querySelector('#adj-var button.on')?.dataset.v || PROF.variety || 'rotate';
@@ -9464,14 +9551,15 @@ window.tourDlg = function(i){
       ${i>0?`<button class="btn sec" onclick="tourDlg(${i-1})">←</button>`:`<button class="btn sec" onclick="DB.tourDone=1;save();closeModal()">Пропустить</button>`}
       <button class="btn grow" onclick="${i<TOUR.length-1?`tourDlg(${i+1})`:'DB.tourDone=1;save();closeModal()'}">${i<TOUR.length-1?'Дальше':'Погнали 🚀'}</button></div>`);
 };
-const APP_VER = '6.9';
+const APP_VER = '7.0';
 const WHATS_NEW = [
-  '💪 Экран «Сила»: графики 1ПМ, рекорды и стандарты силы под твой вес (кнопка над списком тренировок)',
-  '⏱ Таймер: уведомление при погасшем экране + запись следующего подхода прямо с экрана таймера',
-  '🔥 Режим «В зале» — крупные кнопки, негаснущий экран · 📱 ярлыки на иконке приложения',
-  '📥 Импорт шагов из CSV (Samsung Health / Google Takeout) — в «Ещё → ⚙️»',
-  '🛠 Большая чистка багов + журнал ошибок: поймал глюк — «Ещё → ⚙️ → Диагностика», кнопка отчёта, и я чиню точно',
-];
+  '📷 Скан еды больше не зависает: не нашёлся товар — камера продолжает сканировать, сеть ждём максимум 10 секунд',
+  '📌 Страница больше не прыгает вверх, когда отмечаешь подход или воду',
+  '👇 Любую шторку теперь можно закрыть свайпом вниз',
+  '😤 Новая шкала тяжести: эмодзи + цифра, под шкалой — что это значит. И объяснение, почему она с 6 до 10 (в «?»)',
+  '🍏 «?» у упражнений починен на iPhone; подписи в дневнике здоровья; понятные описания разделов в шапках',
+  '🎒 Инвентарь для дома теперь меняется на ходу: «Ещё → ⚙️ → Настройка программы»',
+]
 function whatsNewCheck(){
   if (!DB.profile) { DB.seenVer = APP_VER; save(); return; }
   if (DB.seenVer === APP_VER) return;

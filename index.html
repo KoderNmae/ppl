@@ -497,6 +497,7 @@ a{color:#6da7ec}
 .qbtn .ic, .swapbtn .ic{vertical-align:-3px}
 .qbtn *, .swapbtn *, .hbtn *{pointer-events:none}
 .rpe-row{display:flex; align-items:center; gap:10px; margin-top:10px}
+.rpe-row .grow{flex:1; min-width:0}
 .rpe-lab{font-size:12px; font-weight:800; letter-spacing:.06em; color:var(--muted); display:flex; align-items:center; gap:5px; flex:none}
 .hbtn{width:20px; height:20px; border-radius:50%; border:1.5px solid var(--border2); background:var(--card);
   color:var(--muted); font-size:11.5px; font-weight:800; line-height:1; cursor:pointer; padding:0}
@@ -530,6 +531,21 @@ a{color:#6da7ec}
 .rpe-row .rpe button .re{font-size:19px; line-height:1; pointer-events:none}
 .rpe-row .rpe button b{font-size:12.5px; line-height:1; pointer-events:none}
 .rpe-row .rpe button.on b{color:#fff}
+/* слайдер тяжести: одна широкая полоса, палец ведёшь где угодно */
+.rslider{position:relative; height:46px; touch-action:none; cursor:pointer; -webkit-user-select:none; user-select:none}
+.rslider .rtrack{position:absolute; left:0; right:0; top:9px; bottom:9px; border-radius:14px;
+  background:linear-gradient(90deg,#2fa96b,#7cb342 26%,#e8a13c 52%,#e87b3c 76%,#d45555); opacity:.30}
+.rslider .rmarks{position:absolute; left:23px; right:23px; top:0; bottom:0; display:flex; justify-content:space-between; align-items:center; pointer-events:none}
+.rslider .rmarks span{font-size:14px; opacity:.5; transform:translateY(-1px)}
+.rslider .rthumb{position:absolute; top:0; width:46px; height:46px; border-radius:15px; transform:translateX(-50%);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:0; pointer-events:none;
+  color:#fff; box-shadow:0 5px 16px rgba(0,0,0,.30); border:2.5px solid rgba(255,255,255,.75); transition:left .06s linear}
+.rslider .rthumb span{font-size:17px; line-height:1.05}
+.rslider .rthumb b{font-size:10.5px; line-height:1; color:#fff}
+html.gym .rslider{height:56px}
+html.gym .rslider .rtrack{top:11px; bottom:11px}
+html.gym .rslider .rthumb{height:56px; border-radius:17px}
+html.gym .rslider .rthumb span{font-size:20px}
 .coach{display:flex; gap:9px; align-items:flex-start; margin-top:9px; padding:9px 11px; border-radius:12px;
   background:var(--accent-soft, rgba(11,147,164,.07)); border:1px solid rgba(11,147,164,.18); font-size:13px; line-height:1.45}
 .coach .ic{flex:none; color:var(--accent2); margin-top:1px}
@@ -2483,13 +2499,14 @@ function vTrain(){
         ? `<button class="chip add" onclick="logSet(${s.id},${ex.ei},${(st.sets[ex.ei]||[]).length},${ex.rest},${sg.w||0})">+</button>` : '') +
       `</div>
       <div class="rpe-row"><span class="rpe-lab">Тяжесть <button class="hbtn" onclick="helpDlg('rpe')">?</button></span>
-      <div class="rpe grow" data-ex="${ex.ei}">` +
-        [6,7,8,9,10].map(v=>{ const M = RPE_META[v]; const on = st.rpe[ex.ei]===v;
-          return `<button class="${on?'on':''}" style="${on?`background:${M.c};border-color:${M.c};box-shadow:0 4px 14px ${M.c}55`:''}" onclick="setRPE(${s.id},${ex.ei},${v})"><span class="re">${M.e}</span><b>${v}</b></button>`; }).join('') +
-      `</div></div>
-      <div class="tiny rpe-cap" style="margin:5px 2px 0;${st.rpe[ex.ei]?`color:${RPE_META[st.rpe[ex.ei]].c};font-weight:700`:''}">${st.rpe[ex.ei]
-        ? `${st.rpe[ex.ei]} · ${RPE_META[st.rpe[ex.ei]].t} — ${RPE_META[st.rpe[ex.ei]].d}`
-        : 'как зашёл последний подход? от 😎 «легко» до 🧨 «отказ»'}</div>
+      <div class="rslider grow" data-cap="cap-${ex.ei}" onpointerdown="rpeStart(event,${s.id},${ex.ei})">
+        <div class="rtrack"></div>
+        <div class="rmarks">${[6,7,8,9,10].map(v=>`<span>${RPE_META[v].e}</span>`).join('')}</div>
+        ${st.rpe[ex.ei] ? `<div class="rthumb" style="left:calc(${(st.rpe[ex.ei]-6)/4} * (100% - 46px) + 23px);background:${RPE_META[st.rpe[ex.ei]].c}"><span>${RPE_META[st.rpe[ex.ei]].e}</span><b>${st.rpe[ex.ei]}</b></div>` : ''}
+      </div></div>
+      <div class="tiny rpe-cap" id="cap-${ex.ei}" style="margin:5px 2px 0;${st.rpe[ex.ei]?`color:${RPE_META[st.rpe[ex.ei]].c};font-weight:700`:''}">${st.rpe[ex.ei]
+        ? `${st.rpe[ex.ei]} · ${RPE_META[st.rpe[ex.ei]].t} — ${RPE_META[st.rpe[ex.ei]].d} <button class="hbtn" style="vertical-align:1px" onclick="setRPEval(${s.id},${ex.ei},null)">×</button>`
+        : 'проведи пальцем по шкале: 😎 легко → 🧨 отказ'}</div>
       ${coachRPE(s, ex, st)}
     </div>`;
   });
@@ -2644,6 +2661,53 @@ function sessRow(s, mark, hot, dim){
 }
 window.setRPE = function(sid, ei, v){
   const st = DB.sessions[sid]; st.rpe[ei] = st.rpe[ei]===v ? null : v; save(); render();
+};
+window.setRPEval = function(sid, ei, v){
+  const st = DB.sessions[sid]; if (!st) return;
+  st.rpe[ei] = v || null; save(); render();
+};
+/* слайдер тяжести: тап или ведение пальцем в ЛЮБОМ месте полосы — прицеливаться не нужно */
+window.rpeStart = function(ev, sid, ei){
+  ev.preventDefault();
+  const el = ev.currentTarget;
+  try{ el.setPointerCapture(ev.pointerId); }catch(e){}
+  const valAt = (clientX) => {
+    const r = el.getBoundingClientRect();
+    const frac = Math.min(1, Math.max(0, (clientX - r.left - 23) / Math.max(1, r.width - 46)));
+    return 6 + Math.round(frac * 4);
+  };
+  let cur = null;
+  const paint = (v) => {
+    if (v === cur) return;
+    cur = v;
+    const M = RPE_META[v];
+    let th = el.querySelector('.rthumb');
+    if (!th){
+      th = document.createElement('div'); th.className = 'rthumb';
+      th.innerHTML = '<span></span><b></b>'; el.appendChild(th);
+    }
+    th.style.left = 'calc(' + ((v-6)/4) + ' * (100% - 46px) + 23px)';
+    th.style.background = M.c;
+    th.querySelector('span').textContent = M.e;
+    th.querySelector('b').textContent = v;
+    const cap = document.getElementById(el.dataset.cap);
+    if (cap){
+      cap.style.color = M.c; cap.style.fontWeight = '700';
+      cap.textContent = v + ' · ' + M.t + ' — ' + M.d;
+    }
+    try{ if (navigator.vibrate) navigator.vibrate(8); }catch(e){}
+  };
+  paint(valAt(ev.clientX));
+  const mv = e2 => paint(valAt(e2.clientX));
+  const up = () => {
+    el.removeEventListener('pointermove', mv);
+    el.removeEventListener('pointerup', up);
+    el.removeEventListener('pointercancel', up);
+    if (cur != null) setRPEval(sid, ei, cur);
+  };
+  el.addEventListener('pointermove', mv);
+  el.addEventListener('pointerup', up);
+  el.addEventListener('pointercancel', up);
 };
 window.scrollToEx = function(ei){
   const el = document.getElementById('ex-'+ei);
@@ -8913,7 +8977,7 @@ function vMore(){
       <button class="btn sec full" style="margin-top:10px" onclick="adjustDlg()">Настройка: уровень · травмы · разнообразие</button>
       <button class="btn sec full" style="margin-top:8px" onclick="tourDlg(0)">🧭 Показать тур по приложению</button>
       <button class="btn sec full" style="margin-top:8px" onclick="if(confirm('Пересоздать программу заново через анкету? Вес, еда и шаги сохранятся, а журнал тренировок и замены очистятся.')){DB.profile=null;DB.sessions={};DB.swaps={};DB.skips={};DB.dateOv={};save();location.reload();}">Пересоздать программу (анкета)</button></div>`;
-    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 7.0 (по твоему списку: скан больше не виснет и сканирует дальше после «не нашлось», страница не прыгает вверх при действиях, модалки закрываются свайпом вниз, «?» упражнений работает на iOS, новая шкала тяжести с эмодзи и подписью, инвентарь меняется в настройке, подписи и пояснения везде) · собрано для Егора и друзей · 26.08.2026. Фото — Free Exercise DB; нутриенты — USDA + Скурихин.</div>`;
+    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 7.1 (шкала тяжести — слайдер: одна полоса-градиент, ведёшь пальцем где угодно без прицеливания, бегунок с эмодзи следует за пальцем, лёгкая вибрация на ступенях; плюс всё из 7.0 — скан не виснет, страница не прыгает, свайпы, iOS-фиксы) · собрано для Егора и друзей · 26.08.2026. Фото — Free Exercise DB; нутриенты — USDA + Скурихин.</div>`;
   }
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }
@@ -9551,12 +9615,12 @@ window.tourDlg = function(i){
       ${i>0?`<button class="btn sec" onclick="tourDlg(${i-1})">←</button>`:`<button class="btn sec" onclick="DB.tourDone=1;save();closeModal()">Пропустить</button>`}
       <button class="btn grow" onclick="${i<TOUR.length-1?`tourDlg(${i+1})`:'DB.tourDone=1;save();closeModal()'}">${i<TOUR.length-1?'Дальше':'Погнали 🚀'}</button></div>`);
 };
-const APP_VER = '7.0';
+const APP_VER = '7.1';
 const WHATS_NEW = [
   '📷 Скан еды больше не зависает: не нашёлся товар — камера продолжает сканировать, сеть ждём максимум 10 секунд',
   '📌 Страница больше не прыгает вверх, когда отмечаешь подход или воду',
   '👇 Любую шторку теперь можно закрыть свайпом вниз',
-  '😤 Новая шкала тяжести: эмодзи + цифра, под шкалой — что это значит. И объяснение, почему она с 6 до 10 (в «?»)',
+  '😤 Шкала тяжести — теперь слайдер: проведи пальцем по полосе, прицеливаться не нужно. Бегунок с эмодзи, подпись и вибрация по ступеням',
   '🍏 «?» у упражнений починен на iPhone; подписи в дневнике здоровья; понятные описания разделов в шапках',
   '🎒 Инвентарь для дома теперь меняется на ходу: «Ещё → ⚙️ → Настройка программы»',
 ]

@@ -3828,6 +3828,7 @@ window.saveSet = function(sid, ei, si, rest){
   (st.vars = st.vars || {})[ei] = variantOf(sid, ei).idx;
   save(); closeModal(); render();
   themeSfx('set');
+  try{ if (navigator.vibrate) navigator.vibrate(35); }catch(e){}   // лёгкий тактильный отклик на «Готово»
   const s = SESSIONS[sid];
   const ex = s.exs.find(e=>e.ei===ei);
   if (w != null && isFinite(w)){
@@ -5063,7 +5064,11 @@ function themeSfx(kind){
   try{
     if (!_audioCtx) _audioCtx = new (window.AudioContext||window.webkitAudioContext)();
     const ctx = _audioCtx;
-    if (ctx.state === 'suspended') ctx.resume().catch(()=>{});
+    if (ctx.state === 'suspended'){
+      // сыграть сразу после разблокировки; темам без своего звука — бип
+      ctx.resume().then(() => { if (!themeSfx(kind)) beep(); }).catch(()=>{});
+      return true;
+    }
     const t0 = ctx.currentTime;
     const tone = (type, f0, f1, at, dur, g0, filt) => {
       const o = ctx.createOscillator(), g = ctx.createGain();
@@ -5214,11 +5219,38 @@ window.nudgeTimer = function(ds){
 $('#timer-x').onclick = stopTimer;
 $('#timer-plus').onclick = () => { nudgeTimer(30); };
 let _audioCtx = null; // один контекст на всё приложение: iOS убивает звук после 4-6 созданных
+// первое касание экрана «греет» аудио: браузер держит звук выключенным, пока не было жеста,
+// а сигнал конца отдыха приходит из таймера — без прогрева он молчал бы
+function audioWarm(){
+  try{
+    if (!_audioCtx) _audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    if (_audioCtx.state === 'running') return;
+    _audioCtx.resume().catch(()=>{});
+    const b = _audioCtx.createBuffer(1, 1, 22050);
+    const s = _audioCtx.createBufferSource(); s.buffer = b; s.connect(_audioCtx.destination); s.start(0);
+  }catch(e){}
+}
+document.addEventListener('pointerdown', audioWarm, {capture:true, passive:true});
+document.addEventListener('touchend', audioWarm, {capture:true, passive:true});
+document.addEventListener('visibilitychange', () => {
+  try{ if (!document.hidden && _audioCtx && _audioCtx.state === 'suspended') _audioCtx.resume().catch(()=>{}); }catch(e){}
+});
+// кнопка в Диагностике: послушать сигнал своей темы и убедиться, что звук вообще разрешён
+window.sfxTest = function(){
+  audioWarm();
+  const played = themeSfx('rest');
+  if (!played) beep();
+  setTimeout(() => {
+    const st = _audioCtx && _audioCtx.state;
+    if (st !== 'running') toast('⚠️ Система блокирует звук: проверь беззвучный режим и громкость медиа');
+    else toast(played ? '🔊 Так звучит конец отдыха в твоей теме' : '🔊 У этой темы пока стандартный бип');
+  }, 80);
+};
 function beep(){
   try{
     if (!_audioCtx) _audioCtx = new (window.AudioContext||window.webkitAudioContext)();
     const ctx = _audioCtx;
-    if (ctx.state === 'suspended') ctx.resume().catch(()=>{});
+    if (ctx.state === 'suspended'){ ctx.resume().then(() => beep()).catch(()=>{}); return; }
     [0,.22,.44].forEach(t => {
       const o = ctx.createOscillator(), g = ctx.createGain();
       o.frequency.value = 880; o.connect(g); g.connect(ctx.destination);
@@ -9729,6 +9761,7 @@ function vMore(){
       <div class="small" style="margin-bottom:8px">Приложение записывает свои ошибки прямо на устройстве. Поймал баг — жми кнопку и пришли отчёт мне в чат: починю не вслепую, а точно.</div>
       <button class="btn sec full" onclick="diagCopy()">📋 Скопировать отчёт для разработчика</button>
       <button class="btn ghost full" style="margin-top:6px" onclick="forceUpdate()">🔄 Проверить обновления и перезапустить</button>
+      <button class="btn ghost full" style="margin-top:6px" onclick="sfxTest()">🔊 Проверить звук темы</button>
       ${errN?`<button class="btn ghost full sm" style="margin-top:6px" onclick="if(confirm('Очистить журнал ошибок?')){_errclear();render();}">Очистить журнал</button>`:''}</div>`;
     h += `<div class="card"><h3>Опасная зона</h3>
       <button class="btn danger full" onclick="if(confirm('Точно стереть все записи? Экспорт сделал?')){DB=defaultDB();save();location.reload();}">Стереть все данные</button></div>`;
@@ -9738,7 +9771,7 @@ function vMore(){
       <button class="btn sec full" style="margin-top:10px" onclick="adjustDlg()">Настройка: уровень · травмы · разнообразие</button>
       <button class="btn sec full" style="margin-top:8px" onclick="tourDlg(0)">🧭 Показать тур по приложению</button>
       <button class="btn sec full" style="margin-top:8px" onclick="if(confirm('Пересоздать программу заново через анкету? Вес, еда и шаги сохранятся, а журнал тренировок и замены очистятся.')){DB.profile=null;DB.sessions={};DB.swaps={};DB.skips={};DB.dateOv={};save();location.reload();}">Пересоздать программу (анкета)</button></div>`;
-    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 8.0.1 (темы обрели голос; «Что нового» больше не пропадает из-за автообновления) · собрано для Егора и друзей · 27.08.2026. Фото — Free Exercise DB; нутриенты — USDA + Скурихин.</div>`;
+    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 8.0.2 (звук тем починен: прогрев аудио первым касанием + кнопка проверки звука) · собрано для Егора и друзей · 27.08.2026. Фото — Free Exercise DB; нутриенты — USDA + Скурихин.</div>`;
   }
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }
@@ -10413,9 +10446,12 @@ window.tourDlg = function(i){
       ${i>0?`<button class="btn sec" onclick="tourDlg(${i-1})">←</button>`:`<button class="btn sec" onclick="DB.tourDone=1;save();closeModal()">Пропустить</button>`}
       <button class="btn grow" onclick="${i<TOUR.length-1?`tourDlg(${i+1})`:'DB.tourDone=1;save();closeModal()'}">${i<TOUR.length-1?'Дальше':'Погнали 🚀'}</button></div>`);
 };
-const APP_VER = '8.0.1';
+const APP_VER = '8.0.2';
 const WHATS_NEW = [
-  '📌 Починено: окно «Что нового» больше не исчезает само — обновление вежливо ждёт, пока дочитаешь',
+  '🔊 Звук теперь реально слышно: телефон «разогревает» аудио при первом касании — раньше система глушила сигнал конца отдыха. Где звучит: кнопка «Готово» при записи подхода, конец таймера отдыха, финиш тренировки',
+  '🎚 Проверка на месте: ⚙️ Ещё → Данные → «🔊 Проверить звук темы» — послушай сигнал своей темы и узнай, не блокирует ли его система (беззвучный режим!)',
+  '📳 Лёгкая вибрация при записи подхода — чувствуешь отклик даже в шумном зале',
+  '📌 Из 8.0.1: окно «Что нового» больше не исчезает само — обновление вежливо ждёт, пока дочитаешь',
   '🎬 Темы заговорили и зазвучали: кнопка старта, отдых и финиш — в характере темы. В «Саге» гипердвигатель заряжается и «Да пребудет сила», в «Вулкане» отдых копит магму и взрывается ИЗВЕРЖЕНИЕМ, в «Токио» ждёшь следующий поезд',
   '🔊 Свой звук у каждой темы: гул меча, горн Героев, колокольчик Магии, радиопипы Орбиты, гром Шторма, пузыри Глубины, мотор Оникса — на запись подхода и конец отдыха',
   '⚔️ Напоминание из 7.9: шкала тяжести в «Саге» — световой меч, меняющий цвет; тематические шкалы у всех тем; пролетающие гости',

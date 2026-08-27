@@ -1,5 +1,5 @@
 // офлайн-кэш: приложение открывается в зале даже без сети
-const C = 'ppl-v74';
+const C = 'ppl-v75';
 const BG = 'ppl-bg1';   // фоны тем: вечный кэш, переживает обновления версий
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(C).then(c => c.addAll(['./', './index.html'])).then(() => self.skipWaiting()));

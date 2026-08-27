@@ -9513,6 +9513,7 @@ function vMore(){
     h += `<div class="card"><h3>Диагностика ${errN?`· <span class="c-warn">${errN} ошиб${errN===1?'ка':errN<5?'ки':'ок'}</span>`:'· чисто ✅'}</h3>
       <div class="small" style="margin-bottom:8px">Приложение записывает свои ошибки прямо на устройстве. Поймал баг — жми кнопку и пришли отчёт мне в чат: починю не вслепую, а точно.</div>
       <button class="btn sec full" onclick="diagCopy()">📋 Скопировать отчёт для разработчика</button>
+      <button class="btn ghost full" style="margin-top:6px" onclick="forceUpdate()">🔄 Проверить обновления и перезапустить</button>
       ${errN?`<button class="btn ghost full sm" style="margin-top:6px" onclick="if(confirm('Очистить журнал ошибок?')){_errclear();render();}">Очистить журнал</button>`:''}</div>`;
     h += `<div class="card"><h3>Опасная зона</h3>
       <button class="btn danger full" onclick="if(confirm('Точно стереть все записи? Экспорт сделал?')){DB=defaultDB();save();location.reload();}">Стереть все данные</button></div>`;
@@ -9522,7 +9523,7 @@ function vMore(){
       <button class="btn sec full" style="margin-top:10px" onclick="adjustDlg()">Настройка: уровень · травмы · разнообразие</button>
       <button class="btn sec full" style="margin-top:8px" onclick="tourDlg(0)">🧭 Показать тур по приложению</button>
       <button class="btn sec full" style="margin-top:8px" onclick="if(confirm('Пересоздать программу заново через анкету? Вес, еда и шаги сохранятся, а журнал тренировок и замены очистятся.')){DB.profile=null;DB.sessions={};DB.swaps={};DB.skips={};DB.dateOv={};save();location.reload();}">Пересоздать программу (анкета)</button></div>`;
-    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 7.7 (у каждой темы свой характер: фирменные эффекты, тематические имена достижений, Феникс, сезонные фоны) · собрано для Егора и друзей · 27.08.2026. Фото — Free Exercise DB; нутриенты — USDA + Скурихин.</div>`;
+    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 7.8 (крейсер в «Саге», самообновление по version.json, фирменные эффекты тем и сезонные фоны) · собрано для Егора и друзей · 27.08.2026. Фото — Free Exercise DB; нутриенты — USDA + Скурихин.</div>`;
   }
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }
@@ -9674,6 +9675,40 @@ if ('serviceWorker' in navigator && location.protocol==='https:'){
     setTimeout(() => location.reload(), 600);
   });
 }
+/* — железное обновление: крошечный version.json проверяется при каждом выходе на экран — */
+window.forceUpdate = async function(){
+  toast('🔄 Обновляю приложение…');
+  try{
+    if ('serviceWorker' in navigator){
+      const regs = await navigator.serviceWorker.getRegistrations();
+      for (const rg of regs){ try{ await rg.update(); }catch(e){} }
+    }
+    if (window.caches){
+      const ks = await caches.keys();
+      for (const k of ks){ if (k !== 'ppl-bg1'){ try{ await caches.delete(k); }catch(e){} } }
+    }
+  }catch(e){}
+  setTimeout(() => location.reload(), 900);
+};
+async function updCheck(){
+  try{
+    if (location.protocol !== 'https:') return;
+    const r = await fetch('version.json?t=' + Date.now(), {cache:'no-store'});
+    if (!r.ok) return;
+    const j = await r.json();
+    if (!j.v || j.v === APP_VER || window._updSeen === j.v) return;
+    // не дёргаем посреди дела: открыта шторка или идёт таймер отдыха — отложим до следующего раза
+    const busy = document.getElementById('modal-wrap')?.classList.contains('show') || document.getElementById('timerbar')?.classList.contains('show');
+    if (busy) return;
+    window._updSeen = j.v;
+    toast('✨ Вышла версия ' + j.v + ' — обновляю…');
+    setTimeout(forceUpdate, 700);
+  }catch(e){}
+}
+try{
+  updCheck();
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') updCheck(); });
+}catch(e){}
 
 
 /* ---- донастройка профиля без пересоздания ---- */
@@ -10160,13 +10195,11 @@ window.tourDlg = function(i){
       ${i>0?`<button class="btn sec" onclick="tourDlg(${i-1})">←</button>`:`<button class="btn sec" onclick="DB.tourDone=1;save();closeModal()">Пропустить</button>`}
       <button class="btn grow" onclick="${i<TOUR.length-1?`tourDlg(${i+1})`:'DB.tourDone=1;save();closeModal()'}">${i<TOUR.length-1?'Дальше':'Погнали 🚀'}</button></div>`);
 };
-const APP_VER = '7.7';
+const APP_VER = '7.8';
 const WHATS_NEW = [
-  '🎭 У каждой темы — свой характер: световые мечи в «Саге», HUD-сетка в «Орбите», золотые рамки в «Героях», парящие огоньки в «Магии», неоновая вывеска 東京, молния в «Шторме», пузырьки в «Глубине», снег на «Вершине», хром и фары в «Ониксе», дуо-кнопки у «Совы»…',
-  '🏅 Достижения теперь говорят на языке темы: «Ранняя пташка» в «Героях» — «Огненная птица», в «Орбите» — «Сверхновая». Достижение одно, открывается везде сразу',
-  '🐦‍🔥 Новая тема-трофей «Феникс» — вернись к тренировкам после перерыва в 2+ недели',
-  '❄️ Сезонные фоны: зимой Герои, Лес, Озеро и Токио сами переоденутся в снег',
-  '👀 Читаемость: полоса упражнений в тренировке получила плотную подложку, подписи стали контрастнее',
+  '🚀 «Сага»: на фоне теперь дрейфует боевой крейсер',
+  '🔄 Обновления доходят сами: приложение сверяет версию при каждом открытии и обновляется в одно касание (кнопка — в «Ещё → ⚙️ → Диагностика»)',
+  '🎭 Напоминание: у каждой темы свой характер — эффекты, тематические имена достижений, Феникс за возвращение, зимние фоны с 1 декабря',
 ]
 function whatsNewCheck(){
   if (!DB.profile) { DB.seenVer = APP_VER; save(); return; }

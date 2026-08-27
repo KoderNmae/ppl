@@ -349,12 +349,12 @@ html[data-theme=castle]{
   --modalbg:#251638; --modalgrip:rgba(255,255,255,.16); --tbar:rgba(37,22,56,.94);
 }
 html[data-theme=saber]{
-  --bg:#0a0e1a; --card:rgba(120,180,255,.06); --card2:rgba(120,180,255,.11);
-  --border:rgba(120,180,255,.14); --border2:rgba(120,180,255,.25);
-  --text:#e8f0fa; --text2:#aabdd6; --muted:#71829c;
-  --accent:#4da6ff; --accent2:#7ac2ff; --accent-dim:#1e4a78;
-  --grad:linear-gradient(135deg,#2d7de0 0%,#7ac2ff 100%);
-  --push:#ff8a5f; --pull:#4da6ff; --legs:#4bcd9b;
+  --bg:#0a0e1a; --card:rgba(255,232,31,.05); --card2:rgba(255,232,31,.1);
+  --border:rgba(255,232,31,.16); --border2:rgba(255,232,31,.28);
+  --text:#f2f0dc; --text2:#c4c0a0; --muted:#8c8870;
+  --accent:#ffe81f; --accent2:#ffd75e; --accent-dim:#6e6210;
+  --grad:linear-gradient(135deg,#e8c11c 0%,#ffe81f 100%);
+  --push:#ff5a4a; --pull:#4da6ff; --legs:#4bcd9b;
   --good:#4bcd9b; --warn:#f2b53d; --bad:#ff5a5a;
   --shadow:0 14px 34px rgba(0,0,0,.6); --ringtrack:rgba(120,180,255,.1); --fig:#dde8f6; --glassbr:rgba(120,180,255,.14);
   --modalbg:#101828; --modalgrip:rgba(255,255,255,.16); --tbar:rgba(16,24,40,.94);
@@ -655,8 +655,8 @@ html[data-theme=phoenix] header h1::after{content:' 🐦‍🔥'; font-size:.8em
 @keyframes saberPulse{0%,100%{opacity:.7}50%{opacity:1}}
 html[data-theme=saber] body::after{content:''; position:fixed; inset:0; z-index:-1; pointer-events:none;
   background:
-    linear-gradient(90deg, rgba(77,140,255,.5) 0, rgba(77,140,255,.16) 5px, transparent 26px),
-    linear-gradient(270deg, rgba(255,58,48,.5) 0, rgba(255,58,48,.16) 5px, transparent 26px);
+    linear-gradient(90deg, rgba(77,140,255,.9) 0, rgba(77,140,255,.4) 4px, rgba(77,140,255,.12) 12px, transparent 38px),
+    linear-gradient(270deg, rgba(255,58,48,.9) 0, rgba(255,58,48,.4) 4px, rgba(255,58,48,.12) 12px, transparent 38px);
   animation:saberPulse 3.4s ease-in-out infinite}
 html[data-theme=saber]{--grad:linear-gradient(135deg,#e8c11c 0%,#ffe81f 100%)}
 html[data-theme=saber] .btn:not(.sec):not(.ghost):not(.danger){color:#181400}
@@ -667,7 +667,7 @@ html[data-theme=orbit] body::after{content:''; position:fixed; inset:0; z-index:
     repeating-linear-gradient(90deg, rgba(90,160,255,.05) 0 1px, transparent 1px 54px),
     radial-gradient(130% 96% at 50% 46%, transparent 58%, rgba(2,6,14,.6) 100%)}
 /* ── Герои: золотое тиснение рамок, геральдика ── */
-html[data-theme=castle] .card, html[data-theme=castle] .tile{border:1px solid rgba(222,178,74,.5);
+html[data-theme=castle] .card, html[data-theme=castle] .tile, html[data-theme=castle] .insight{border:1px solid rgba(222,178,74,.5);
   box-shadow:0 0 0 3px rgba(24,14,42,.55), 0 0 0 4px rgba(222,178,74,.3), 0 14px 34px rgba(0,0,0,.5)}
 html[data-theme=castle] h3{color:#e8c15a; letter-spacing:.7px}
 html[data-theme=castle] body::after{content:''; position:fixed; inset:0; z-index:-1; pointer-events:none;
@@ -1050,8 +1050,8 @@ html[data-theme=dark] .coach{background:rgba(46,198,209,.08); border-color:rgba(
 .sto .ring{display:block; width:58px; height:58px; margin:0 auto; border-radius:50%; padding:2.5px;
   background:conic-gradient(from 210deg, var(--accent), var(--accent2), var(--accent-dim), var(--accent))}
 .sto.seen .ring{background:var(--border2)}
-.sto .inn{width:100%; height:100%; border-radius:50%; background:var(--card); display:grid; place-items:center; font-size:22px; border:2.5px solid var(--bg)}
-.sto .lb{display:block; font-size:10px; color:var(--muted); font-weight:700; margin-top:4px; line-height:1.15; height:23px; overflow:hidden}
+.sto .inn{width:100%; height:100%; border-radius:50%; background:var(--bg); display:grid; place-items:center; font-size:22px; border:2.5px solid var(--bg)}
+.sto .lb{display:block; font-size:10px; color:var(--text2); font-weight:800; margin-top:4px; line-height:1.15; height:23px; overflow:hidden; text-shadow:0 1px 6px var(--bg), 0 0 12px var(--bg)}
 #story-view{position:fixed; inset:0; z-index:130; background:#0d1517; display:none; flex-direction:column; color:#eef6f6}
 #story-view.show{display:flex}
 #story-bars{display:flex; gap:5px; padding:calc(10px + env(safe-area-inset-top)) 12px 8px}
@@ -10362,7 +10362,7 @@ function themeAllowed(t){
   return true;
 }
 /* сезонные вариации фонов: зимой часть тем переодевается сама */
-const SEASONAL_BG = { winter: ['castle','forest','lake','tokyo'] };   // bg-<тема>-winter.jpg
+const SEASONAL_BG = { winter: ['castle','forest','lake','tokyo','orbit','saber','deep','midnight'] };   // bg-<тема>-winter.jpg
 function seasonNow(){ const m = today().getMonth()+1; return (m===12||m<=2) ? 'winter' : m<=5 ? 'spring' : m<=8 ? 'summer' : 'autumn'; }
 function applySeasonalBg(){
   const rs = document.documentElement.style;

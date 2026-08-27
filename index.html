@@ -1240,11 +1240,12 @@ html.gym .exhint, html.gym .exhist{font-size:14px}
 </div>
 <div id="rest-full">
   <button id="rest-close" onclick="closeRestFull()">⌄</button>
+  <div id="rest-flavor" style="font-size:16px;font-weight:800;color:var(--accent);text-align:center;max-width:84%;margin-bottom:6px"></div>
   <div class="rlab" id="rest-full-l">отдых</div>
   <div id="rest-ring">
     <svg viewBox="0 0 200 200">
       <defs><linearGradient id="restgrad" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0" stop-color="#0b93a4"/><stop offset="1" stop-color="#2ec6d1"/></linearGradient></defs>
+        <stop offset="0" stop-color="var(--accent)"/><stop offset="1" stop-color="var(--accent2)"/></linearGradient></defs>
       <circle class="bgc" cx="100" cy="100" r="88"/>
       <circle class="fgc" id="rest-arc" cx="100" cy="100" r="88" stroke-dasharray="552.9" stroke-dashoffset="0"/>
     </svg>
@@ -2922,7 +2923,7 @@ function vHome(){
         <div class="exmeta" style="margin-top:6px">${ns.exs.length} упражнений · неделя ${ns.w}
         ${todayIs ? '· сегодня по плану' : overdue ? '· план был '+fmtD(nd)+' — просто делаешь следующую' : '· по плану '+fmtD(nd)}</div>
       </div>
-      <button class="btn" onclick="tab='train';trainSelected=${ns.id};render()">Начать</button></div>
+      <button class="btn" onclick="tab='train';trainSelected=${ns.id};render()">${(flavor()||{}).start||'Начать'}</button></div>
       <div class="row" style="gap:8px;margin-top:10px">
         <button class="btn sec sm" style="flex:1" onclick="event.stopPropagation();dateDlg(${ns.id})">Перенести</button>
         <button class="btn sec sm" style="flex:1" onclick="event.stopPropagation();skipDlg(${ns.id})">Пропустить</button></div>`;
@@ -3534,7 +3535,8 @@ let swapSel = 0;
 window.skipEx = function(sid, ei){
   const st = DB.sessions[sid] || (DB.sessions[sid] = {sets:{}, rpe:{}, note:''});
   (st.skipEx = st.skipEx || {})[ei] = 1;
-  save(); closeModal(); render(); toast('Пропущено — вернуть можно в карточке');
+  save(); closeModal(); render();
+  toast('Пропущено — вернуть можно в карточке');
 };
 window.unskipEx = function(sid, ei){
   const st = DB.sessions[sid];
@@ -3825,6 +3827,7 @@ window.saveSet = function(sid, ei, si, rest){
   if (failFl) st.sets[ei][si].fail = 1;
   (st.vars = st.vars || {})[ei] = variantOf(sid, ei).idx;
   save(); closeModal(); render();
+  themeSfx('set');
   const s = SESSIONS[sid];
   const ex = s.exs.find(e=>e.ei===ei);
   if (w != null && isFinite(w)){
@@ -3869,6 +3872,8 @@ window.finishSession = function(sid){
   const s = SESSIONS[sid];
   const tonnage = Object.values(st.sets).flat().filter(Boolean).reduce((a,x)=>a+(x.w||0)*x.r,0);
   trainSelected = null; render();
+  { const f = flavor(); if (f && f.fin) setTimeout(()=>toast(f.fin), 2600); }
+  themeSfx('rest');
   toast(typeLabel(s.type)+' готово: '+total+' '+ruPl(total,'подход','подхода','подходов')+(tonnage>0?', тоннаж '+Math.round(tonnage).toLocaleString('ru-RU')+' кг':'')+(st.dur?' · '+durTxt(st.dur):''));
 };
 /* --- разминка, блины, прогресс упражнения --- */
@@ -5030,6 +5035,122 @@ window.shareWorkoutCard = function(sid){
 };
 /* ============ 8. ТАЙМЕР ОТДЫХА ============ */
 let timerEnd = null, timerTick = null, timerTotal = 0;
+/* ══ v8.0: характер темы — тексты и звуки ══ */
+const THEME_FLAVOR = {
+saber:{start:'Да пребудет сила', rest:'Гипердвигатель заряжается…', done:'Гипердвигатель готов — прыжок!', fin:'Сила с тобой.'},
+castle:{start:'В поход!', rest:'Привал у костра…', done:'Труба зовёт — в бой!', fin:'Победа за нами!'},
+wizard:{start:'Творим волшебство', rest:'Зелье настаивается…', done:'Зелье готово!', fin:'Экзамен сдан!'},
+orbit:{start:'Запуск', rest:'Идёт стыковка…', done:'Стыковка завершена — вперёд!', fin:'Миссия выполнена.'},
+tokyo:{start:'В ночной город', rest:'Следующий поезд через…', done:'Поезд прибыл — погнали!', fin:'Огни города твои.'},
+owl:{start:'Начать урок', rest:'Переменка…', done:'Перемена окончена!', fin:'Урок пройден — стрик живёт!'},
+volcano:{start:'Разбудить вулкан', rest:'Магма копится…', done:'ИЗВЕРЖЕНИЕ! Пошёл!', fin:'Кратер дымится.'},
+phoenix:{start:'Восстань!', rest:'Пламя восстанавливается…', done:'Возрождён — в бой!', fin:'Из пепла — сильнее.'},
+deep:{start:'Погружение', rest:'Всплытие через…', done:'Всплыли — работаем!', fin:'Глубина покорена.'},
+storm:{start:'В бурю!', rest:'Гроза надвигается…', done:'Молния! Бей!', fin:'Шторм усмирён.'},
+onyx:{start:'Газ в пол', rest:'Пит-стоп…', done:'Зелёный свет — гони!', fin:'Финиш. Чистая работа.'},
+aurora:{start:'За сиянием', rest:'Небо собирает краски…', done:'Небо вспыхнуло — вперёд!', fin:'Сияние твоё.'},
+peak:{start:'На штурм!', rest:'Привал на склоне…', done:'Дальше по маршруту!', fin:'Ещё одна высота взята.'},
+jungle:{start:'В джунгли', rest:'Тень пальмы…', done:'Тропа зовёт!', fin:'Джунгли пройдены.'},
+desert:{start:'Через пески', rest:'Глоток из фляги…', done:'Караван идёт!', fin:'Бархан позади.'},
+lake:{start:'На берег', rest:'Тихая бухта…', done:'Вёсла на воду!', fin:'Гладь спокойна. Ты — нет.'},
+forest:{start:'В чащу', rest:'Дыши лесом…', done:'Тропа ждёт!', fin:'Лес отпускает домой.'},
+midnight:{start:'В ночь', rest:'Считаем звёзды…', done:'Звезда упала — жми!', fin:'Ночь была продуктивной.'},
+ocean:{start:'На глубину', rest:'Течение отдыхает…', done:'Волна пошла — грeби!', fin:'Океан покорён.'}
+};
+function flavor(){ return THEME_FLAVOR[document.documentElement.dataset.theme] || null; }
+/* тематические звуки: короткий сигнал на запись подхода и фирменный — на конец отдыха */
+function themeSfx(kind){
+  try{
+    if (!_audioCtx) _audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    const ctx = _audioCtx;
+    if (ctx.state === 'suspended') ctx.resume().catch(()=>{});
+    const t0 = ctx.currentTime;
+    const tone = (type, f0, f1, at, dur, g0, filt) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = type;
+      o.frequency.setValueAtTime(f0, t0+at);
+      if (f1 && f1 !== f0) o.frequency.exponentialRampToValueAtTime(f1, t0+at+dur);
+      let node = o;
+      if (filt){ const f = ctx.createBiquadFilter(); f.type = filt[0]; f.frequency.value = filt[1]; node.connect(f); node = f; }
+      node.connect(g); g.connect(ctx.destination);
+      g.gain.setValueAtTime(0.0001, t0+at);
+      g.gain.exponentialRampToValueAtTime(g0, t0+at+0.02);
+      g.gain.exponentialRampToValueAtTime(0.001, t0+at+dur);
+      o.start(t0+at); o.stop(t0+at+dur+0.05);
+    };
+    const noise = (at, dur, g0, ftype, f0, f1) => {
+      const n = Math.floor(ctx.sampleRate * dur);
+      const buf = ctx.createBuffer(1, n, ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i=0;i<n;i++) d[i] = Math.random()*2-1;
+      const src = ctx.createBufferSource(); src.buffer = buf;
+      const f = ctx.createBiquadFilter(); f.type = ftype||'lowpass';
+      f.frequency.setValueAtTime(f0||600, t0+at);
+      if (f1) f.frequency.exponentialRampToValueAtTime(f1, t0+at+dur);
+      const g = ctx.createGain();
+      src.connect(f); f.connect(g); g.connect(ctx.destination);
+      g.gain.setValueAtTime(0.0001, t0+at);
+      g.gain.exponentialRampToValueAtTime(g0, t0+at+0.03);
+      g.gain.exponentialRampToValueAtTime(0.001, t0+at+dur);
+      src.start(t0+at); src.stop(t0+at+dur+0.05);
+    };
+    const th = document.documentElement.dataset.theme;
+    const R = kind === 'rest';
+    switch (th){
+      case 'saber':
+        if (R){ tone('sawtooth', 90, 180, 0, .5, .16, ['lowpass', 320]); tone('sawtooth', 93, 186, 0, .5, .14, ['lowpass', 320]); tone('sine', 220, 880, 0, .12, .1); }
+        else tone('sine', 420, 940, 0, .09, .12);
+        break;
+      case 'castle':
+        if (R){ tone('sawtooth', 392, 392, 0, .2, .14, ['lowpass', 1400]); tone('sawtooth', 523, 523, .2, .3, .16, ['lowpass', 1400]); }
+        else tone('sawtooth', 392, 392, 0, .1, .1, ['lowpass', 1200]);
+        break;
+      case 'wizard':
+        if (R){ tone('sine', 1318, 1318, 0, .45, .14); tone('sine', 1975, 1975, .02, .4, .08); tone('sine', 2637, 2637, .05, .3, .05); }
+        else tone('sine', 1568, 1568, 0, .18, .1);
+        break;
+      case 'orbit':
+        if (R){ [0,.14,.28].forEach(d => tone('sine', 1200, 1200, d, .07, .12)); }
+        else tone('sine', 1200, 1200, 0, .06, .1);
+        break;
+      case 'tokyo':
+        if (R){ tone('sawtooth', 220, 220, 0, .22, .1, ['lowpass', 2400]); tone('sawtooth', 222, 222, 0, .22, .1, ['lowpass', 2400]); tone('sawtooth', 440, 440, .05, .25, .08, ['lowpass', 2600]); noise(.32, .1, .06, 'highpass', 5000); }
+        else noise(0, .07, .08, 'highpass', 6000);
+        break;
+      case 'owl':
+        if (R){ tone('triangle', 659, 659, 0, .14, .14); tone('triangle', 784, 784, .15, .2, .16); }
+        else tone('triangle', 523, 523, 0, .1, .1);
+        break;
+      case 'volcano':
+        if (R){ noise(0, .5, .2, 'lowpass', 500, 80); tone('sine', 60, 45, 0, .5, .2); }
+        else tone('sine', 90, 55, 0, .16, .14);
+        break;
+      case 'phoenix':
+        if (R){ noise(0, .35, .1, 'bandpass', 900); tone('sine', 300, 1100, 0, .4, .13); }
+        else tone('sine', 500, 1000, 0, .12, .1);
+        break;
+      case 'deep':
+        if (R){ tone('sine', 250, 700, 0, .3, .13); tone('sine', 300, 800, .18, .25, .1); noise(0, .3, .04, 'lowpass', 500); }
+        else tone('sine', 300, 650, 0, .13, .1);
+        break;
+      case 'storm':
+        if (R){ noise(0, .7, .18, 'lowpass', 160); noise(0, .06, .1, 'highpass', 3000); }
+        else noise(0, .05, .09, 'highpass', 3500);
+        break;
+      case 'onyx':
+        if (R){ tone('sawtooth', 55, 110, 0, .4, .16, ['lowpass', 240]); tone('sawtooth', 57, 114, 0, .4, .12, ['lowpass', 240]); }
+        else tone('sine', 1000, 1000, 0, .07, .1);
+        break;
+      case 'aurora':
+        if (R){ tone('sine', 523, 523, 0, .5, .1); tone('sine', 659, 659, .06, .5, .09); tone('sine', 784, 784, .12, .5, .08); }
+        else tone('sine', 659, 659, 0, .16, .09);
+        break;
+      default:
+        return false;   // темам без своего звука — прежний сигнал
+    }
+    return true;
+  }catch(e){ return false; }
+}
 function startTimer(sec, label){
   timerEnd = Date.now() + sec*1000;
   timerTotal = sec*1000;
@@ -5055,12 +5176,14 @@ function restLogBtn(){
 function tickTimer(){
   const left = Math.ceil((timerEnd - Date.now())/1000);
   if (left <= 0){
-    $('#timer-t').textContent = '0:00'; stopTimer(); closeRestFull(); beep();
+    $('#timer-t').textContent = '0:00'; stopTimer(); closeRestFull();
+    try{ if (navigator.vibrate) navigator.vibrate([180,90,180]); }catch(e){}
+    if (!themeSfx('rest')) beep();
     try{
       if (document.hidden && 'Notification' in window && Notification.permission === 'granted')
         new Notification('⏱ Отдых окончен', {body: (window._restCtx ? 'Дальше: '+window._restCtx.n+' · подход '+window._restCtx.no : 'Следующий подход'), tag:'ppl-rest', silent:false});
     }catch(e){}
-    toast('Отдых окончен — следующий подход'); return;
+    { const f = flavor(); toast(f ? f.done : 'Отдых окончен — следующий подход'); } return;
   }
   const txt = Math.floor(left/60)+':'+pad(left%60);
   $('#timer-t').textContent = txt;
@@ -5076,6 +5199,7 @@ function tickTimer(){
 function stopTimer(){ clearInterval(timerTick); $('#timerbar').classList.remove('show'); }
 window.openRestFull = function(){
   if (timerEnd == null || timerEnd - Date.now() <= 0) return;
+  { const f = flavor(); const el = document.getElementById('rest-flavor'); if (el) el.textContent = f ? f.rest : ''; }
   $('#rest-full-l').textContent = $('#timer-l').textContent;
   restLogBtn();
   $('#rest-full').classList.add('show'); tickTimer();
@@ -5091,7 +5215,6 @@ $('#timer-x').onclick = stopTimer;
 $('#timer-plus').onclick = () => { nudgeTimer(30); };
 let _audioCtx = null; // один контекст на всё приложение: iOS убивает звук после 4-6 созданных
 function beep(){
-  try{ if (navigator.vibrate) navigator.vibrate([180,90,180]); }catch(e){}
   try{
     if (!_audioCtx) _audioCtx = new (window.AudioContext||window.webkitAudioContext)();
     const ctx = _audioCtx;
@@ -9615,7 +9738,7 @@ function vMore(){
       <button class="btn sec full" style="margin-top:10px" onclick="adjustDlg()">Настройка: уровень · травмы · разнообразие</button>
       <button class="btn sec full" style="margin-top:8px" onclick="tourDlg(0)">🧭 Показать тур по приложению</button>
       <button class="btn sec full" style="margin-top:8px" onclick="if(confirm('Пересоздать программу заново через анкету? Вес, еда и шаги сохранятся, а журнал тренировок и замены очистятся.')){DB.profile=null;DB.sessions={};DB.swaps={};DB.skips={};DB.dateOv={};save();location.reload();}">Пересоздать программу (анкета)</button></div>`;
-    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 7.9 (шкала-световой меч и арт в «Саге», тематические шкалы и пролетающие объекты, фикс кэша фонов) · собрано для Егора и друзей · 27.08.2026. Фото — Free Exercise DB; нутриенты — USDA + Скурихин.</div>`;
+    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 8.0 (темы обрели голос: тематические тексты старта/отдыха/финиша и фирменные звуки каждой темы) · собрано для Егора и друзей · 27.08.2026. Фото — Free Exercise DB; нутриенты — USDA + Скурихин.</div>`;
   }
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }
@@ -10287,12 +10410,11 @@ window.tourDlg = function(i){
       ${i>0?`<button class="btn sec" onclick="tourDlg(${i-1})">←</button>`:`<button class="btn sec" onclick="DB.tourDone=1;save();closeModal()">Пропустить</button>`}
       <button class="btn grow" onclick="${i<TOUR.length-1?`tourDlg(${i+1})`:'DB.tourDone=1;save();closeModal()'}">${i<TOUR.length-1?'Дальше':'Погнали 🚀'}</button></div>`);
 };
-const APP_VER = '7.9';
+const APP_VER = '8.0';
 const WHATS_NEW = [
-  '⚔️ «Сага» пересобрана: твой арт на фоне, сине-красные кнопки, шкала тяжести стала световым мечом — лезвие меняет цвет от синего (легко) к красному (отказ), и изредка мимо проносится знакомый грузовой корабль',
-  '🎚 Тематические шкалы тяжести везде: пламя в Фениксе и Вулкане, неон-трубка в Токио, сияние в Авроре, глубиномер в Глубине, HUD-тяга в Орбите, созвездие в Полночи, палочка в Магии…',
-  '🛰 Пролетающие гости: светлячок в Магии, спутник в Орбите, ночной экспресс в Токио',
-  '🧯 Починен вечный кэш фонов — картинки тем теперь обновляются как надо',
+  '🎬 Темы заговорили и зазвучали: кнопка старта, отдых и финиш — в характере темы. В «Саге» гипердвигатель заряжается и «Да пребудет сила», в «Вулкане» отдых копит магму и взрывается ИЗВЕРЖЕНИЕМ, в «Токио» ждёшь следующий поезд',
+  '🔊 Свой звук у каждой темы: гул меча, горн Героев, колокольчик Магии, радиопипы Орбиты, гром Шторма, пузыри Глубины, мотор Оникса — на запись подхода и конец отдыха',
+  '⚔️ Напоминание из 7.9: шкала тяжести в «Саге» — световой меч, меняющий цвет; тематические шкалы у всех тем; пролетающие гости',
 ]
 function whatsNewCheck(){
   if (!DB.profile) { DB.seenVer = APP_VER; save(); return; }

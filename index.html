@@ -300,10 +300,10 @@ html[data-theme=steel]{
 :root{
 --bgi-owl:url(bg-owl.jpg);
 --bgi-castle:url(bg-castle.jpg);
---bgi-saber:url(bg-saber.jpg);
+--bgi-saber:url(bg-saber.jpg?v=2);
 --bgi-wizard:url(bg-wizard.jpg);
 --bgi-lake:url(bg-lake.jpg);
---bgi-orbit:url(bg-orbit.jpg);
+--bgi-orbit:url(bg-orbit.jpg?v=2);
 --bgi-onyx:url(bg-onyx.jpg);
 --bgi-tokyo:url(bg-tokyo.jpg);
 --bgi-forest:url(bg-forest.jpg);
@@ -349,11 +349,11 @@ html[data-theme=castle]{
   --modalbg:#251638; --modalgrip:rgba(255,255,255,.16); --tbar:rgba(37,22,56,.94);
 }
 html[data-theme=saber]{
-  --bg:#0a0e1a; --card:rgba(255,232,31,.05); --card2:rgba(255,232,31,.1);
-  --border:rgba(255,232,31,.16); --border2:rgba(255,232,31,.28);
-  --text:#f2f0dc; --text2:#c4c0a0; --muted:#8c8870;
-  --accent:#ffe81f; --accent2:#ffd75e; --accent-dim:#6e6210;
-  --grad:linear-gradient(135deg,#e8c11c 0%,#ffe81f 100%);
+  --bg:#070810; --card:rgba(100,140,255,.06); --card2:rgba(100,140,255,.11);
+  --border:rgba(120,150,255,.16); --border2:rgba(120,150,255,.28);
+  --text:#eef0fa; --text2:#b2b8d6; --muted:#787fa0;
+  --accent:#4da6ff; --accent2:#ff4a3c; --accent-dim:#28407a;
+  --grad:linear-gradient(135deg,#2d7de0 0%,#8a3ae0 52%,#ff3a30 100%);
   --push:#ff5a4a; --pull:#4da6ff; --legs:#4bcd9b;
   --good:#4bcd9b; --warn:#f2b53d; --bad:#ff5a5a;
   --shadow:0 14px 34px rgba(0,0,0,.6); --ringtrack:rgba(120,180,255,.1); --fig:#dde8f6; --glassbr:rgba(120,180,255,.14);
@@ -501,7 +501,7 @@ html[data-theme=phoenix]{
 html[data-theme=owl] body::before{background:linear-gradient(180deg,rgba(234,247,224,.8),rgba(234,247,224,.2) 22%,rgba(234,247,224,.45)),var(--bgi-owl) center/cover no-repeat}
 html[data-theme=lake] body::before{background:linear-gradient(180deg,rgba(232,242,244,.78),rgba(232,242,244,.18) 22%,rgba(232,242,244,.5)),var(--bgi-lake) center/cover no-repeat}
 html[data-theme=castle] body::before{background:linear-gradient(180deg,rgba(28,16,48,.62),rgba(28,16,48,.3) 22%,rgba(30,16,52,.55)),var(--bgi-castle) center/cover no-repeat}
-html[data-theme=saber] body::before{background:linear-gradient(180deg,rgba(10,14,26,.6),rgba(10,14,26,.22) 22%,rgba(10,14,26,.48)),var(--bgi-saber) center/cover no-repeat}
+html[data-theme=saber] body::before{background:linear-gradient(180deg,rgba(7,8,16,.5),rgba(7,8,16,.16) 22%,rgba(7,8,16,.44)),var(--bgi-saber) center/cover no-repeat}
 html[data-theme=wizard] body::before{background:linear-gradient(180deg,rgba(12,20,48,.6),rgba(12,20,48,.2) 22%,rgba(12,20,48,.5)),var(--bgi-wizard) center/cover no-repeat}
 html[data-theme=orbit] body::before{background:linear-gradient(180deg,rgba(5,10,20,.62),rgba(5,10,20,.28) 22%,rgba(5,10,20,.52)),var(--bgi-orbit) center/cover no-repeat}
 html[data-theme=onyx] body::before{background:linear-gradient(180deg,rgba(20,22,25,.55),rgba(20,22,25,.2) 22%,rgba(20,22,25,.48)),var(--bgi-onyx) center/cover no-repeat}
@@ -658,8 +658,6 @@ html[data-theme=saber] body::after{content:''; position:fixed; inset:0; z-index:
     linear-gradient(90deg, rgba(77,140,255,.9) 0, rgba(77,140,255,.4) 4px, rgba(77,140,255,.12) 12px, transparent 38px),
     linear-gradient(270deg, rgba(255,58,48,.9) 0, rgba(255,58,48,.4) 4px, rgba(255,58,48,.12) 12px, transparent 38px);
   animation:saberPulse 3.4s ease-in-out infinite}
-html[data-theme=saber]{--grad:linear-gradient(135deg,#e8c11c 0%,#ffe81f 100%)}
-html[data-theme=saber] .btn:not(.sec):not(.ghost):not(.danger){color:#181400}
 /* ── Орбита: HUD-сетка и иллюминатор ── */
 html[data-theme=orbit] body::after{content:''; position:fixed; inset:0; z-index:-1; pointer-events:none;
   background:
@@ -783,6 +781,98 @@ html[data-theme=lake] body::after{content:''; position:fixed; left:0; right:0; t
   background:linear-gradient(90deg, transparent, rgba(255,255,255,.5), transparent); filter:blur(6px);
   animation:lakeGlint 8s ease-in-out infinite}
 @media (prefers-reduced-motion: reduce){ body::after, html[data-theme] header h1::after{animation:none !important} }
+
+/* ══ v7.9: тематические RPE-шкалы и пролетающие объекты ══ */
+/* — Сага: шкала = световой меч. Лезвие меняет цвет от синего (легко) к красному (отказ) — */
+html[data-theme=saber] .rslider .rtrack{top:18px; bottom:18px; border-radius:5px; opacity:1;
+  background:linear-gradient(90deg,#2d7de0,#8a4ae0 55%,#ff3a30);
+  box-shadow:0 0 12px rgba(120,90,255,.6), 0 0 28px rgba(120,90,255,.34)}
+html[data-theme=saber] .rslider.rv6 .rtrack{background:#2d7de0; box-shadow:0 0 14px #2d7de0, 0 0 30px rgba(45,125,224,.5)}
+html[data-theme=saber] .rslider.rv7 .rtrack{background:#4aa0e8; box-shadow:0 0 14px #4aa0e8, 0 0 30px rgba(74,160,232,.5)}
+html[data-theme=saber] .rslider.rv8 .rtrack{background:#8a4ae0; box-shadow:0 0 14px #8a4ae0, 0 0 30px rgba(138,74,224,.5)}
+html[data-theme=saber] .rslider.rv9 .rtrack{background:#e0483c; box-shadow:0 0 14px #e0483c, 0 0 30px rgba(224,72,60,.5)}
+html[data-theme=saber] .rslider.rv10 .rtrack{background:#ff2418; box-shadow:0 0 16px #ff2418, 0 0 34px rgba(255,36,24,.6)}
+html[data-theme=saber] .rslider .rthumb{background:linear-gradient(180deg,#f2f6fa 0%,#98a2ae 45%,#3c444e 100%) !important;
+  border-color:#d6dee6; box-shadow:0 4px 14px rgba(0,0,0,.5)}
+html[data-theme=saber] .rslider .rthumb b{color:#16202a}
+html[data-theme=saber] .rslider .rmarks span{opacity:.28}
+/* — Феникс и Вулкан: шкала-пламя — */
+html[data-theme=phoenix] .rslider .rtrack, html[data-theme=volcano] .rslider .rtrack{opacity:.9;
+  background:linear-gradient(90deg,#ffd24c,#ff7a1c 55%,#e8321c); box-shadow:0 0 14px rgba(255,122,28,.45)}
+/* — Токио: неоновая трубка — */
+html[data-theme=tokyo] .rslider .rtrack{opacity:.92;
+  background:linear-gradient(90deg,#31e6ff,#b44fff 55%,#ff4fd8); box-shadow:0 0 16px rgba(255,79,216,.5)}
+/* — Аврора: сияние — */
+html[data-theme=aurora] .rslider .rtrack{opacity:.85;
+  background:linear-gradient(90deg,#3ee6a8,#58c8ff 55%,#b44fff); box-shadow:0 0 14px rgba(62,230,168,.4)}
+/* — Глубина: глубиномер — */
+html[data-theme=deep] .rslider .rtrack{opacity:.9;
+  background:linear-gradient(90deg,#8fd8ff,#4d9fff 55%,#12327a); box-shadow:0 0 12px rgba(77,159,255,.4)}
+/* — Орбита: HUD-шкала тяги с делениями — */
+html[data-theme=orbit] .rslider .rtrack{opacity:1; border:1px solid rgba(90,160,255,.55);
+  background:repeating-linear-gradient(90deg, rgba(90,160,255,.4) 0 2px, rgba(90,160,255,.08) 2px 22px)}
+/* — Шторм: от штиля к грозе — */
+html[data-theme=storm] .rslider .rtrack{opacity:.85;
+  background:linear-gradient(90deg,#7aa8d4,#c8dcf2 45%,#ffd75e 80%,#ffef9a); box-shadow:0 0 12px rgba(255,215,94,.35)}
+/* — Полночь: созвездие — */
+html[data-theme=midnight] .rslider .rtrack{opacity:1; background:
+  radial-gradient(2px 2px at 8% 50%, #fff 60%, transparent 70%), radial-gradient(2px 2px at 26% 40%, #cfe0ff 60%, transparent 70%),
+  radial-gradient(2.4px 2.4px at 44% 60%, #fff 60%, transparent 70%), radial-gradient(2px 2px at 62% 45%, #cfe0ff 60%, transparent 70%),
+  radial-gradient(2.6px 2.6px at 82% 52%, #fff 60%, transparent 70%), linear-gradient(90deg,#101828,#1c2a4a)}
+/* — Герои: полоса похода по карте — */
+html[data-theme=castle] .rslider .rtrack{opacity:.95; border:1px solid rgba(222,178,74,.6);
+  background:linear-gradient(90deg,#6d5518,#c8a23c 55%,#8a2418)}
+/* — Магия: волшебная палочка с искрой — */
+html[data-theme=wizard] .rslider .rtrack{top:20px; bottom:20px; border-radius:3px; opacity:1;
+  background:linear-gradient(90deg,#3a2a18,#6b4a26 82%,#ffd75e 96%, #fff);
+  box-shadow:0 0 10px rgba(255,215,94,.35)}
+/* — Сова: дуо-капсула — */
+html[data-theme=owl] .rslider .rtrack{opacity:.92; background:linear-gradient(90deg,#8fe33e,#58cc02 60%,#3fa802)}
+/* — Оникс: хром и янтарь фар — */
+html[data-theme=onyx] .rslider .rtrack{opacity:.95;
+  background:linear-gradient(90deg,#7d8890,#aab8c4 45%,#ffd489); box-shadow:0 0 10px rgba(255,212,137,.3)}
+/* ── слой пролетающих объектов ── */
+#fx{position:fixed; inset:0; z-index:-1; pointer-events:none; overflow:hidden}
+#fx::before{content:none}
+/* Сага: грузовой диск проносится (привет, контрабандисты) */
+@keyframes fxShip{0%, 78%{transform:translate(-14vw, 22vh) rotate(-6deg); opacity:0}
+  79%{opacity:.9}
+  92%{transform:translate(70vw, 12vh) rotate(-6deg); opacity:.9}
+  100%{transform:translate(114vw, 6vh) rotate(-6deg); opacity:0}}
+html[data-theme=saber] #fx::before{content:''; position:absolute; left:0; top:0; width:74px; height:50px;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 74 50'%3E%3Cellipse cx='34' cy='26' rx='22' ry='16' fill='%23b8c4d0'/%3E%3Crect x='50' y='12' width='20' height='7' rx='3.5' fill='%23b8c4d0'/%3E%3Crect x='50' y='24' width='20' height='7' rx='3.5' fill='%23b8c4d0'/%3E%3Ccircle cx='42' cy='18' r='4' fill='%236d7a88'/%3E%3Cellipse cx='12' cy='26' rx='5' ry='9' fill='%237ac2ff' opacity='.85'/%3E%3C/svg%3E") center/contain no-repeat;
+  filter:drop-shadow(0 0 8px rgba(122,194,255,.5));
+  animation:fxShip 26s linear infinite}
+/* Магия: золотой светлячок порхает */
+@keyframes fxFly{0%,72%{transform:translate(84vw, 30vh); opacity:0}
+  74%{opacity:1}
+  80%{transform:translate(64vw, 22vh)}
+  86%{transform:translate(70vw, 34vh)}
+  92%{transform:translate(52vw, 26vh); opacity:1}
+  100%{transform:translate(40vw, 18vh); opacity:0}}
+html[data-theme=wizard] #fx::before{content:''; position:absolute; left:0; top:0; width:26px; height:18px;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 26 18'%3E%3Cellipse cx='7' cy='7' rx='6' ry='3.4' fill='white' opacity='.85' transform='rotate(-22 7 7)'/%3E%3Cellipse cx='19' cy='7' rx='6' ry='3.4' fill='white' opacity='.85' transform='rotate(22 19 7)'/%3E%3Ccircle cx='13' cy='10' r='4.6' fill='%23ffd75e'/%3E%3C/svg%3E") center/contain no-repeat;
+  filter:drop-shadow(0 0 7px rgba(255,215,94,.85));
+  animation:fxFly 21s ease-in-out infinite}
+/* Орбита: спутник по диагонали */
+@keyframes fxSat{0%,70%{transform:translate(108vw, 6vh) rotate(14deg); opacity:0}
+  72%{opacity:.95}
+  98%{transform:translate(-12vw, 30vh) rotate(14deg); opacity:.95}
+  100%{opacity:0}}
+html[data-theme=orbit] #fx::before{content:''; position:absolute; left:0; top:0; width:54px; height:26px;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 54 26'%3E%3Crect x='0' y='8' width='16' height='10' rx='2' fill='%234d9fff' opacity='.85'/%3E%3Crect x='38' y='8' width='16' height='10' rx='2' fill='%234d9fff' opacity='.85'/%3E%3Crect x='20' y='5' width='14' height='16' rx='3' fill='%23cfe0f2'/%3E%3Ccircle cx='27' cy='13' r='3' fill='%2335d0e8'/%3E%3C/svg%3E") center/contain no-repeat;
+  filter:drop-shadow(0 0 6px rgba(90,160,255,.6));
+  animation:fxSat 30s linear infinite}
+/* Токио: ночной экспресс проносится по нижней кромке */
+@keyframes fxTrain{0%,82%{transform:translateX(110vw); opacity:0}
+  83%{opacity:.95}
+  97%{transform:translateX(-120vw); opacity:.95}
+  100%{opacity:0}}
+html[data-theme=tokyo] #fx::before{content:''; position:absolute; left:0; bottom:16vh; width:120vw; height:8px; border-radius:4px;
+  background:repeating-linear-gradient(90deg, rgba(255,231,120,.95) 0 14px, rgba(20,10,32,.9) 14px 22px, rgba(49,230,255,.8) 22px 24px, rgba(20,10,32,.9) 24px 34px);
+  box-shadow:0 0 14px rgba(255,231,120,.5), 0 0 30px rgba(49,230,255,.3);
+  animation:fxTrain 19s linear infinite}
+@media (prefers-reduced-motion: reduce){ #fx::before{animation:none !important; content:none !important} }
 /* сетка выбора тем */
 .thgrid{display:grid; grid-template-columns:repeat(3,1fr); gap:9px; margin-top:10px}
 .thcell{border:2px solid var(--border2); border-radius:14px; padding:9px 6px 8px; text-align:center; cursor:pointer; background:var(--card); position:relative}
@@ -1169,6 +1259,7 @@ html.gym .exhint, html.gym .exhist{font-size:14px}
 </div>
 <div id="toast"></div>
 <div id="jrn"></div>
+<div id="fx"></div>
 <div class="modal-wrap" id="modal-wrap"><div class="modal" id="modal"></div></div>
 <script>
 "use strict";
@@ -2992,7 +3083,7 @@ function vTrain(){
         ? `<button class="chip add" onclick="logSet(${s.id},${ex.ei},${(st.sets[ex.ei]||[]).length},${ex.rest},${sg.w||0})">+</button>` : '') +
       `</div>
       <div class="rpe-row"><span class="rpe-lab">Тяжесть <button class="hbtn" onclick="helpDlg('rpe')">?</button></span>
-      <div class="rslider grow" data-cap="cap-${ex.ei}" onpointerdown="rpeStart(event,${s.id},${ex.ei})">
+      <div class="rslider grow${st.rpe[ex.ei]?` rv${st.rpe[ex.ei]}`:``}" data-cap="cap-${ex.ei}" onpointerdown="rpeStart(event,${s.id},${ex.ei})">
         <div class="rtrack"></div>
         <div class="rmarks">${[6,7,8,9,10].map(v=>`<span>${RPE_META[v].e}</span>`).join('')}</div>
         ${st.rpe[ex.ei] ? `<div class="rthumb" style="left:calc(${(st.rpe[ex.ei]-6)/4} * (100% - 46px) + 23px);background:${RPE_META[st.rpe[ex.ei]].c}"><span>${RPE_META[st.rpe[ex.ei]].e}</span><b>${st.rpe[ex.ei]}</b></div>` : ''}
@@ -3184,6 +3275,7 @@ window.rpeStart = function(ev, sid, ei){
     th.style.background = M.c;
     th.querySelector('span').textContent = M.e;
     th.querySelector('b').textContent = v;
+    el.classList.remove('rv6','rv7','rv8','rv9','rv10'); el.classList.add('rv'+v);
     const cap = document.getElementById(el.dataset.cap);
     if (cap){
       cap.style.color = M.c; cap.style.fontWeight = '700';
@@ -9523,7 +9615,7 @@ function vMore(){
       <button class="btn sec full" style="margin-top:10px" onclick="adjustDlg()">Настройка: уровень · травмы · разнообразие</button>
       <button class="btn sec full" style="margin-top:8px" onclick="tourDlg(0)">🧭 Показать тур по приложению</button>
       <button class="btn sec full" style="margin-top:8px" onclick="if(confirm('Пересоздать программу заново через анкету? Вес, еда и шаги сохранятся, а журнал тренировок и замены очистятся.')){DB.profile=null;DB.sessions={};DB.swaps={};DB.skips={};DB.dateOv={};save();location.reload();}">Пересоздать программу (анкета)</button></div>`;
-    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 7.8 (крейсер в «Саге», самообновление по version.json, фирменные эффекты тем и сезонные фоны) · собрано для Егора и друзей · 27.08.2026. Фото — Free Exercise DB; нутриенты — USDA + Скурихин.</div>`;
+    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 7.9 (шкала-световой меч и арт в «Саге», тематические шкалы и пролетающие объекты, фикс кэша фонов) · собрано для Егора и друзей · 27.08.2026. Фото — Free Exercise DB; нутриенты — USDA + Скурихин.</div>`;
   }
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }
@@ -10195,11 +10287,12 @@ window.tourDlg = function(i){
       ${i>0?`<button class="btn sec" onclick="tourDlg(${i-1})">←</button>`:`<button class="btn sec" onclick="DB.tourDone=1;save();closeModal()">Пропустить</button>`}
       <button class="btn grow" onclick="${i<TOUR.length-1?`tourDlg(${i+1})`:'DB.tourDone=1;save();closeModal()'}">${i<TOUR.length-1?'Дальше':'Погнали 🚀'}</button></div>`);
 };
-const APP_VER = '7.8';
+const APP_VER = '7.9';
 const WHATS_NEW = [
-  '🚀 «Сага»: на фоне теперь дрейфует боевой крейсер',
-  '🔄 Обновления доходят сами: приложение сверяет версию при каждом открытии и обновляется в одно касание (кнопка — в «Ещё → ⚙️ → Диагностика»)',
-  '🎭 Напоминание: у каждой темы свой характер — эффекты, тематические имена достижений, Феникс за возвращение, зимние фоны с 1 декабря',
+  '⚔️ «Сага» пересобрана: твой арт на фоне, сине-красные кнопки, шкала тяжести стала световым мечом — лезвие меняет цвет от синего (легко) к красному (отказ), и изредка мимо проносится знакомый грузовой корабль',
+  '🎚 Тематические шкалы тяжести везде: пламя в Фениксе и Вулкане, неон-трубка в Токио, сияние в Авроре, глубиномер в Глубине, HUD-тяга в Орбите, созвездие в Полночи, палочка в Магии…',
+  '🛰 Пролетающие гости: светлячок в Магии, спутник в Орбите, ночной экспресс в Токио',
+  '🧯 Починен вечный кэш фонов — картинки тем теперь обновляются как надо',
 ]
 function whatsNewCheck(){
   if (!DB.profile) { DB.seenVer = APP_VER; save(); return; }

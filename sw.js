@@ -1,5 +1,5 @@
 // офлайн-кэш: приложение открывается в зале даже без сети
-const C = 'ppl-v76';
+const C = 'ppl-v77';
 const BG = 'ppl-bg1';   // фоны тем: вечный кэш, переживает обновления версий
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(C).then(c => c.addAll(['./', './index.html'])).then(() => self.skipWaiting()));
@@ -13,7 +13,7 @@ self.addEventListener('fetch', e => {
   // чужие домены (Rutube, постеры) — напрямую в сеть, без кэша
   if (u.origin !== self.location.origin) return;
   // фоновые картинки тем: кэш прежде сети, отдельное вечное хранилище
-  if (/bg-\w+\.jpg$/.test(u.pathname)){
+  if (/bg-[\w-]+\.jpg$/.test(u.pathname)){
     e.respondWith(
       caches.match(e.request, {ignoreSearch: true}).then(r => r ||
         fetch(e.request).then(resp => {

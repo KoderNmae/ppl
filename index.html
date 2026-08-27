@@ -105,7 +105,7 @@ html[data-theme=dark] .card{background:linear-gradient(180deg,rgba(255,255,255,.
 .small{font-size:13.5px; color:var(--text2)}
 .tiny{font-size:12px; color:var(--muted); line-height:1.5}
 .divider{height:1px; background:var(--border); margin:12px -16px}
-.section-t{font-size:12px; font-weight:800; margin:20px 4px 6px; color:var(--muted);
+.section-t{font-size:12px; font-weight:800; margin:20px 4px 6px; color:var(--text2); text-shadow:0 1px 8px var(--bg);
   text-transform:uppercase; letter-spacing:1.4px; display:flex; align-items:center; gap:8px}
 .section-t::before{content:''; width:14px; height:3px; border-radius:2px; background:var(--grad)}
 /* ---------- кнопки ---------- */
@@ -486,6 +486,17 @@ html[data-theme=deep]{
   --shadow:0 14px 34px rgba(0,0,0,.64); --ringtrack:rgba(77,216,255,.1); --fig:#dae6f6; --glassbr:rgba(77,216,255,.14);
   --modalbg:#0a1428; --modalgrip:rgba(255,255,255,.16); --tbar:rgba(10,20,40,.94);
 }
+html[data-theme=phoenix]{
+  --bg:#180a04; --card:rgba(255,122,28,.06); --card2:rgba(255,122,28,.11);
+  --border:rgba(255,150,80,.16); --border2:rgba(255,150,80,.27);
+  --text:#f8ece2; --text2:#d6b09a; --muted:#9c7a64;
+  --accent:#ff7a1c; --accent2:#ffd24c; --accent-dim:#7a3a10;
+  --grad:linear-gradient(135deg,#f2621a 0%,#ffd24c 100%);
+  --push:#ff8a5f; --pull:#7fa8e8; --legs:#5fcf9f;
+  --good:#5fcf9f; --warn:#ffd24c; --bad:#ff6b6b;
+  --shadow:0 14px 34px rgba(0,0,0,.62); --ringtrack:rgba(255,122,28,.1); --fig:#f4e2d4; --glassbr:rgba(255,150,80,.15);
+  --modalbg:#241006; --modalgrip:rgba(255,255,255,.16); --tbar:rgba(36,16,6,.94);
+}
 html[data-theme=owl] body::before{background:linear-gradient(180deg,rgba(234,247,224,.8),rgba(234,247,224,.2) 22%,rgba(234,247,224,.45)),var(--bgi-owl) center/cover no-repeat}
 html[data-theme=lake] body::before{background:linear-gradient(180deg,rgba(232,242,244,.78),rgba(232,242,244,.18) 22%,rgba(232,242,244,.5)),var(--bgi-lake) center/cover no-repeat}
 html[data-theme=castle] body::before{background:linear-gradient(180deg,rgba(28,16,48,.62),rgba(28,16,48,.3) 22%,rgba(30,16,52,.55)),var(--bgi-castle) center/cover no-repeat}
@@ -512,7 +523,9 @@ html[data-theme=steel] body::before{background:linear-gradient(180deg,rgba(16,19
 html[data-theme=aurora] body::before{background:linear-gradient(180deg,rgba(6,18,26,.6),rgba(6,18,26,.26) 22%,rgba(6,18,26,.5)),var(--bgi-aurora) center/cover no-repeat}
 html[data-theme=storm] body::before{background:linear-gradient(180deg,rgba(12,20,32,.6),rgba(12,20,32,.26) 22%,rgba(12,20,32,.5)),var(--bgi-storm) center/cover no-repeat}
 html[data-theme=volcano] body::before{background:linear-gradient(180deg,rgba(20,10,8,.6),rgba(20,10,8,.26) 22%,rgba(20,10,8,.5)),var(--bgi-volcano) center/cover no-repeat}
+html[data-theme=phoenix] body::before{background:linear-gradient(180deg,rgba(24,10,4,.6),rgba(24,10,4,.26) 22%,rgba(24,10,4,.52)),var(--bgi-phoenix) center/cover no-repeat}
 html[data-theme=deep] body::before{background:linear-gradient(180deg,rgba(5,10,24,.6),rgba(5,10,24,.26) 22%,rgba(5,10,24,.5)),var(--bgi-deep) center/cover no-repeat}
+html[data-theme=phoenix] .card, html[data-theme=phoenix] .tile, html[data-theme=phoenix] .insight,
 html[data-theme=owl] .card, html[data-theme=owl] .tile, html[data-theme=owl] .insight,
 html[data-theme=lake] .card, html[data-theme=lake] .tile, html[data-theme=lake] .insight,
 html[data-theme=castle] .card, html[data-theme=castle] .tile, html[data-theme=castle] .insight,
@@ -559,6 +572,7 @@ html[data-theme=aurora] .card, html[data-theme=aurora] .tile, html[data-theme=au
 html[data-theme=storm] .card, html[data-theme=storm] .tile, html[data-theme=storm] .insight{background:rgba(12,22,36,.64)}
 html[data-theme=volcano] .card, html[data-theme=volcano] .tile, html[data-theme=volcano] .insight{background:rgba(26,12,8,.64)}
 html[data-theme=deep] .card, html[data-theme=deep] .tile, html[data-theme=deep] .insight{background:rgba(6,13,30,.64)}
+html[data-theme=phoenix] .card, html[data-theme=phoenix] .tile, html[data-theme=phoenix] .insight{background:rgba(30,13,6,.64)}
 /* карточки сюжетных тем: полупрозрачное стекло, чтобы картинка дышала сквозь них */
 html[data-theme=owl] .card, html[data-theme=owl] .tile, html[data-theme=owl] .insight{background:rgba(255,255,255,.72)}
 html[data-theme=lake] .card, html[data-theme=lake] .tile, html[data-theme=lake] .insight{background:rgba(255,255,255,.72)}
@@ -604,6 +618,170 @@ html.jrn-open #app{display:none}
   html.jrn-open, html.jrn-open body{height:auto; overflow:visible; background:#fff}
   body::before{display:none !important}
 }
+
+/* ══ фирменные эффекты тем (v7.7): у каждой темы — своя фишка-отсылка ══ */
+/* значок темы в шапке */
+html[data-theme=owl] header h1::after{content:' 🦉'; font-size:.8em}
+html[data-theme=lake] header h1::after{content:' 🏞'; font-size:.8em}
+html[data-theme=saber] header h1::after{content:' ⚔️'; font-size:.8em}
+html[data-theme=forest] header h1::after{content:' 🌲'; font-size:.8em}
+html[data-theme=sunset] header h1::after{content:' 🌅'; font-size:.8em}
+html[data-theme=wizard] header h1::after{content:' ⚡'; color:#ffd75e; text-shadow:0 0 10px rgba(255,215,94,.7)}
+html[data-theme=neon] header h1::after{content:' ⚡'; color:#b7f24d; text-shadow:0 0 12px rgba(183,242,77,.8)}
+html[data-theme=desert] header h1::after{content:' 🏜'; font-size:.8em}
+html[data-theme=sakura] header h1::after{content:' 🌸'; font-size:.8em}
+html[data-theme=tokyo] header h1::after{content:' 東京'; font-size:.68em; color:#ff4fd8; font-weight:800; letter-spacing:1px;
+  text-shadow:0 0 12px rgba(255,79,216,.85), 0 0 28px rgba(49,230,255,.5); animation:neonFlick 7s infinite}
+html[data-theme=ocean] header h1::after{content:' 🌊'; font-size:.8em}
+html[data-theme=jungle] header h1::after{content:' 🌴'; font-size:.8em}
+html[data-theme=gold] header h1::after{content:' 👑'; font-size:.8em}
+html[data-theme=castle] header h1::after{content:' ⚜️'; color:#e8c15a; font-size:.85em}
+html[data-theme=royal] header h1::after{content:' 🔮'; font-size:.8em}
+html[data-theme=aurora] header h1::after{content:' 🌠'; font-size:.8em}
+html[data-theme=crimson] header h1::after{content:' 🥊'; font-size:.8em}
+html[data-theme=orbit] header h1::after{content:' 🛰'; font-size:.8em}
+html[data-theme=midnight] header h1::after{content:' 🌌'; font-size:.8em}
+html[data-theme=deep] header h1::after{content:' 🐙'; font-size:.8em}
+html[data-theme=retro] header h1::after{content:' 📼'; font-size:.8em}
+html[data-theme=arctic] header h1::after{content:' ❄️'; font-size:.8em}
+html[data-theme=steel] header h1::after{content:' 🛠'; font-size:.8em}
+html[data-theme=volcano] header h1::after{content:' 🌋'; font-size:.8em}
+html[data-theme=storm] header h1::after{content:' ⛈'; font-size:.8em}
+html[data-theme=peak] header h1::after{content:' 🏔'; font-size:.8em}
+html[data-theme=onyx] header h1::after{content:' 🐆'; font-size:.8em}
+html[data-theme=phoenix] header h1::after{content:' 🐦‍🔥'; font-size:.8em}
+/* ── Сага: световые мечи по краям + жёлтый «титровый» акцент ── */
+@keyframes saberPulse{0%,100%{opacity:.7}50%{opacity:1}}
+html[data-theme=saber] body::after{content:''; position:fixed; inset:0; z-index:-1; pointer-events:none;
+  background:
+    linear-gradient(90deg, rgba(77,140,255,.5) 0, rgba(77,140,255,.16) 5px, transparent 26px),
+    linear-gradient(270deg, rgba(255,58,48,.5) 0, rgba(255,58,48,.16) 5px, transparent 26px);
+  animation:saberPulse 3.4s ease-in-out infinite}
+html[data-theme=saber]{--grad:linear-gradient(135deg,#e8c11c 0%,#ffe81f 100%)}
+html[data-theme=saber] .btn:not(.sec):not(.ghost):not(.danger){color:#181400}
+/* ── Орбита: HUD-сетка и иллюминатор ── */
+html[data-theme=orbit] body::after{content:''; position:fixed; inset:0; z-index:-1; pointer-events:none;
+  background:
+    repeating-linear-gradient(0deg, rgba(90,160,255,.05) 0 1px, transparent 1px 54px),
+    repeating-linear-gradient(90deg, rgba(90,160,255,.05) 0 1px, transparent 1px 54px),
+    radial-gradient(130% 96% at 50% 46%, transparent 58%, rgba(2,6,14,.6) 100%)}
+/* ── Герои: золотое тиснение рамок, геральдика ── */
+html[data-theme=castle] .card, html[data-theme=castle] .tile{border:1px solid rgba(222,178,74,.5);
+  box-shadow:0 0 0 3px rgba(24,14,42,.55), 0 0 0 4px rgba(222,178,74,.3), 0 14px 34px rgba(0,0,0,.5)}
+html[data-theme=castle] h3{color:#e8c15a; letter-spacing:.7px}
+html[data-theme=castle] body::after{content:''; position:fixed; inset:0; z-index:-1; pointer-events:none;
+  background:radial-gradient(120% 100% at 50% 50%, transparent 62%, rgba(20,8,34,.5) 100%)}
+/* ── Магия: парящие огоньки-свечи ── */
+@keyframes wizFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-16px)}}
+html[data-theme=wizard] body::after{content:''; position:fixed; inset:0; z-index:-1; pointer-events:none;
+  background:
+    radial-gradient(3px 3px at 16% 26%, rgba(255,215,94,.95), transparent 60%),
+    radial-gradient(2.4px 2.4px at 78% 16%, rgba(255,215,94,.85), transparent 60%),
+    radial-gradient(2px 2px at 58% 40%, rgba(255,231,154,.75), transparent 60%),
+    radial-gradient(2.7px 2.7px at 34% 10%, rgba(255,215,94,.8), transparent 60%),
+    radial-gradient(2px 2px at 90% 52%, rgba(255,231,154,.6), transparent 60%);
+  animation:wizFloat 6s ease-in-out infinite}
+html[data-theme=wizard] h3{font-style:italic; letter-spacing:.4px}
+/* ── Сова: «дуо»-кнопки с нижней тенью и отжимом ── */
+html[data-theme=owl] .btn{border-bottom:4px solid rgba(0,0,0,.25); transition:transform .07s, border-bottom-width .07s}
+html[data-theme=owl] .btn:active{transform:translateY(3px); border-bottom-width:1px}
+/* ── Токио: неоновое свечение заголовков, мерцание вывески ── */
+@keyframes neonFlick{0%,91%,95%,100%{opacity:1}93%{opacity:.5}}
+html[data-theme=tokyo] h3{text-shadow:0 0 14px rgba(255,79,216,.5)}
+html[data-theme=tokyo] .exname{text-shadow:0 0 12px rgba(49,230,255,.4)}
+/* ── Оникс: хромовый логотип, янтарные фары ── */
+html[data-theme=onyx] header h1{background:linear-gradient(180deg,#f6fafc 18%,#7d8890 58%,#d4dee4 92%);
+  -webkit-background-clip:text; background-clip:text; color:transparent}
+html[data-theme=onyx] body::after{content:''; position:fixed; inset:0; z-index:-1; pointer-events:none;
+  background:
+    radial-gradient(24% 10% at 30% 90%, rgba(255,212,137,.22), transparent 70%),
+    radial-gradient(24% 10% at 70% 90%, rgba(255,212,137,.22), transparent 70%)}
+/* ── Аврора: живое сияние ── */
+@keyframes aurWave{0%,100%{opacity:.45; transform:translateX(-4%) skewX(-4deg)}50%{opacity:.9; transform:translateX(4%) skewX(4deg)}}
+html[data-theme=aurora] body::after{content:''; position:fixed; left:-12%; right:-12%; top:0; height:36%; z-index:-1; pointer-events:none;
+  background:linear-gradient(100deg, transparent 8%, rgba(62,230,168,.2) 30%, rgba(88,200,255,.16) 52%, rgba(180,79,255,.14) 70%, transparent 90%);
+  filter:blur(16px); animation:aurWave 9s ease-in-out infinite}
+/* ── Шторм: вспышка молнии за интерфейсом ── */
+@keyframes stormBolt{0%,85.6%,88.4%,100%{opacity:0}86%,88%{opacity:.5}87%{opacity:.14}}
+html[data-theme=storm] body::after{content:''; position:fixed; inset:0; z-index:-1; pointer-events:none;
+  background:#eaf2ff; opacity:0; animation:stormBolt 13s infinite}
+/* ── Вулкан: пульс жара снизу ── */
+@keyframes emberPulse{0%,100%{opacity:.45}50%{opacity:.95}}
+html[data-theme=volcano] body::after{content:''; position:fixed; left:0; right:0; bottom:0; height:40%; z-index:-1; pointer-events:none;
+  background:linear-gradient(0deg, rgba(255,96,30,.32), transparent 82%); animation:emberPulse 4.6s ease-in-out infinite}
+/* ── Глубина: пузырьки поднимаются ── */
+@keyframes bubblesUp{from{background-position:8% 108%, 46% 118%, 78% 112%}to{background-position:10% -8%, 44% -14%, 80% -10%}}
+html[data-theme=deep] body::after{content:''; position:fixed; inset:0; z-index:-1; pointer-events:none;
+  background-image:
+    radial-gradient(circle, rgba(190,235,255,.5) 2.2px, transparent 3.4px),
+    radial-gradient(circle, rgba(150,210,255,.4) 1.7px, transparent 2.8px),
+    radial-gradient(circle, rgba(190,235,255,.32) 2.8px, transparent 4.2px);
+  background-size:180px 260px, 240px 340px, 320px 440px; background-repeat:repeat;
+  animation:bubblesUp 24s linear infinite}
+/* ── Вершина и Арктика: медленный снег ── */
+@keyframes snowFall{from{background-position:0 -12%, 60px -20%, 130px -6%}to{background-position:30px 112%, 20px 124%, 150px 116%}}
+html[data-theme=peak] body::after, html[data-theme=arctic] body::after{content:''; position:fixed; inset:0; z-index:-1; pointer-events:none;
+  background-image:
+    radial-gradient(circle, rgba(255,255,255,.85) 1.4px, transparent 2.4px),
+    radial-gradient(circle, rgba(255,255,255,.6) 1.1px, transparent 2px),
+    radial-gradient(circle, rgba(255,255,255,.45) 1.8px, transparent 3px);
+  background-size:210px 290px, 150px 230px, 320px 420px; background-repeat:repeat;
+  animation:snowFall 26s linear infinite}
+/* ── Сакура: лепестки ── */
+@keyframes petalFall{from{background-position:0 -10%, 90px -18%}to{background-position:60px 112%, 30px 120%}}
+html[data-theme=sakura] body::after{content:''; position:fixed; inset:0; z-index:-1; pointer-events:none;
+  background-image:
+    radial-gradient(ellipse 3.4px 2.2px, rgba(244,143,187,.75) 60%, transparent 70%),
+    radial-gradient(ellipse 2.6px 1.8px, rgba(255,183,213,.6) 60%, transparent 70%);
+  background-size:240px 320px, 170px 260px; background-repeat:repeat;
+  animation:petalFall 21s linear infinite}
+/* ── Феникс: искры взлетают ── */
+@keyframes sparksUp{from{background-position:12% 108%, 52% 116%, 84% 110%}to{background-position:16% -10%, 48% -16%, 88% -8%}}
+html[data-theme=phoenix] body::after{content:''; position:fixed; inset:0; z-index:-1; pointer-events:none;
+  background-image:
+    radial-gradient(circle, rgba(255,178,76,.8) 1.6px, transparent 2.6px),
+    radial-gradient(circle, rgba(255,120,40,.65) 1.3px, transparent 2.2px),
+    radial-gradient(circle, rgba(255,210,120,.5) 2px, transparent 3.2px);
+  background-size:200px 280px, 150px 240px, 300px 400px; background-repeat:repeat;
+  animation:sparksUp 17s linear infinite}
+/* ── Полночь: падающая звезда ── */
+@keyframes shootingStar{0%,90%{opacity:0; transform:translate(-8vw,-4vh) rotate(-16deg)}91%{opacity:.9}96%,100%{opacity:0; transform:translate(74vw,26vh) rotate(-16deg)}}
+html[data-theme=midnight] body::after{content:''; position:fixed; left:6%; top:12%; width:120px; height:2px; z-index:-1; pointer-events:none;
+  background:linear-gradient(90deg, rgba(255,255,255,.9), transparent); border-radius:2px;
+  animation:shootingStar 17s linear infinite}
+/* ── Океан: лучи света сверху ── */
+@keyframes raysSway{0%,100%{transform:translateX(-2%)}50%{transform:translateX(2%)}}
+html[data-theme=ocean] body::after{content:''; position:fixed; inset:-4% -6%; z-index:-1; pointer-events:none;
+  background:
+    linear-gradient(74deg, transparent 26%, rgba(120,220,255,.1) 31%, transparent 38%),
+    linear-gradient(100deg, transparent 50%, rgba(120,220,255,.08) 56%, transparent 64%);
+  animation:raysSway 11s ease-in-out infinite}
+/* ── Лес: дрейф тумана ── */
+@keyframes mistDrift{0%,100%{transform:translateX(-3%)}50%{transform:translateX(3%)}}
+html[data-theme=forest] body::after{content:''; position:fixed; left:-10%; right:-10%; bottom:8%; height:30%; z-index:-1; pointer-events:none;
+  background:linear-gradient(180deg, transparent, rgba(255,255,255,.16) 45%, rgba(255,255,255,.05));
+  filter:blur(14px); animation:mistDrift 13s ease-in-out infinite}
+/* ── Ретро: скан-линии VHS ── */
+html[data-theme=retro] body::after{content:''; position:fixed; inset:0; z-index:-1; pointer-events:none;
+  background:repeating-linear-gradient(0deg, rgba(74,52,12,.06) 0 2px, transparent 2px 5px)}
+/* ── Золото: мерцание ── */
+@keyframes goldShimmer{0%,100%{opacity:.35}50%{opacity:.75}}
+html[data-theme=gold] body::after{content:''; position:fixed; inset:0; z-index:-1; pointer-events:none;
+  background:radial-gradient(60% 30% at 50% 0%, rgba(232,193,90,.2), transparent 70%);
+  animation:goldShimmer 5.5s ease-in-out infinite}
+/* ── статичные виньетки в тон: неон/королевская/кримзон/сталь/закат/дюны/джунгли/озеро ── */
+html[data-theme=neon] body::after, html[data-theme=royal] body::after, html[data-theme=crimson] body::after,
+html[data-theme=steel] body::after{content:''; position:fixed; inset:0; z-index:-1; pointer-events:none;
+  background:radial-gradient(120% 96% at 50% 48%, transparent 60%, color-mix(in srgb, var(--accent) 14%, transparent) 100%)}
+html[data-theme=sunset] body::after, html[data-theme=desert] body::after{content:''; position:fixed; inset:0; z-index:-1; pointer-events:none;
+  background:radial-gradient(34% 22% at 84% 6%, rgba(255,214,140,.34), transparent 70%)}
+html[data-theme=jungle] body::after{content:''; position:fixed; inset:0; z-index:-1; pointer-events:none;
+  background:radial-gradient(44% 34% at 0% 0%, rgba(20,60,30,.3), transparent 70%), radial-gradient(44% 34% at 100% 100%, rgba(20,60,30,.3), transparent 70%)}
+@keyframes lakeGlint{0%,100%{opacity:.25; transform:translateX(-6%)}50%{opacity:.6; transform:translateX(6%)}}
+html[data-theme=lake] body::after{content:''; position:fixed; left:0; right:0; top:46%; height:3%; z-index:-1; pointer-events:none;
+  background:linear-gradient(90deg, transparent, rgba(255,255,255,.5), transparent); filter:blur(6px);
+  animation:lakeGlint 8s ease-in-out infinite}
+@media (prefers-reduced-motion: reduce){ body::after, html[data-theme] header h1::after{animation:none !important} }
 /* сетка выбора тем */
 .thgrid{display:grid; grid-template-columns:repeat(3,1fr); gap:9px; margin-top:10px}
 .thcell{border:2px solid var(--border2); border-radius:14px; padding:9px 6px 8px; text-align:center; cursor:pointer; background:var(--card); position:relative}
@@ -892,8 +1070,8 @@ html[data-theme=dark] .coach{background:rgba(46,198,209,.08); border-color:rgba(
 .srow .tiny2{font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:rgba(238,246,246,.6); font-weight:700}
 .srow b{font-size:20px}
 /* — тренировка 2.0 — */
-#excar{position:sticky; top:0; z-index:40; display:flex; gap:10px; overflow-x:auto; padding:10px 4px 12px;
-  margin:0 -4px; background:linear-gradient(var(--bg) 82%, transparent); scrollbar-width:none}
+#excar{position:sticky; top:0; z-index:40; display:flex; gap:10px; overflow-x:auto; padding:10px 8px 12px;
+  margin:0 -4px; background:var(--bg); border-radius:0 0 14px 14px; box-shadow:0 8px 18px rgba(0,0,0,.16); scrollbar-width:none}
 #excar::-webkit-scrollbar{display:none}
 .excir{flex:none; width:52px; text-align:center; background:none; border:none; padding:0; cursor:pointer}
 .excir .imgw{display:block; position:relative; overflow:hidden; width:48px; height:48px; margin:0 auto; border-radius:50%; border:2.5px solid var(--border2);
@@ -903,7 +1081,7 @@ html[data-theme=dark] .coach{background:rgba(46,198,209,.08); border-color:rgba(
 .excir.full .imgw{border-color:var(--good)}
 .excir.full .imgw::after{content:"✓"; position:absolute; right:-4px; bottom:-4px; width:17px; height:17px;
   border-radius:50%; background:var(--good); color:#fff; font:800 11px/17px system-ui; text-align:center}
-.excir .n{font-size:9.5px; color:var(--muted); margin-top:3px; line-height:1.15; height:22px; overflow:hidden; font-weight:600}
+.excir .n{font-size:9.5px; color:var(--text2); margin-top:3px; line-height:1.15; height:22px; overflow:hidden; font-weight:700}
 .excir .imgw b{font:800 15px/44px system-ui; color:var(--text2)}
 .excir .imgw img{position:absolute; inset:0; width:100%; height:100%; object-fit:cover}
 .exprev{font-size:12.5px; color:var(--muted); margin:7px 2px 0; cursor:pointer}
@@ -4142,6 +4320,7 @@ const ACH = [
   {c:'trn', id:'t200',e:'🐘', n:'200 тренировок', d:'заверши 200 тренировок', f:s=>s.done>=200},
   {c:'trn', id:'t300',e:'🗿', n:'300 тренировок', d:'это уже спарта', f:s=>s.done>=300},
   {c:'trn', id:'tall',e:'🏆', n:'Вся программа', d:'заверши все тренировки программы', f:s=>s.total>0&&s.done>=s.total},
+  {c:'trn', id:'phoenix', e:'🐦‍🔥', n:'Феникс', d:'вернись к тренировкам после перерыва в 2+ недели — возвращение сильнее безупречности', f:s=>s.comeback},
   {c:'trn', id:'deload1', e:'🌿', n:'Умная разгрузка', d:'пройди разгрузочную неделю, не пропустив её', f:s=>s.deloadDone},
   {c:'trn', id:'early', e:'🌅', n:'Ранняя пташка', d:'начни тренировку до 8 утра', f:s=>s.early},
   {c:'trn', id:'owl',  e:'🦉', n:'Сова железа', d:'начни тренировку после 21:00', f:s=>s.owl},
@@ -4268,6 +4447,10 @@ function achStats(){
       ton += arr.reduce((a,x)=>a+(x.w||0)*x.r,0);
     }
   }
+  // возвращение после перерыва 14+ дней
+  let comeback = false;
+  { const ds = [...doneDates].sort();
+    for (let i = 1; i < ds.length; i++){ if ((fromKey(ds[i]) - fromKey(ds[i-1]))/864e5 >= 14){ comeback = true; break; } } }
   // выходные одной недели
   let weekend = false;
   const byW = {};
@@ -4327,7 +4510,7 @@ function achStats(){
   }
   const lw = lastWeight();
   const lossRaw = lw ? (goalMode()==='bulk' ? lw.v - (PROF.startWeight||0) : (PROF.startWeight||0) - lw.v) : 0;
-  return { done, sets, ton, rpeN, noteN, early, owl, deloadDone, weekend, weeks3, weighStreak,
+  return { comeback, done, sets, ton, rpeN, noteN, early, owl, deloadDone, weekend, weeks3, weighStreak,
     total: SESSIONS.length, streak: streakCount(),
     loss: Math.max(0, lossRaw),
     weighN: Object.keys(DB.weights).length,
@@ -4354,7 +4537,7 @@ function achCheck(){
     if (fresh.length){
       save();
       const themed = fresh.filter(a => THEMES.some(t => t.ach === a.id));
-      const names = fresh.slice(0,3).map(a=>a.e+' '+a.n).join(' · ') + (fresh.length>3 ? ` и ещё ${fresh.length-3}` : '');
+      const names = fresh.slice(0,3).map(a=>achEmoji(a)+' '+achName(a)).join(' · ') + (fresh.length>3 ? ` и ещё ${fresh.length-3}` : '');
       setTimeout(()=>{
         toast('🏅 Достижение: ' + names + (themed.length ? ' — открыта новая тема оформления!' : ''));
         confetti();
@@ -4362,16 +4545,45 @@ function achCheck(){
     }
   } catch(e){}
 }
-function achName(a){ return goalMode()==='bulk' && a.c==='wgt' && a.n.startsWith('\u2212') ? a.n.replace('\u2212','+') : a.n; }
+/* ── скины ачивок: одно достижение, своё имя в каждой теме (v7.7) ── */
+const ACH_SKIN = {
+saber:{early:['Атака на рассвете','🌅'],owl:['Зов тёмной стороны','🌑'],wknd:['Двойной удар','⚔️'],deload1:['Путь равновесия','⚖️'],t25:['Падаван','🥋'],t50:['Рыцарь ордена','⚔️'],s12:['Сила потока','💫'],s20:['Непрерывная Сила','🌠'],ton10:['Крейсерская масса','🚀'],ton25:['Звёздный разрушитель','💥'],kg5:['Легче на орбите','🪐'],kg7:['Гиперлёгкость','✨'],cyc1:['Путь пройден','🏆']},
+castle:{early:['Огненная птица','🐦‍🔥'],owl:['Ночной страж','🏰'],wknd:['Осада выходных','🏹'],deload1:['Неделя в таверне','🍺'],t25:['Опытный герой','🎖'],t50:['Легенда королевства','👑'],s12:['Долгий поход','🐎'],s20:['Великий поход','🗺'],ton10:['Обоз золота','💰'],ton25:['Караван сокровищ','🐫'],kg5:['Легче в седле','🐎'],kg7:['Лёгкая пехота','🛡'],cyc1:['Кампания пройдена','🏆']},
+orbit:{early:['Сверхновая','💥'],owl:['Ночная вахта','🌃'],wknd:['Двойной виток','🌀'],deload1:['Мягкая стыковка','🛰'],t25:['25 витков','🌍'],t50:['50 витков','🌏'],s12:['Стабильная орбита','📡'],s20:['Дальний космос','🌌'],ton10:['Грузовой отсек','🚀'],ton25:['Космический грузовик','🛸'],kg5:['Сброшен балласт','🎈'],kg7:['Невесомость','🪐'],cyc1:['Миссия выполнена','🏁']},
+wizard:{early:['До первой совы','🌅'],owl:['Полночная магия','🕯'],wknd:['Двойное заклинание','✨'],deload1:['Урок зельеварения','⚗️'],t25:['Первый курс','📚'],t50:['Старшекурсник','🎓'],s12:['12 лунных ночей','🌙'],s20:['Мастер постоянства','🔮'],ton10:['10 тонн чар','🪄'],ton25:['Великое волшебство','🌟'],kg5:['Чары лёгкости','🪶'],kg7:['Полёт пера','🕊'],cyc1:['Выпускной экзамен','🏆']},
+owl:{early:['Раньше совы','🌄'],owl:['Сова в деле','🦉'],wknd:['Выходные засчитаны','📗'],deload1:['Мудрая пауза','🪶'],t25:['25 уроков','📗'],t50:['50 уроков','📘'],s12:['Стрик 12','🔥'],s20:['Стрик 20','🔥'],ton10:['10 тонн практики','💪'],ton25:['25 тонн практики','🏋️'],kg5:['Минус 5 — так держать','⭐'],kg7:['Минус 7 — блестяще','🌟'],cyc1:['Курс завершён','🎓']},
+tokyo:{early:['Первый поезд','🚆'],owl:['Неон не гаснет','🌃'],wknd:['Городские выходные','🏙'],deload1:['Тихий переулок','🏮'],t25:['25 кварталов','🗼'],t50:['50 кварталов','🌆'],s12:['12 ночей неона','💡'],s20:['Марафон мегаполиса','🚇'],ton10:['10 тонн стали города','🏗'],ton25:['Грузовой состав','🚛'],kg5:['Легче на 5','🎐'],kg7:['Лёгкий как фонарик','🏮'],cyc1:['Круг по кольцевой','🚉']},
+onyx:{early:['Охота на рассвете','🌄'],owl:['Ночной хищник','🐆'],wknd:['Двойной прыжок','🐾'],deload1:['Затаиться','🌑'],t25:['25 вылазок','🐾'],t50:['50 вылазок','🖤'],s12:['Серия прыжков','⚡'],s20:['Хищная серия','🐆'],ton10:['10 тонн мощи','🦾'],ton25:['Апекс-хищник','👑'],kg5:['Суше на 5','💨'],kg7:['Грация кошки','🐈‍⬛'],cyc1:['Территория взята','🚩']},
+lake:{early:['Штиль на заре','🌅'],owl:['Ночная гладь','🌙'],wknd:['Два берега','⛰'],deload1:['Тихая бухта','⚓'],t25:['25 гребков','🚣'],t50:['50 гребков','🛶'],s12:['Ровное течение','💧'],s20:['Большая вода','🌊'],ton10:['10 тонн валунов','🪨'],ton25:['Горная порода','⛰'],kg5:['Легче на плаву','🦆'],kg7:['Как поплавок','🎣'],cyc1:['Озеро переплыто','🏊']},
+desert:{early:['До жары','🌅'],owl:['Холод пустыни','🌙'],wknd:['Два бархана','🏜'],deload1:['Оазис','🌴'],t25:['25 миль песка','👣'],t50:['Караванщик','🐫'],s12:['Через пески','🐪'],s20:['Великий переход','🧭'],ton10:['10 тонн песка','⏳'],ton25:['Гора-бархан','🏔'],kg5:['Суше на 5','☀️'],kg7:['Мираж прежнего веса','✨'],cyc1:['Пустыня пройдена','🏁']},
+jungle:{early:['Крик попугая','🦜'],owl:['Ночные джунгли','🌘'],wknd:['Две лианы','🌿'],deload1:['Тень пальмы','🌴'],t25:['25 троп','🐾'],t50:['Следопыт','🧭'],s12:['Сквозь заросли','🌿'],s20:['Сердце джунглей','💚'],ton10:['10 тонн лиан','🪵'],ton25:['Слоновья сила','🐘'],kg5:['Ловкость обезьяны','🐒'],kg7:['Пантера в форме','🐆'],cyc1:['Джунгли покорены','🗿']},
+aurora:{early:['Полярный рассвет','🌅'],owl:['Под сиянием','🌌'],wknd:['Две полярные ночи','❄️'],deload1:['Тихая ночь','🌙'],t25:['25 всполохов','💚'],t50:['50 всполохов','💜'],s12:['Непрерывное сияние','🌈'],s20:['Полярный марафон','🧊'],ton10:['10 тонн льда','🧊'],ton25:['Ледокол','🚢'],kg5:['Легче снега','❄️'],kg7:['Северная лёгкость','🕊'],cyc1:['Полярный круг замкнут','🧭']},
+storm:{early:['До первого грома','🌄'],owl:['Гроза в ночи','🌩'],wknd:['Двойной разряд','⚡'],deload1:['Глаз бури','🌀'],t25:['25 раскатов','🌩'],t50:['Повелитель молний','⚡'],s12:['Грозовой фронт','🌪'],s20:['Идеальный шторм','🌊'],ton10:['10 тонн ливня','🌧'],ton25:['Ураганная мощь','🌀'],kg5:['Унесло ветром','💨'],kg7:['Легче облака','☁️'],cyc1:['Шторм пережит','🌈']},
+volcano:{early:['Разбудил вулкан','🌋'],owl:['Ночная лава','🔥'],wknd:['Двойное извержение','💥'],deload1:['Спящий вулкан','😴'],t25:['25 извержений','🌋'],t50:['Кратер закалки','🔥'],s12:['Лавовый поток','🌡'],s20:['Магма-серия','🔥'],ton10:['10 тонн базальта','🪨'],ton25:['Тектоническая мощь','🌍'],kg5:['Переплавка','🔥'],kg7:['Пепел прошлого','🌫'],cyc1:['Кратер покорён','🏆']},
+deep:{early:['Первый луч на глубине','🌅'],owl:['Биолюминесценция','🪼'],wknd:['Двойное погружение','🤿'],deload1:['Декомпрессия','🫧'],t25:['25 метров вниз','🌊'],t50:['50 метров вниз','🐋'],s12:['Держим давление','🫧'],s20:['Марианский настрой','🌌'],ton10:['10 тонн балласта','⚓'],ton25:['Кит-тоннаж','🐋'],kg5:['Всплываем','🐠'],kg7:['Нейтральная плавучесть','🪼'],cyc1:['Глубина покорена','🏆']},
+peak:{early:['Штурм на рассвете','🌄'],owl:['Ночёвка в лагере','⛺'],wknd:['Два перевала','⛰'],deload1:['Акклиматизация','🧗'],t25:['Высота 2500','🏔'],t50:['Высота 5000','🗻'],s12:['12 дней восхождения','🥾'],s20:['Без кислорода','💨'],ton10:['10 тонн скал','🪨'],ton25:['Вес горы','⛰'],kg5:['Рюкзак легче','🎒'],kg7:['Высотная форма','🦅'],cyc1:['Флаг на вершине','🚩']},
+phoenix:{early:['Рассвет из пепла','🌅'],owl:['Полуночное пламя','🕯'],wknd:['Двойное пламя','🔥'],deload1:['Ровное пламя','🕯'],t25:['25 перерождений','🐦‍🔥'],t50:['Вечный огонь','🔥'],s12:['Не гаснет 12','🔥'],s20:['Негасимый','☀️'],ton10:['10 тонн жара','🌡'],ton25:['Кузница феникса','⚒️'],kg5:['Переплавка формы','🔥'],kg7:['Пепел −7','🌫'],cyc1:['Полное перерождение','🐦‍🔥']}
+};
+function achSkin(a){
+  const t = document.documentElement.dataset.theme || '';
+  return (ACH_SKIN[t] && ACH_SKIN[t][a.id]) || null;
+}
+function achEmoji(a){ const s = achSkin(a); return s ? s[1] : a.e; }
+function achName(a){
+  const sk = achSkin(a);
+  if (sk) return sk[0];
+  return goalMode()==='bulk' && a.c==='wgt' && a.n.startsWith('\u2212') ? a.n.replace('\u2212','+') : a.n;
+}
 function achDesc(a){ return goalMode()==='bulk' ? a.d.replace('минус','плюс').replace('сброшено','набрано') : a.d; }
 window.achDlg = function(id){
   const a = ACH.find(x=>x.id===id); if (!a) return;
   const got = DB.achSeen && DB.achSeen[a.id];
   const th = THEMES.find(t => t.ach === a.id);
   openModal(`<div style="text-align:center;padding:6px 0">
-    <div style="font-size:64px;line-height:1;${got?'':'opacity:.35;filter:grayscale(1)'}">${a.e}</div>
+    <div style="font-size:64px;line-height:1;${got?'':'opacity:.35;filter:grayscale(1)'}">${achEmoji(a)}</div>
     <h2 style="margin-top:10px">${esc(achName(a))}</h2>
     <div class="small" style="margin-top:6px">${esc(achDesc(a))}</div>
+    ${achSkin(a)?`<div class="tiny" style="margin-top:5px">сквозное достижение · в классике: «${esc(a.n)}» ${a.e}</div>`:''}
     ${th?`<div class="tiny" style="margin-top:6px">${th.e} Открывает тему «${th.n}»</div>`:''}
     <div class="${got?'insight good':'insight'}" style="margin-top:12px;text-align:left"><p style="margin:0">${got?`Получено ${fmtD(fromKey(got))} 🎉`:'Ещё не получено — всё впереди.'}</p></div>
     <button class="btn full" style="margin-top:12px" onclick="closeModal()">Закрыть</button></div>`);
@@ -4395,9 +4607,9 @@ function achCard(){
     }).join('') + `</div>
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px 6px;margin-top:10px">` +
     inCat.map(a => `<div style="text-align:center;cursor:pointer;${isOn(a)?'':'opacity:.28;filter:grayscale(1)'}" onclick="achDlg('${a.id}')">
-      <div style="font-size:25px;line-height:1">${a.e}</div>
+      <div style="font-size:25px;line-height:1">${achEmoji(a)}</div>
       <div class="tiny" style="font-size:9.5px;line-height:1.15;margin-top:3px">${esc(achName(a))}</div></div>`).join('') +
-    `</div>${next?`<div class="tiny" style="margin-top:10px">Ближайшее: <b>${next.e} ${esc(achName(next))}</b> — ${esc(achDesc(next))}. Тап по значку — детали.</div>`:`<div class="tiny" style="margin-top:10px">Все ${ACH.length} собраны. Красавец.</div>`}</div>`;
+    `</div>${next?`<div class="tiny" style="margin-top:10px">Ближайшее: <b>${achEmoji(next)} ${esc(achName(next))}</b> — ${esc(achDesc(next))}. Тап по значку — детали.</div>`:`<div class="tiny" style="margin-top:10px">Все ${ACH.length} собраны. Красавец.</div>`}</div>`;
 }
 function installCard(){
   let standalone = false;
@@ -9309,7 +9521,7 @@ function vMore(){
       <button class="btn sec full" style="margin-top:10px" onclick="adjustDlg()">Настройка: уровень · травмы · разнообразие</button>
       <button class="btn sec full" style="margin-top:8px" onclick="tourDlg(0)">🧭 Показать тур по приложению</button>
       <button class="btn sec full" style="margin-top:8px" onclick="if(confirm('Пересоздать программу заново через анкету? Вес, еда и шаги сохранятся, а журнал тренировок и замены очистятся.')){DB.profile=null;DB.sessions={};DB.swaps={};DB.skips={};DB.dateOv={};save();location.reload();}">Пересоздать программу (анкета)</button></div>`;
-    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 7.6 (28 тем с фото-фонами и прогрессией наград; журнал-PDF, воскресный дайджест, напоминание о бэкапе) · собрано для Егора и друзей · 27.08.2026. Фото — Free Exercise DB; нутриенты — USDA + Скурихин.</div>`;
+    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 7.7 (у каждой темы свой характер: фирменные эффекты, тематические имена достижений, Феникс, сезонные фоны) · собрано для Егора и друзей · 27.08.2026. Фото — Free Exercise DB; нутриенты — USDA + Скурихин.</div>`;
   }
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }
@@ -9947,12 +10159,13 @@ window.tourDlg = function(i){
       ${i>0?`<button class="btn sec" onclick="tourDlg(${i-1})">←</button>`:`<button class="btn sec" onclick="DB.tourDone=1;save();closeModal()">Пропустить</button>`}
       <button class="btn grow" onclick="${i<TOUR.length-1?`tourDlg(${i+1})`:'DB.tourDone=1;save();closeModal()'}">${i<TOUR.length-1?'Дальше':'Погнали 🚀'}</button></div>`);
 };
-const APP_VER = '7.6';
+const APP_VER = '7.7';
 const WHATS_NEW = [
-  '🎨 Гардероб вырос до 28 тем — и теперь у КАЖДОЙ настоящий фото-фон: у старых «плоских» тоже (Лес — туманные ели, Океан — подводные лучи, Полночь — Млечный Путь…)',
-  '🆕 7 новых тем: Дюны 🏜, Джунгли 🌴, Аврора 🌠, Шторм ⛈, Вулкан 🌋, Глубина 🐙, Вершина 🏔',
-  '🏆 Темы стали наградами: часть открывается уровнями, темы-трофеи — за достижения (Шторм за серию 12, Вулкан за 25 тонн, Вершина за пройденную программу, Оникс за тренировку после 21:00)',
-  '🔒 Честное правило: тема, которую ты уже выбрал, остаётся доступной навсегда',
+  '🎭 У каждой темы — свой характер: световые мечи в «Саге», HUD-сетка в «Орбите», золотые рамки в «Героях», парящие огоньки в «Магии», неоновая вывеска 東京, молния в «Шторме», пузырьки в «Глубине», снег на «Вершине», хром и фары в «Ониксе», дуо-кнопки у «Совы»…',
+  '🏅 Достижения теперь говорят на языке темы: «Ранняя пташка» в «Героях» — «Огненная птица», в «Орбите» — «Сверхновая». Достижение одно, открывается везде сразу',
+  '🐦‍🔥 Новая тема-трофей «Феникс» — вернись к тренировкам после перерыва в 2+ недели',
+  '❄️ Сезонные фоны: зимой Герои, Лес, Озеро и Токио сами переоденутся в снег',
+  '👀 Читаемость: полоса упражнений в тренировке получила плотную подложку, подписи стали контрастнее',
 ]
 function whatsNewCheck(){
   if (!DB.profile) { DB.seenVer = APP_VER; save(); return; }
@@ -10137,6 +10350,7 @@ const THEMES = [
   {id:'storm',   n:'Шторм',    e:'⛈', sw:'var(--bgi-storm) center/cover',  bar:'#0c1420', pic:1, ach:'s12', achT:'серия 12 тренировок'},
   {id:'peak',    n:'Вершина',  e:'🏔', sw:'var(--bgi-peak) center/cover',   bar:'#edf2f8', pic:1, ach:'cyc1', achT:'пройди программу целиком'},
   {id:'onyx',    n:'Оникс',    e:'🐆', sw:'var(--bgi-onyx) center/cover',   bar:'#141619', pic:1, ach:'owl', achT:'тренировка после 21:00'},
+  {id:'phoenix', n:'Феникс',   e:'🐦‍🔥', sw:'var(--bgi-phoenix) center/cover', bar:'#180a04', pic:1, ach:'phoenix', achT:'вернись после перерыва 2+ недели'},
 ];
 function themeAllowed(t){
   const th = THEMES.find(x=>x.id===t);
@@ -10146,7 +10360,18 @@ function themeAllowed(t){
   if (th.ach && !(DB.achSeen && DB.achSeen[th.ach])) return false;
   return true;
 }
+/* сезонные вариации фонов: зимой часть тем переодевается сама */
+const SEASONAL_BG = { winter: ['castle','forest','lake','tokyo'] };   // bg-<тема>-winter.jpg
+function seasonNow(){ const m = today().getMonth()+1; return (m===12||m<=2) ? 'winter' : m<=5 ? 'spring' : m<=8 ? 'summer' : 'autumn'; }
+function applySeasonalBg(){
+  const rs = document.documentElement.style;
+  for (const season in SEASONAL_BG) for (const th of SEASONAL_BG[season]){
+    if (seasonNow() === season) rs.setProperty('--bgi-'+th, `url(bg-${th}-${season}.jpg)`);
+    else rs.removeProperty('--bgi-'+th);
+  }
+}
 function applyTheme(){
+  applySeasonalBg();
   let t = DB.theme || 'light';
   if (!themeAllowed(t)) t = 'dark';
   if (t === 'auto') t = (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';

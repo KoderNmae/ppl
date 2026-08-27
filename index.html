@@ -532,7 +532,7 @@ a{color:#6da7ec}
 .rpe-row .rpe button b{font-size:12.5px; line-height:1; pointer-events:none}
 .rpe-row .rpe button.on b{color:#fff}
 /* слайдер тяжести: одна широкая полоса, палец ведёшь где угодно */
-.rslider{position:relative; height:46px; touch-action:none; cursor:pointer; -webkit-user-select:none; user-select:none}
+.rslider{position:relative; height:46px; touch-action:pan-y; cursor:pointer; -webkit-user-select:none; user-select:none}
 .rslider .rtrack{position:absolute; left:0; right:0; top:9px; bottom:9px; border-radius:14px;
   background:linear-gradient(90deg,#2fa96b,#7cb342 26%,#e8a13c 52%,#e87b3c 76%,#d45555); opacity:.30}
 .rslider .rmarks{position:absolute; left:23px; right:23px; top:0; bottom:0; display:flex; justify-content:space-between; align-items:center; pointer-events:none}
@@ -2666,17 +2666,18 @@ window.setRPEval = function(sid, ei, v){
   const st = DB.sessions[sid]; if (!st) return;
   st.rpe[ei] = v || null; save(); render();
 };
-/* слайдер тяжести: тап или ведение пальцем в ЛЮБОМ месте полосы — прицеливаться не нужно */
+/* слайдер тяжести: тап или ГОРИЗОНТАЛЬНОЕ ведение пальцем. Вертикальный свайп по шкале —
+   это скролл страницы: отдаём его браузеру и значение не трогаем (touch-action:pan-y) */
 window.rpeStart = function(ev, sid, ei){
-  ev.preventDefault();
   const el = ev.currentTarget;
-  try{ el.setPointerCapture(ev.pointerId); }catch(e){}
+  const x0 = ev.clientX, y0 = ev.clientY;
+  let mode = 'pending';   // pending → drag, либо отменяемся в пользу скролла
+  let cur = null;
   const valAt = (clientX) => {
     const r = el.getBoundingClientRect();
     const frac = Math.min(1, Math.max(0, (clientX - r.left - 23) / Math.max(1, r.width - 46)));
     return 6 + Math.round(frac * 4);
   };
-  let cur = null;
   const paint = (v) => {
     if (v === cur) return;
     cur = v;
@@ -2697,17 +2698,31 @@ window.rpeStart = function(ev, sid, ei){
     }
     try{ if (navigator.vibrate) navigator.vibrate(8); }catch(e){}
   };
-  paint(valAt(ev.clientX));
-  const mv = e2 => paint(valAt(e2.clientX));
-  const up = () => {
+  const cleanup = () => {
     el.removeEventListener('pointermove', mv);
     el.removeEventListener('pointerup', up);
-    el.removeEventListener('pointercancel', up);
-    if (cur != null) setRPEval(sid, ei, cur);
+    el.removeEventListener('pointercancel', cancel);
   };
+  const mv = e2 => {
+    if (mode === 'pending'){
+      const dx = Math.abs(e2.clientX - x0), dy = Math.abs(e2.clientY - y0);
+      if (dy > 10 && dy > dx){ cleanup(); return; }          // палец пошёл вниз/вверх — это скролл, уходим
+      if (dx < 8) return;                                    // ещё не понятно — ждём
+      mode = 'drag';
+      try{ el.setPointerCapture(e2.pointerId); }catch(e){}
+    }
+    paint(valAt(e2.clientX));
+  };
+  const up = e2 => {
+    const tap = mode === 'pending' && Math.abs(e2.clientX - x0) < 8 && Math.abs(e2.clientY - y0) < 8;
+    const fin = mode === 'drag' ? cur : (tap ? valAt(e2.clientX) : null);
+    cleanup();
+    if (fin != null) setRPEval(sid, ei, fin);
+  };
+  const cancel = () => cleanup();                            // браузер забрал жест под скролл — ничего не меняем
   el.addEventListener('pointermove', mv);
   el.addEventListener('pointerup', up);
-  el.addEventListener('pointercancel', up);
+  el.addEventListener('pointercancel', cancel);
 };
 window.scrollToEx = function(ei){
   const el = document.getElementById('ex-'+ei);
@@ -8977,7 +8992,7 @@ function vMore(){
       <button class="btn sec full" style="margin-top:10px" onclick="adjustDlg()">Настройка: уровень · травмы · разнообразие</button>
       <button class="btn sec full" style="margin-top:8px" onclick="tourDlg(0)">🧭 Показать тур по приложению</button>
       <button class="btn sec full" style="margin-top:8px" onclick="if(confirm('Пересоздать программу заново через анкету? Вес, еда и шаги сохранятся, а журнал тренировок и замены очистятся.')){DB.profile=null;DB.sessions={};DB.swaps={};DB.skips={};DB.dateOv={};save();location.reload();}">Пересоздать программу (анкета)</button></div>`;
-    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 7.1 (шкала тяжести — слайдер: одна полоса-градиент, ведёшь пальцем где угодно без прицеливания, бегунок с эмодзи следует за пальцем, лёгкая вибрация на ступенях; плюс всё из 7.0 — скан не виснет, страница не прыгает, свайпы, iOS-фиксы) · собрано для Егора и друзей · 26.08.2026. Фото — Free Exercise DB; нутриенты — USDA + Скурихин.</div>`;
+    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 7.2 (шкала тяжести научилась отличать скролл от выбора: вертикальный свайп по ней листает страницу как обычно, значение меняется только горизонтальным ведением или тапом — случайно дёрнуть больше нельзя) · собрано для Егора и друзей · 26.08.2026. Фото — Free Exercise DB; нутриенты — USDA + Скурихин.</div>`;
   }
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }
@@ -9615,12 +9630,12 @@ window.tourDlg = function(i){
       ${i>0?`<button class="btn sec" onclick="tourDlg(${i-1})">←</button>`:`<button class="btn sec" onclick="DB.tourDone=1;save();closeModal()">Пропустить</button>`}
       <button class="btn grow" onclick="${i<TOUR.length-1?`tourDlg(${i+1})`:'DB.tourDone=1;save();closeModal()'}">${i<TOUR.length-1?'Дальше':'Погнали 🚀'}</button></div>`);
 };
-const APP_VER = '7.1';
+const APP_VER = '7.2';
 const WHATS_NEW = [
   '📷 Скан еды больше не зависает: не нашёлся товар — камера продолжает сканировать, сеть ждём максимум 10 секунд',
   '📌 Страница больше не прыгает вверх, когда отмечаешь подход или воду',
   '👇 Любую шторку теперь можно закрыть свайпом вниз',
-  '😤 Шкала тяжести — теперь слайдер: проведи пальцем по полосе, прицеливаться не нужно. Бегунок с эмодзи, подпись и вибрация по ступеням',
+  '😤 Шкала тяжести: слайдер без прицеливания — и теперь он не мешает листать страницу: вертикальный свайп по шкале просто скроллит, значение меняют только тап или ведение вбок',
   '🍏 «?» у упражнений починен на iPhone; подписи в дневнике здоровья; понятные описания разделов в шапках',
   '🎒 Инвентарь для дома теперь меняется на ходу: «Ещё → ⚙️ → Настройка программы»',
 ]

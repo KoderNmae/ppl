@@ -852,7 +852,7 @@ html[data-theme=onyx] .rslider .rtrack{opacity:.95;
   94%{opacity:.96}
   100%{transform:translate(24vw, 72vh) rotate(7deg); opacity:0}}
 html[data-theme=saber] #fx::before{content:''; position:absolute; left:0; top:0; width:158px; height:60px;
-  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 60'%3E%3Cpolygon points='151,30 14,8 14,52' fill='%237e8a97' stroke='%23272e37' stroke-width='1'/%3E%3Cpolygon points='151,30 14,8 14,30' fill='%23a3b1bf'/%3E%3Cline x1='149' y1='30' x2='16' y2='30' stroke='%235c6672' stroke-width='.8'/%3E%3Cline x1='138' y1='30' x2='22' y2='15' stroke='%236e7a86' stroke-width='.6'/%3E%3Cline x1='114' y1='24' x2='30' y2='13' stroke='%2378848f' stroke-width='.5'/%3E%3Cline x1='138' y1='30' x2='22' y2='45' stroke='%234f5864' stroke-width='.6'/%3E%3Cline x1='114' y1='36' x2='30' y2='47' stroke='%23515a66' stroke-width='.5'/%3E%3Crect x='31' y='2' width='21' height='9' rx='1' fill='%236f7a86' stroke='%23272e37' stroke-width='.6'/%3E%3Crect x='34' y='4' width='15' height='5' fill='%23a3b1bf'/%3E%3Ccircle cx='37' cy='2.4' r='2' fill='%235c6672'/%3E%3Ccircle cx='46' cy='2.4' r='2' fill='%235c6672'/%3E%3Ccircle cx='15' cy='17' r='3.4' fill='%23b6e2ff'/%3E%3Ccircle cx='15' cy='30' r='4' fill='%23dcf2ff'/%3E%3Ccircle cx='15' cy='43' r='3.4' fill='%23b6e2ff'/%3E%3C/svg%3E") center/contain no-repeat;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 60'%3E%3Cpolygon points='151,30 14,8 14,52' fill='%237e8a97' stroke='%23272e37' stroke-width='1'/%3E%3Cpolygon points='151,30 14,8 14,30' fill='%23a3b1bf'/%3E%3Cline x1='149' y1='30' x2='16' y2='30' stroke='%235c6672' stroke-width='.8'/%3E%3Cline x1='138' y1='30' x2='22' y2='15' stroke='%236e7a86' stroke-width='.6'/%3E%3Cline x1='114' y1='24' x2='30' y2='13' stroke='%2378848f' stroke-width='.5'/%3E%3Cline x1='138' y1='30' x2='22' y2='45' stroke='%234f5864' stroke-width='.6'/%3E%3Cline x1='114' y1='36' x2='30' y2='47' stroke='%23515a66' stroke-width='.5'/%3E%3Cline x1='96' y1='19' x2='40' y2='12' stroke='%2378848f' stroke-width='.4'/%3E%3Cline x1='96' y1='41' x2='40' y2='48' stroke='%23515a66' stroke-width='.4'/%3E%3Ccircle cx='15' cy='17' r='3.4' fill='%23b6e2ff'/%3E%3Ccircle cx='15' cy='30' r='4' fill='%23dcf2ff'/%3E%3Ccircle cx='15' cy='43' r='3.4' fill='%23b6e2ff'/%3E%3C/svg%3E") center/contain no-repeat;
   filter:drop-shadow(-7px 0 13px rgba(150,214,255,.75)) drop-shadow(0 0 3px rgba(0,0,0,.6)) drop-shadow(0 4px 7px rgba(0,0,0,.5));
   animation:fxShip 34s linear infinite}
 /* Магия: золотой светлячок порхает */
@@ -9810,7 +9810,7 @@ function vMore(){
       <button class="btn sec full" style="margin-top:10px" onclick="adjustDlg()">Настройка: уровень · травмы · разнообразие</button>
       <button class="btn sec full" style="margin-top:8px" onclick="tourDlg(0)">🧭 Показать тур по приложению</button>
       <button class="btn sec full" style="margin-top:8px" onclick="if(confirm('Пересоздать программу заново через анкету? Вес, еда и шаги сохранятся, а журнал тренировок и замены очистятся.')){DB.profile=null;DB.sessions={};DB.swaps={};DB.skips={};DB.dateOv={};save();location.reload();}">Пересоздать программу (анкета)</button></div>`;
-    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 8.0.3 (Сага: шкала-меч с раскалённым ядром, настоящий гул лайтсейбера, крейсер на фоне, примерка тем) · собрано для Егора и друзей · 27.08.2026. Фото — Free Exercise DB; нутриенты — USDA + Скурихин.</div>`;
+    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 8.0.4 (Сага: шкала-меч с раскалённым ядром, настоящий гул лайтсейбера, чистый крейсер на фоне, примерка тем) · собрано для Егора и друзей · 27.08.2026. Фото — Free Exercise DB; нутриенты — USDA + Скурихин.</div>`;
   }
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }
@@ -10485,11 +10485,11 @@ window.tourDlg = function(i){
       ${i>0?`<button class="btn sec" onclick="tourDlg(${i-1})">←</button>`:`<button class="btn sec" onclick="DB.tourDone=1;save();closeModal()">Пропустить</button>`}
       <button class="btn grow" onclick="${i<TOUR.length-1?`tourDlg(${i+1})`:'DB.tourDone=1;save();closeModal()'}">${i<TOUR.length-1?'Дальше':'Погнали 🚀'}</button></div>`);
 };
-const APP_VER = '8.0.3';
+const APP_VER = '8.0.4';
 const WHATS_NEW = [
   '⚔️ «Сага»: шкала RPE стала настоящим световым мечом — раскалённое белое ядро, цветная аура от синего к алому, рукоять-эмиттер с насечками и живое мерцание луча',
   '🔊 Звук меча переписан: вместо короткого «пука» — узнаваемый гул с зажиганием и вибрато (конец отдыха) и свист взмаха (запись подхода). Тот же приём, что в кино: гудение + помехи',
-  '🚀 На фоне «Саги» теперь величественно проплывает имперский клин-крейсер, а не мутный диск',
+  '🚀 На фоне «Саги» проплывает имперский клин-крейсер — силуэт стал чище',
   '🔓 Примерка тем: ⚙️ Ещё → Данные → «Примерить все темы» — открывает все темы для просмотра, чтобы оценить эффекты каждой (выбранная всё равно остаётся твоей навсегда)',
   '📌 Из 8.0.2: звук «разогревается» первым касанием (система больше не глушит сигнал отдыха) + кнопка «Проверить звук темы»',
   '🎬 Темы заговорили и зазвучали: кнопка старта, отдых и финиш — в характере темы. В «Саге» гипердвигатель заряжается и «Да пребудет сила», в «Вулкане» отдых копит магму и взрывается ИЗВЕРЖЕНИЕМ, в «Токио» ждёшь следующий поезд',

@@ -1,5 +1,5 @@
 // офлайн-кэш: приложение открывается в зале даже без сети
-const C = 'ppl-v806';
+const C = 'ppl-v807';
 const BG = 'ppl-bg2';   // фоны тем: вечный кэш; при замене картинки меняем ?v=N в CSS
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(C).then(c => c.addAll(['./', './index.html'])).then(() => self.skipWaiting()));

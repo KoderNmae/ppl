@@ -1698,6 +1698,13 @@ function tuneProgram(ex, alts){
         if (e[ph] && e[ph][0] > 2) e[ph] = [e[ph][0]-1, e[ph][1], e[ph][2], e[ph][3]];
     });
   }
+  if ((PROF.level||'some') === 'fit'){
+    // опытным — больше объёма на базовых движениях (+1 рабочий подход на этапах «Разгон» и «Новая территория»)
+    for (const t in ex) ex[t].forEach(e => {
+      for (const ph of ['p1','p2'])
+        if (e[ph] && e[ph][0] >= 4) e[ph] = [e[ph][0]+1, e[ph][1], e[ph][2], e[ph][3]];
+    });
+  }
 }
 function addFemaleSlots(ex, alts){
   if (PROF.sex !== 'f') return;
@@ -2637,17 +2644,23 @@ const HOME_SLOTS = {
   {m:'Спина (одностор.)', v:[
     {n:'Тяга гантели одной рукой', need:'db', inc:2, p0:[2,'10–12',10,12], p1:[3,'8–12',8,12], p2:[3,'8–12',8,12], rest:100},
     {n:'Тяга резинки одной рукой', need:'band', bw:1, e:1, p0:[2,'12–15',12,15], p1:[3,'12–18',12,18], p2:[3,'12–18',12,18], rest:90},
+    {n:'Тяга рюкзака одной рукой в наклоне', bw:1, p0:[2,'10–14',10,14], p1:[3,'12–16',12,16], p2:[3,'12–16',12,16], rest:90},
     {n:'Австралийские подтягивания (стол)', bw:1, p0:[2,'6–12',6,12], p1:[3,'8–15',8,15], p2:[3,'8–15',8,15], rest:110}]},
   {m:'Задняя дельта', v:[
     {n:'Тяга резинки к лицу', need:'band', bw:1, p0:[2,'15',13,17], p1:[3,'12–18',12,18], p2:[3,'12–18',12,18], rest:75},
     {n:'Разведения в наклоне с гантелями', need:'db', inc:2, p0:[2,'12–15',12,15], p1:[3,'12–15',12,15], p2:[3,'12–15',12,15], rest:75},
+    {n:'Разведения рюкзака/бутылок в наклоне', bw:1, p0:[2,'12–15',12,15], p1:[3,'12–18',12,18], p2:[3,'12–18',12,18], rest:65},
+    {n:'Обратные разведения лёжа (Y-подъёмы)', bw:1, e:1, p0:[2,'12–15',12,15], p1:[3,'15–20',15,20], p2:[3,'15–20',15,20], rest:60},
     {n:'Супермен', bw:1, p0:[2,'12–15',12,15], p1:[3,'12–18',12,18], p2:[3,'12–18',12,18], rest:60}]},
   {m:'Бицепс', v:[
     {n:'Сгибания с гантелями', need:'db', inc:2, p0:[2,'10–12',10,12], p1:[3,'8–12',8,12], p2:[3,'8–12',8,12], rest:90},
     {n:'Сгибания с резинкой', need:'band', bw:1, e:1, p0:[2,'12–15',12,15], p1:[3,'12–18',12,18], p2:[3,'12–18',12,18], rest:75},
-    {n:'Подтягивания обратным хватом', need:'bar', bw:1, p0:[2,'4–8',4,8], p1:[3,'4–8',4,8], p2:[3,'4–8',4,8], rest:120}]},
+    {n:'Подтягивания обратным хватом', need:'bar', bw:1, p0:[2,'4–8',4,8], p1:[3,'4–8',4,8], p2:[3,'4–8',4,8], rest:120},
+    {n:'Сгибания рюкзака двумя руками', bw:1, p0:[2,'12–15',12,15], p1:[3,'12–18',12,18], p2:[3,'12–18',12,18], rest:75},
+    {n:'Сгибания бутылок/канистры', bw:1, e:1, p0:[2,'12–18',12,18], p1:[3,'15–20',15,20], p2:[3,'15–20',15,20], rest:70}]},
   {m:'Бицепс (доп.)', v:[
-    {n:'«Молотки» с гантелями', need:'db', inc:2, p1:[2,'10–12',10,12], p2:[2,'10–12',10,12], rest:75}]},
+    {n:'«Молотки» с гантелями', need:'db', inc:2, p0:[2,'10–12',10,12], p1:[2,'10–12',10,12], p2:[2,'10–12',10,12], rest:75},
+    {n:'«Молотки» рюкзака/бутылок', bw:1, p0:[2,'12–15',12,15], p1:[2,'12–18',12,18], p2:[2,'12–18',12,18], rest:70}]},
   {m:'Поясница', v:[
     {n:'Лодочка (супермен с вытяжением)', bw:1, p0:[2,'12–15',12,15], p1:[3,'12–18',12,18], p2:[3,'12–18',12,18], rest:60}]},
  ],
@@ -7306,37 +7319,60 @@ function recipesFor(mid, requireHave){
   const tg = mealTargets(foodDate)[mid] || {kcal:500};
   const eaten = mealEaten(foodDate, mid);
   const targetK = Math.max(250, tg.kcal - eaten.kcal);
+  const havePantry = Object.keys(DB.pantry||{}).length > 0;
   const out = [];
   for (const r of recipesAllowed()){
     if (!(r.m.includes(key) || (key==='s' && r.m.includes('b')) || r.my)) continue;
-    if (requireHave !== false && !r.ing.every(s => s[2] || ingHave(s))) continue;
+    // покрытие холодильником: обязательные (не опциональные) ингредиенты
+    const req = r.ing.filter(s => !s[2]);
+    const haveN = req.filter(ingHave).length;
+    const missArr = req.filter(s => !ingHave(s));
+    const cover = req.length ? haveN/req.length : 1;
+    // «Из моих продуктов» — как на поварёнке: показываем и частичные совпадения, но отсекаем совсем далёкие
+    if (requireHave){
+      if (!havePantry) continue;
+      if (haveN < 1) continue;                 // ничего общего — мимо
+      if (cover < 0.34 && missArr.length > 2) continue; // меньше трети и много не хватает — мимо
+    }
     const base = recipeCalc(r, 1);
     const qMin = base.kcal > 900 ? 0.15 : 0.5; // кастрюльные рецепты — можно взять одну порцию
     let q = Math.round(Math.min(1.5, Math.max(qMin, targetK/Math.max(base.kcal,1)))*20)/20;
     const t = recipeCalc(r, q);
     const optAll = r.ing.filter(s=>s[2]).length;
     const optHave = r.ing.filter(s=>s[2] && ingHave(s)).length;
-    let score = 1 + (optAll ? optHave/optAll : 0.5);
-    if (focus==='protein') score += (t.p*4/Math.max(t.kcal,1))*3;
-    if (focus==='lowcarb') score -= (t.c*4/Math.max(t.kcal,1))*2;
-    if (focus==='lowfat') score -= (t.f*9/Math.max(t.kcal,1))*2;
-    if (r.boost==='p' && focus==='protein') score += .6;
-    if (r.gen) score -= .25;
-    if (r.my) score += .7;
-    out.push({r, q, t, score});
+    let score = 1 + (optAll ? optHave/optAll : 0.5)*0.3;
+    // главный сигнал — насколько рецепт собирается из холодильника (и в режиме «из моих», и в общем)
+    if (havePantry) score += cover*4 - missArr.length*0.4;
+    if (focus==='protein') score += (t.p*4/Math.max(t.kcal,1))*2.5;
+    if (focus==='lowcarb') score -= (t.c*4/Math.max(t.kcal,1))*1.5;
+    if (focus==='lowfat') score -= (t.f*9/Math.max(t.kcal,1))*1.5;
+    if (r.boost==='p' && focus==='protein') score += .5;
+    if (r.gen) score -= .2;
+    if (r.my) score += .6;
+    out.push({r, q, t, score, cover, makeNow: missArr.length===0,
+      miss: missArr.map(s=>pInfo(ingResolve(s)).n)});
   }
-  return out.sort((a,b)=>b.score-a.score);
+  return out.sort((a,b)=> (b.makeNow-a.makeNow) || (b.score-a.score));
 }
 window.pantryDlg = function(backMid, mode){
   DB.pantry = DB.pantry || {}; DB.exclude = DB.exclude || {};
   mode = mode || 'have';
   const cats = ['prot','fish','dairy','carb','veg','fruit','fat','sweet','ready','drink','misc'];
   const isEx = mode === 'ex';
+  const doneAct = backMid?`closeModal();recipesDlg('${backMid}')`:'closeModal();render()';
+  const have = Object.keys(DB.pantry||{}).filter(id=>!excluded(id));
+  const chipStrip = (!isEx && have.length) ? `<div class="small" style="margin-top:10px">В холодильнике (${have.length}) — нажми, чтобы убрать:</div>
+      <div class="mods" style="margin-top:4px">${have.map(id=>`<button class="chip done" style="min-height:36px;font-size:13px;font-weight:600" onclick="pantryQuickDel('${id}',this)">${esc(pInfo(id).n)} ✕</button>`).join('')}</div>` : '';
   openModal(`<h2>Продукты</h2>
     <div class="seg" style="margin-top:8px">
       <button class="${!isEx?'on':''}" onclick="pantryDlg(${backMid?`'${backMid}'`:'null'},'have')">Есть дома</button>
       <button class="${isEx?'on':''}" onclick="pantryDlg(${backMid?`'${backMid}'`:'null'},'ex')">Не ем</button></div>
+    <div class="ptbar" style="position:sticky;top:0;z-index:5;background:var(--card,#fff);padding:8px 0;display:flex;gap:8px">
+      <button class="btn sec grow sm" style="margin:0" onclick="bcToPantry(${backMid?`'${backMid}'`:'null'})">📷 Скан</button>
+      ${!backMid?`<button class="btn sec grow sm" style="margin:0" onclick="_rcF='fit';closeModal();recipesDlg((nextMealInfo(foodDate)||{}).m&&nextMealInfo(foodDate).m.id||'l')">🍳 Что приготовить</button>`:''}
+      <button class="btn grow sm" style="margin:0" onclick="${doneAct}">✓ Готово</button></div>
     <div class="small">${isEx?'Отметь, что не ешь — эти продукты исчезнут из всех рецептов и подборов.':'Отметь, что есть дома — рецепты соберутся из этого. Список запоминается.'}</div>
+    ${chipStrip}
     <div class="row" style="gap:8px;margin-top:8px">
       <input type="text" id="pt-q" class="grow" placeholder="Поиск среди ${ING_ALL.length} продуктов…" style="margin:0" oninput="pantrySearch(this.value)">
       ${(window.SpeechRecognition||window.webkitSpeechRecognition)?`<button class="btn sec sm" style="flex:none;min-width:48px" onclick="voiceInto('pt-q')">🎤</button>`:''}</div>` +
@@ -7373,6 +7409,15 @@ window.pantryToggle = function(id, el, mode){
   if (DB.pantry[id]) delete DB.pantry[id]; else DB.pantry[id] = 1;
   DB.pantryUse[id] = 0;
   save(); el.classList.toggle('done');
+};
+window.pantryQuickDel = function(id, el){   // быстрое удаление из «есть дома» одним нажатием
+  if (DB.pantry) delete DB.pantry[id];
+  save();
+  if (el) el.remove();
+  const q = $('#pt-q'); if (q && q.value) pantrySearch(q.value);
+};
+window.bcToPantry = function(backMid){       // скан штрихкода прямо в холодильник (через карточку продукта → «В холодильник»)
+  barcodeDlg(backMid || null);
 };
 let _rcF = 'top';
 window.recipesDlg = function(mid){
@@ -7415,8 +7460,12 @@ window.rcList = function(mid, q){
     if (_rcF === 'fast') pool = pool.filter(o => o.r.t <= 15);
     if (_rcF === 'prot') pool = pool.filter(o => o.r.boost==='p' || protShare(o) >= 0.3).sort((a,b)=>protShare(b)-protShare(a));
     if (_rcF === 'my') pool = pool.filter(o => o.r.my);
-    list = pool.slice(0, 12).map(o => ({...o, miss: _rcF==='fit' ? [] : o.r.ing.filter(s=>!s[2] && !ingHave(s)).map(s=>pInfo(s[0]).n)}));
-    note = list.length ? `${_rcF==='fit' ? 'собирается из того, что дома' : 'лучшие для этого приёма'} · показано ${list.length}, ищи среди всех ${recipesAllowed().length}` : '';
+    list = pool.slice(0, 14);   // miss/makeNow уже посчитаны в recipesFor
+    const nNow = list.filter(o=>o.makeNow).length;
+    note = list.length ? (_rcF==='fit'
+        ? (nNow ? `можно приготовить прямо сейчас: ${nNow} · ниже — почти готовые, докупить пару позиций`
+                : `полностью не хватает ни на один — вот самые близкие, докупи отмеченное`)
+        : `лучшие для этого приёма · показано ${list.length}, ищи среди всех ${recipesAllowed().length}`) : '';
     if (_rcF === 'my' && !list.length) note = '';
   } else {
     const tg = mealTargets(foodDate)[mid] || {kcal:500};
@@ -7439,11 +7488,12 @@ window.rcList = function(mid, q){
         const un = ing.unitG ? Math.max(1, Math.round(g/ing.unitG))+' шт' : g+' г';
         return esc(ing.n)+' '+un;
       }).filter(Boolean).join(' · ');
+      const missShown = o.miss.slice(0,4).map(esc).join(', ') + (o.miss.length>4?` +${o.miss.length-4}`:'');
       return `<div class="card" style="margin:10px 0">
-        <b style="font-size:15px">${recEmo(o.r)} ${o.r.my?'★ ':''}${esc(o.r.n)}</b>
+        <b style="font-size:15px">${recEmo(o.r)} ${o.r.my?'★ ':''}${esc(o.r.n)} ${o.makeNow?'<span class="tiny" style="color:var(--good);font-weight:700">· готовится из твоих</span>':(o.miss.length&&o.miss.length<=2?'<span class="tiny" style="color:var(--warn);font-weight:700">· почти</span>':'')}</b>
         <div class="tiny" style="margin-top:2px">${o.r.t} мин · ${Math.round(o.t.kcal)} ккал · Б${Math.round(o.t.p)} Ж${Math.round(o.t.f)} У${Math.round(o.t.c)}${o.q!==1?' · порция ×'+o.q:''}</div>
         <div class="tiny" style="margin-top:6px">${ingTxt}</div>
-        ${o.miss.length?`<div class="tiny c-warn" style="margin-top:4px">не хватает: ${o.miss.map(esc).join(', ')}</div>`:''}
+        ${o.miss.length?`<div class="tiny c-warn" style="margin-top:4px">докупить: ${missShown}</div>`:''}
         <div id="rc-steps-${ix}" style="display:none" class="small">${o.r.s.map((st,i)=>`<div class="tiny" style="margin-top:5px">${i+1}. ${esc(st)}</div>`).join('')}</div>
         <div class="row" style="gap:8px;margin-top:9px">
           <button class="btn sec sm grow" onclick="const e=document.getElementById('rc-steps-${ix}');e.style.display=e.style.display==='none'?'':'none'">Готовка</button>
@@ -7454,7 +7504,7 @@ window.rcList = function(mid, q){
           <button class="btn sm grow" onclick="eatRecipe('${o.r.id}',${o.q},'${mid}')">В дневник</button></div></div>`;
     }).join('') : `<div class="card small">${q ? 'Ничего не нашлось — попробуй другое слово или ингредиент.'
       : _rcF==='my' ? 'Своих рецептов пока нет. «+ Свой рецепт» сверху — собери первый из любых продуктов базы, КБЖУ и витамины посчитаются сами.'
-      : _rcF==='fit' ? 'Из отмеченных продуктов ничего не собрать. Добавь базовые вещи: яйца, крупу, овощи, что-то белковое.'
+      : _rcF==='fit' ? (Object.keys(DB.pantry||{}).length ? 'Ни один рецепт пока не пересекается с тем, что дома. Отметь ещё пару базовых вещей: яйца, крупу, овощи, что-то белковое — и появятся варианты «почти готово».' : 'Сначала отметь, что есть дома (кнопка «Продукты дома» сверху), и рецепты соберутся из этого.')
       : 'Для этого приёма ничего не подобралось — посмотри фильтр «Все».'}</div>`);
 };
 window.eatRecipe = function(rid, q, mid){
@@ -7818,8 +7868,18 @@ window.psPick = function(id, mid, src){
     <div class="row" style="gap:8px;margin-top:10px">
       <button class="btn sec" onclick="modulesDlg('${mid}')">←</button>
       <button class="btn sec grow" style="flex:1" onclick="psAdd(true)">+ Ещё</button>
-      <button class="btn grow" style="flex:1" onclick="psAdd()">В дневник</button></div>`);
+      <button class="btn grow" style="flex:1" onclick="psAdd()">В дневник</button></div>
+    <button class="btn sec full sm" style="margin-top:8px" onclick="psToPantry()">🧺 ${pantryOn(id)?'Уже в холодильнике ✓':'Добавить в «Есть дома»'}</button>`);
   psCalc();
+};
+window.psToPantry = function(){
+  const ctx = window._psCtx; if (!ctx) return;
+  DB.pantry = DB.pantry || {}; DB.pantryUse = DB.pantryUse || {};
+  DB.pantry[ctx.id] = 1; DB.pantryUse[ctx.id] = 0;
+  save();
+  const x = prodBy(ctx.id);
+  toast('🧺 ' + (x?x.n:'Продукт') + ' → в холодильник');
+  closeModal(); render();
 };
 window.psCalc = function(){
   const ctx = window._psCtx; if (!ctx) return;
@@ -10105,7 +10165,7 @@ function vMore(){
       <button class="btn sec full" style="margin-top:10px" onclick="adjustDlg()">Настройка: уровень · травмы · разнообразие</button>
       <button class="btn sec full" style="margin-top:8px" onclick="tourDlg(0)">🧭 Показать тур по приложению</button>
       <button class="btn sec full" style="margin-top:8px" onclick="if(confirm('Пересоздать программу заново через анкету? Вес, еда и шаги сохранятся, а журнал тренировок и замены очистятся.')){DB.profile=null;DB.sessions={};DB.swaps={};DB.skips={};DB.dateOv={};save();location.reload();}">Пересоздать программу (анкета)</button></div>`;
-    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 8.0.15 (ротация упражнений еженедельная, +бицепс, фикс светлых тем и таймера) · собрано для Егора и друзей · 29.08.2026. Фото — Free Exercise DB; иконки предметов — game-icons.net (CC BY 3.0); нутриенты — USDA + Скурихин.</div>`;
+    h += `<div class="tiny" style="margin:8px 2px">Данные живут в браузере этого устройства (localStorage). Перенос на другое устройство — экспорт → импорт. Версия 8.0.16 (рецепты из холодильника по-новому, скан в холодильник, аудит программ: опытный уровень + дом без инвентаря) · собрано для Егора и друзей · 30.08.2026. Фото — Free Exercise DB; иконки предметов — game-icons.net (CC BY 3.0); нутриенты — USDA + Скурихин.</div>`;
   }
   $('#view').innerHTML = `<div class="fade-list">${h}</div>`;
 }
@@ -10783,13 +10843,13 @@ window.tourDlg = function(i){
       ${i>0?`<button class="btn sec" onclick="tourDlg(${i-1})">←</button>`:`<button class="btn sec" onclick="DB.tourDone=1;save();closeModal()">Пропустить</button>`}
       <button class="btn grow" onclick="${i<TOUR.length-1?`tourDlg(${i+1})`:'DB.tourDone=1;save();closeModal()'}">${i<TOUR.length-1?'Дальше':'Погнали 🚀'}</button></div>`);
 };
-const APP_VER = '8.0.15';
+const APP_VER = '8.0.16';
 const WHATS_NEW = [
-  '🔄 Ротация упражнений теперь каждую неделю: подсобные меняются от недели к неделе (базовые движения остаются — на них прогрессия)',
-  '💪 +1 упражнение на бицепс с первой недели («молотки» теперь и на этапе «Возвращение»)',
-  '☀️ Починил шкалу тяжести в светлых темах (Сакура, Озеро, Сова) — предмет больше не на чёрном прямоугольнике',
-  '⏱ Таймер отдыха больше не перекрывает кнопку «Завершить тренировку» после последнего упражнения',
-  '🆕 Окно «Что нового» больше не пропадает само',
+  '🍳 Рецепты из холодильника — по-новому: показывает, что можно приготовить прямо сейчас, и что «почти» (докупить пару позиций). Больше никакого «ничего не собрать»',
+  '📷 Скан штрихкода теперь умеет добавлять продукт в «Есть дома» (кнопка «В холодильник»)',
+  '🧺 Холодильник: кнопка «Готово» сверху (не нужно мотать вниз), продукты можно быстро убирать одним касанием, и кнопка «🍳 Что приготовить» сразу из холодильника',
+  '🏋️ Уровень «Опытный» теперь реально даёт больше объёма (было = «Средний»)',
+  '🏠 Дом без инвентаря: полноценный день тяги + упражнения на бицепс (рюкзак/бутылки)',
 ]
 window.whatsNewSeen = function(){ DB.seenVer = APP_VER; save(); };
 function whatsNewCheck(){

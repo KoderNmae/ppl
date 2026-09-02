@@ -149,6 +149,8 @@ input:focus,select:focus{outline:none; border-color:var(--accent); box-shadow:0 
 .b-pull{background:rgba(45,123,212,.13); color:#2461ad}
 .b-legs{background:rgba(18,141,96,.13); color:#0e7350}
 .b-rest{background:rgba(110,138,144,.14); color:var(--text2)}
+.b-full{background:rgba(124,77,212,.13); color:#5b34a8}
+html[data-theme=dark] .b-full{background:rgba(160,120,240,.16); color:#b79bf5}
 .b-deload{background:rgba(173,116,7,.13); color:#8f6206}
 html[data-theme=dark] .b-push{background:rgba(233,126,69,.14); color:#f0955f}
 html[data-theme=dark] .b-pull{background:rgba(79,150,232,.14); color:#7fb3f0}
@@ -1486,12 +1488,7 @@ function tuneProgram(ex, alts){
     });
     ex[t] = nx; alts[t] = na;
   }
-  if ((PROF.level||'some') === 'new'){
-    for (const t in ex) ex[t].forEach(e => {
-      for (const ph of ['p1','p2'])
-        if (e[ph] && e[ph][0] > 2) e[ph] = [e[ph][0]-1, e[ph][1], e[ph][2], e[ph][3]];
-    });
-  }
+  // «с нуля» (−1 подход) теперь применяется понедельно в buildSessions и снимается после первой разгрузки (v8.3)
   if ((PROF.level||'some') === 'fit'){
     // опытным — больше объёма на базовых движениях (+1 рабочий подход на этапах «Разгон» и «Новая территория»)
     for (const t in ex) ex[t].forEach(e => {
@@ -1597,6 +1594,8 @@ function buildProgram(){
   } else if (PROF.place === 'home'){
     const hb = buildHomeDB(PROF.equip || {}, stx);
     EXDB = hb.ex; ALTS = hb.alts;
+    const hf = buildHomeFull(PROF.equip || {}, stx);        // 4-й день «Фулбади» для домашнего PPL (v8.3)
+    if (hf.ex.length){ EXDB.Full = hf.ex; ALTS.Full = hf.alts; }
   } else {
     EXDB = JSON.parse(JSON.stringify(GYM_EXDB));
     ALTS = JSON.parse(JSON.stringify(GYM_ALTS));
@@ -1635,6 +1634,17 @@ const GYM_EXDB = {
   {n:'Разгибания ног', p0:[2,'12–15',12,15], p1:[3,'12–15',12,15], p2:[3,'12–15',12,15], rest:90, inc:5, start:'подбор', sub:'Гоблет-присед 3×10–12'},
   {n:'Икры стоя в тренажёре', p0:[2,'12–15',12,15], p1:[3,'12–15',12,15], p2:[3,'12–15',12,15], rest:75, inc:5, start:'подбор', sub:'Икры в жиме ногами'},
   {n:'Скручивания на верхнем блоке', p0:[2,'12–15',12,15], p1:[3,'12–15',12,15], p2:[3,'12–15',12,15], rest:75, inc:2.5, start:'подбор', sub:'Планка 3×40–60 сек'},
+ ],
+ /* 4-й день «Фулбади» (v8.3): вторая, более лёгкая проработка каждой группы за неделю — 2×/нед вместо 1,33.
+    Упражнения намеренно другие, чем в Push/Pull/Legs: те же группы, другой паттерн — меньше нагрузка на одни и те же суставы. */
+ Full:[
+  {n:'Жим гантелей лёжа', p0:[2,'8–12',8,12], p1:[3,'8–12',8,12], p2:[3,'8–12',8,12], rest:120, inc:2, start:'подбор', sub:'Жим в тренажёре (грудь)'},
+  {n:'Рычажная тяга в тренажёре', p0:[2,'8–12',8,12], p1:[3,'8–12',8,12], p2:[3,'8–12',8,12], rest:120, inc:5, start:'подбор', sub:'Тяга штанги в наклоне'},
+  {n:'Гакк-машина', p0:[2,'10–12',10,12], p1:[3,'8–12',8,12], p2:[3,'8–12',8,12], rest:150, inc:5, start:'подбор', sub:'Присед в Смите'},
+  {n:'Жим в тренажёре (плечи)', p0:[2,'10–12',10,12], p1:[2,'10–12',10,12], p2:[3,'10–12',10,12], rest:100, inc:5, start:'подбор', sub:'Жим Арнольда'},
+  {n:'Сгибания сидя', p0:[2,'12–15',12,15], p1:[2,'12–15',12,15], p2:[3,'12–15',12,15], rest:90, inc:5, start:'подбор', sub:'Гиперэкстензия с весом'},
+  {n:'Сгибания на блоке', p1:[2,'10–12',10,12], p2:[2,'10–12',10,12], rest:75, inc:2.5, start:'подбор', sub:'Сгибания с гантелями'},
+  {n:'Разгибания на блоке (прямая рукоять)', p1:[2,'10–12',10,12], p2:[2,'10–12',10,12], rest:75, inc:2.5, start:'подбор', sub:'Французский жим с гантелью'},
  ]
 };
 /* аналоги на ту же группу мышц: m — группа, a — варианты (индекс 0 = оригинал из EXDB) */
@@ -1663,6 +1673,15 @@ const GYM_ALTS = {
   {m:'Квадрицепс', a:[{n:'Гоблет-присед',inc:2},{n:'Выпады с гантелями',inc:2},{n:'Разгибания одной ногой',inc:2.5}]},
   {m:'Икры', a:[{n:'Икры в жиме ногами',inc:5},{n:'Икры сидя',inc:5},{n:'Икры стоя с гантелью одной ногой',inc:2}]},
   {m:'Пресс', a:[{n:'Подъём ног в упоре',inc:2.5},{n:'Скручивания на полу с весом',inc:2.5},{n:'Велосипед (пресс)',inc:0,bw:1},{n:'Боковая планка',inc:0,bw:1},{n:'Скалолаз',inc:0,bw:1},{n:'Паллоф-пресс с резинкой',inc:0,bw:1},{n:'Дэд-баг',inc:0,bw:1}]},
+ ],
+ Full: [
+  {m:'Грудь', a:[{n:'Жим в тренажёре (грудь)',inc:5},{n:'Жим в Смите лёжа',inc:2.5},{n:'Кроссовер (сведения на блоке)',inc:2.5}]},
+  {m:'Середина спины', a:[{n:'Тяга штанги в наклоне',inc:2.5},{n:'Тяга Т-грифа',inc:2.5},{n:'Тяга гантелей с упором грудью',inc:2}]},
+  {m:'Квадрицепс + ягодицы', a:[{n:'Присед в Смите',inc:2.5},{n:'Выпады с гантелями',inc:2},{n:'Гоблет-присед',inc:2}]},
+  {m:'Плечи', a:[{n:'Жим Арнольда',inc:2},{n:'Жим Смита сидя (плечи)',inc:2.5},{n:'Махи в кроссовере',inc:2.5}]},
+  {m:'Задняя поверхность', a:[{n:'Гиперэкстензия с весом',inc:2.5},{n:'Сгибания стоя одной ногой',inc:5}]},
+  {m:'Бицепс', a:[{n:'Сгибания с гантелями',inc:2},{n:'Сгибания на скамье Скотта',inc:2.5}]},
+  {m:'Трицепс', a:[{n:'Французский жим с гантелью',inc:2},{n:'Разгибания из-за головы на блоке',inc:2.5}]},
  ]
 };
 /* ============ ДВИЖОК ТЕХНИКИ v2: обратная кинематика от точек контакта ============ */
@@ -2516,8 +2535,8 @@ function buildHomeDB(eq, stx){
   return {ex, alts};
 }
 const TYPES = () => Object.keys(EXDB);
-const badgeCls = t => ({Push:'b-push',Pull:'b-pull',Legs:'b-legs',A:'b-push',B:'b-pull'})[t] || 'b-rest';
-const typeLabel = t => ({A:'Фулбади A',B:'Фулбади B'})[t] || t;
+const badgeCls = t => ({Push:'b-push',Pull:'b-pull',Legs:'b-legs',A:'b-push',B:'b-pull',Full:'b-full'})[t] || 'b-rest';
+const typeLabel = t => ({A:'Фулбади A',B:'Фулбади B',Full:'Фулбади'})[t] || t;
 /* ---- фулбади для зала: две чередующиеся тренировки ---- */
 function buildFbGym(stx){
   stx = stx || {};
@@ -2539,6 +2558,8 @@ function buildFbGym(stx){
     {n:'Разведения гантелей в стороны', p0:[2,'12–15',12,15], p1:[3,'12–15',12,15], p2:[4,'12–15',12,15], rest:75, inc:2, start:'подбор', sub:'Махи в кроссовере'},
     {n:'Сгибания на бицепс (штанга/EZ)', p1:[2,'8–12',8,12], p2:[2,'8–12',8,12], rest:75, inc:2.5, start:'подбор', sub:'Сгибания с гантелями'},
     {n:'Икры стоя в тренажёре', p0:[2,'12–15',12,15], p1:[3,'12–15',12,15], p2:[3,'12–15',12,15], rest:60, inc:5, start:'подбор', sub:'Икры в жиме ногами'},
+    // v8.3: квадрицепс и в день B (раньше — только жим ногами в A: 4–5 подходов в неделю, ниже порога роста). Добавлено в конец — индексы старых записей не сдвигаются
+    {n:'Разгибания ног', p0:[2,'12–15',12,15], p1:[2,'12–15',12,15], p2:[3,'12–15',12,15], rest:90, inc:5, start:'подбор', sub:'Гоблет-присед'},
    ],
   };
   const alts = {
@@ -2559,8 +2580,33 @@ function buildFbGym(stx){
     {m:'Средняя дельта', a:[{n:'Махи в кроссовере',inc:2.5},{n:'Разведения в тренажёре',inc:5}]},
     {m:'Бицепс', a:[{n:'Сгибания с гантелями',inc:2},{n:'Канат на блоке (нейтральный хват)',inc:2.5}]},
     {m:'Икры', a:[{n:'Икры в жиме ногами',inc:5},{n:'Икры сидя',inc:5}]},
+    {m:'Квадрицепс', a:[{n:'Гоблет-присед',inc:2},{n:'Выпады с гантелями',inc:2},{n:'Разгибания одной ногой',inc:2.5}]},
    ],
   };
+  return {ex, alts};
+}
+/* ---- 4-й день «Фулбади» для домашнего PPL: 6 слотов, не дублирующих якоря; подходов не больше 3 (вторая, лёгкая проработка) ---- */
+const FULL_HOME_PLAN = [['Push',2],['Pull',1],['Legs',3],['Push',1],['Legs',2],['Pull',3]];
+function buildHomeFull(eq, stx){
+  const ex = [], alts = [], used = new Set();
+  for (const [t, si] of FULL_HOME_PLAN){
+    const slot = (HOME_SLOTS[t]||[])[si]; if (!slot) continue;
+    const ok = slot.v.filter(v => (!v.need || eq[v.need]) && !used.has(v.n));
+    if (!ok.length) continue;
+    let c = ok[0];
+    if (PROF && (PROF.level||'some')==='new' && c.bw){ const ez = ok.find(v=>v.e); if (ez) c = ez; }
+    used.add(c.n);
+    const rest_ = ok.filter(v=>v!==c);
+    const entry = {n:c.n, rest:c.rest, inc:c.inc||0, bw:c.bw?1:0,
+      start: c.bw ? 'вес тела' : ((c.st && stx && stx[c.st]) ? stx[c.st] : 'подбор'),
+      sub: rest_[0] ? rest_[0].n : '—'};
+    for (const ph of ['p0','p1','p2']) if (c[ph]){
+      const [s, reps, lo, hi] = c[ph];
+      entry[ph] = [Math.min(ph==='p0'?2:3, s), reps.replace(' · топ-сет',''), lo, hi];
+    }
+    ex.push(entry);
+    alts.push({m:slot.m.replace(' · якорь',''), a: rest_.map(v=>({n:v.n, inc:v.inc||0, bw:v.bw?1:0}))});
+  }
   return {ex, alts};
 }
 /* ---- фулбади для дома: собирается из домашних слотов ---- */
@@ -2598,6 +2644,23 @@ function phaseOf(w){
   return w <= (WEEKS()>=10?6:5) ? 'p1' : 'p2';
 }
 const PHASE_NAME = {p0:'Возвращение', p1:'Разгон', deload:'Разгрузка', p2:'Новая территория'};
+/* — периодизация v8.3 — */
+function firstDeload(){ const d = deloadWeeks(); return d.length ? d[0] : (WEEKS()>=10 ? 7 : 6); }
+// «с нуля» = минус подход только до первой разгрузки; дальше человек уже не новичок — переводим в обычный режим сами
+function lvlEff(w){ const l = (PROF && PROF.level) || 'some'; return (l==='new' && w > firstDeload()) ? 'some' : l; }
+// порядковый номер недели внутри блока (1..): блок «Разгон» = нед. 3..p1end, блоки «Новой территории» — между разгрузками
+function blockWeekIdx(w){
+  const ph = phaseOf(w); if (ph==='p0' || ph==='deload') return 0;
+  let start = 3;
+  if (ph==='p2'){ start = (WEEKS()>=10?6:5)+1; for (const d of deloadWeeks()) if (d < w && d+1 > start) start = d+1; }
+  return w - start + 1;
+}
+// рампа объёма: +1 подход на компаунды каждые 2 недели блока (якорь до +2, остальные до +1), изоляция без рампы, потолок 6
+function rampSets(sets, k, top, lvl){
+  if (sets < 3 || k <= 0) return sets;
+  const cap = top ? (lvl==='new' ? 1 : 2) : (lvl==='new' ? 0 : 1);
+  return Math.min(6, sets + Math.min(cap, Math.floor((k-1)/2)));
+}
 // тренировки: очередь по порядку (пропустил — делаешь следующую, даты — ориентир)
 function buildSessions(){
   const list = [];
@@ -2609,20 +2672,30 @@ function buildSessions(){
   const fb = PROF.split === 'fb';
   const rot = fb ? ['A','B'] : ['Push','Pull','Legs'];
   const dows = (PROF.days && PROF.days.length) ? PROF.days : (fb ? [0,2,4] : [0,1,3,5]);
+  // v8.3: PPL идёт фиксированной неделей Push · Pull · Legs · Фулбади (каждая группа 2×/нед) начиная с недели hybridFrom;
+  // недели до неё остаются «по кругу» как были — так у уже пройденных тренировок не меняются ни тип, ни индексы, ни история
+  const FIXED = ['Push','Pull','Legs','Full'];
+  const hyb = (!fb && PROF.hybridFrom != null && EXDB.Full) ? PROF.hybridFrom : null;
   let i = 0;
   for (let w = 0; w < WEEKS(); w++)
-    for (const dow of dows) {
+    dows.forEach((dow, di) => {
       const d = new Date(W1); d.setDate(d.getDate() + w*7 + dow);
-      list.push({w:w+1, d, t:rot[i++ % rot.length]});
-    }
+      const t = (hyb != null && w+1 >= hyb) ? FIXED[di % FIXED.length] : rot[i++ % rot.length];
+      list.push({w:w+1, d, t});
+    });
   return list.map((s, idx) => {
     const ph = phaseOf(s.w);
     const base = ph==='deload' ? 'p1' : ph;
+    const lvl = lvlEff(s.w), k = blockWeekIdx(s.w);
     const exs = EXDB[s.t].map((e,ei)=>({...e, ei})).filter(e => e[base]).map(e => {
-      const [sets, reps, lo, hi] = e[base];
-      return ph==='deload'
-        ? {ei:e.ei, n:e.n, sets:2, reps:reps.split(' ·')[0]+' · RPE≤6', lo, hi, rest:e.rest, inc:e.inc, bw:e.bw||0, hint:e.bw?'−30–40% повторов':'−30% от рабочего', sub:e.sub, deload:true}
-        : {ei:e.ei, n:e.n, sets, reps, lo, hi, rest:e.rest, inc:e.inc, bw:e.bw||0, hint:s.w<=2?e.start:'', sub:e.sub};
+      let [sets, reps, lo, hi] = e[base];
+      const isAnchor = /топ-сет/.test(((e.p2||[])[1])||'');          // якорь = движение с топ-сетом в «Новой территории»
+      const top = ph==='p2' && isAnchor ? 1 : 0;
+      if (ph==='deload')
+        return {ei:e.ei, n:e.n, sets:2, reps:reps.split(' ·')[0]+' · RPE≤6', lo, hi, rest:e.rest, inc:e.inc, bw:e.bw||0, hint:e.bw?'−30–40% повторов':'−30% от рабочего', sub:e.sub, deload:true};
+      if (ph!=='p0' && lvl==='new' && sets > 2) sets -= 1;          // «с нуля»: на подход меньше — до первой разгрузки
+      if (ph!=='p0') sets = rampSets(sets, k, isAnchor, lvl);       // рампа объёма внутри блока (якорь до +2, остальные до +1)
+      return {ei:e.ei, n:e.n, sets, reps, lo, hi, rest:e.rest, inc:e.inc, bw:e.bw||0, hint:s.w<=2?e.start:'', sub:e.sub, top};
     });
     return {id:idx, w:s.w, date:s.d, type:s.t, phase:ph, exs};
   });
@@ -2864,15 +2937,16 @@ function variantOf(sid, ei){
   const s = SESSIONS[sid];
   const perSess = DB.sessions[sid] && DB.sessions[sid].swapEx ? DB.sessions[sid].swapEx[ei] : undefined;
   const val = perSess != null ? perSess : (DB.swaps[s.type+':'+ei] != null ? DB.swaps[s.type+':'+ei] : 0);
-  // ротация вспомогательных: каждую неделю идём по кругу аналогов слота, чтобы видеть разнообразие с 1-й недели
+  // ротация вспомогательных: блоками по 3 недели идём по кругу аналогов слота (v8.3; «weekly» — старый режим раз в неделю).
+  // 3 недели на вариант = 3–6 подходов к одному движению — двойная прогрессия успевает сработать, а разнообразие остаётся.
   // (якорь не трогаем — там линейная прогрессия; разгрузочные недели вариант не сдвигают)
   if (val === 0 && perSess == null && (PROF.variety||'rotate') !== 'stable' && ei !== (anchorsOf()[s.type] ?? 0)){
     const slotAlts = (ALTS[s.type][ei] && ALTS[s.type][ei].a) || [];
     if (slotAlts.length){
       let wEff = 0;
       for (let i = 1; i <= s.w; i++){ if (phaseOf(i) !== 'deload') wEff++; }
-      // неделя 1 — базовые упражнения (подобраны под тебя), дальше каждую неделю новый вариант слота
-      const pick = Math.max(0, wEff-1) % (slotAlts.length + 1);
+      const per = PROF.variety === 'weekly' ? 1 : 3;
+      const pick = Math.floor(Math.max(0, wEff-1) / per) % (slotAlts.length + 1);
       if (pick > 0){ const a = slotAlts[pick-1]; return {idx:pick, n:a.n, inc:a.inc||0, bw:a.bw||0, rot:1}; }
     }
   }
@@ -2949,6 +3023,14 @@ function exSuggest(sess, ex){
   const w = Math.max(...last.sets.map(s=>s.w||0));
   const allTop = last.sets.every(s => s.r >= ex.hi);
   if (ex.deload) return {txt:'разгрузка: '+r1(w*0.7)+' кг (−30%)', w:r1(w*0.7)};
+  if (ex.top){
+    // топ-сет (v8.3): первый подход тяжёлый на RPE 8–9, остальные −10%; топ растёт, когда в прошлый раз добил верх диапазона
+    const step = v.inc || 2.5;
+    const prog = last.sets[0] && last.sets[0].r >= ex.hi;
+    const topW = prog ? r1(w + step) : w;
+    const backW = r1(Math.round((topW * 0.9) / step) * step);
+    return {txt:'топ-сет 1×'+ex.lo+'–'+ex.hi+': '+topW+' кг (RPE 8–9) → ещё '+Math.max(1, ex.sets-1)+'×: '+backW+' кг', w:topW, up:prog};
+  }
   if (allTop) return {txt:'все подходы по '+ex.hi+' — добавляй: '+r1(w+v.inc)+' кг', w:r1(w+v.inc), up:true};
   return {txt:'прошлый раз: '+last.sets.map(s=>s.w+'×'+s.r).join(' · '), w};
 }
@@ -10753,18 +10835,19 @@ function vMore(){
   if (moreSec==='base'){ h += guidesSection() + encSection(); }
   if (moreSec==='plan'){
     const N = WEEKS(), dls = deloadWeeks(), p1end = N>=10?6:5;
+    const nt = 'Новая территория · RPE 8–9, топ-сет на якорях (1 тяжёлый + остальные −10%), +1 подход каждые 2 недели';
     let phRows = `<tr><td>Нед. ${PROF.legacyWeek0?'0':'1'}–2</td><td>Возвращение · RPE 6–7, по 2 подхода, веса 60–70%</td></tr>
-      <tr><td>Нед. 3–${p1end}</td><td>Разгон · RPE 7–8, вернуть рабочие веса</td></tr>`;
+      <tr><td>Нед. 3–${p1end}</td><td>Разгон · RPE 7–8, 3–4 подхода, +1 подход на компаунды с 3-й недели блока</td></tr>`;
     if (!dls.length){
-      phRows += `<tr><td>Нед. ${p1end+1}–${N}</td><td>Новая территория · RPE 8–9, топ-сеты. Разгрузка не заложена — сделай лёгкую неделю после программы</td></tr>`;
+      phRows += `<tr><td>Нед. ${p1end+1}–${N}</td><td>${nt}. Разгрузка не заложена — сделай лёгкую неделю после программы</td></tr>`;
     } else {
       let from = p1end+1;
       for (const dw of dls){
-        if (dw > from) phRows += `<tr><td>Нед. ${from}–${dw-1}</td><td>Новая территория · RPE 8–9, топ-сеты</td></tr>`;
-        phRows += `<tr><td>Нед. ${dw}</td><td>Разгрузка · −30% веса, 2 подхода, RPE ≤6</td></tr>`;
+        if (dw > from) phRows += `<tr><td>Нед. ${from}–${dw-1}</td><td>${nt}</td></tr>`;
+        phRows += `<tr><td>Нед. ${dw}</td><td>Разгрузка · −30% веса, 2 подхода, RPE ≤6${(PROF.level||'some')==='new' && dw===firstDeload()?' · после неё режим «с нуля» снимается — подходы как у всех':''}</td></tr>`;
         from = dw+1;
       }
-      if (from <= N) phRows += `<tr><td>Нед. ${from}–${N}</td><td>Новая территория · RPE 8–9, топ-сеты</td></tr>`;
+      if (from <= N) phRows += `<tr><td>Нед. ${from}–${N}</td><td>${nt}</td></tr>`;
     }
     h += `<div class="card"><h3>Программа ${DB.cycles&&DB.cycles.length?('№'+(DB.cycles.length+1)):''}</h3>
       ${DB.cycles&&DB.cycles.length?`<div class="small" style="margin-bottom:8px">Завершено программ: ${DB.cycles.length}. История веса, замеров и фото — сквозная.</div>`:''}
@@ -10776,6 +10859,12 @@ function vMore(){
         <tr><td>нечётные</td><td>A</td><td>B</td><td>A</td></tr>
         <tr><td>чётные</td><td>B</td><td>A</td><td>B</td></tr></table>
         <div class="week-note">Две тренировки на всё тело чередуются. Пропустил день — не удваивай: просто делаешь следующую из очереди.</div></div>`;
+    } else if (PROF.hybridFrom != null && EXDB.Full){
+      const hf = PROF.hybridFrom;
+      h += `<div class="card"><h3>Неделя (Пн · Вт · Чт · Сб)</h3><table>
+        <tr><th>Пн</th><th>Вт</th><th>Чт</th><th>Сб</th></tr>
+        <tr><td>Push</td><td>Pull</td><td>Legs</td><td>Фулбади</td></tr></table>
+        <div class="week-note">Каждая группа мышц работает 2 раза в неделю: один раз в свой день на полном объёме, второй — легче, в фулбади, другими упражнениями.${hf>1?` До недели ${hf} тренировки шли по кругу Push→Pull→Legs — как и было.`:''} Пропустил день — не удваивай: просто делаешь следующую из очереди.</div></div>`;
     } else {
       const cyc = i => { const arr=[]; for (let x=i+1; x<=N; x+=3) arr.push(x); return arr.join(', '); };
       h += `<div class="card"><h3>Ротация (Пн · Вт · Чт · Сб)</h3><table>
@@ -11167,12 +11256,13 @@ window.adjustDlg = function(){
       <button data-l="new" class="${lvl==='new'?'on':''}" onclick="adjSeg(this,'adj-lvl')">С нуля</button>
       <button data-l="some" class="${lvl==='some'?'on':''}" onclick="adjSeg(this,'adj-lvl')">Средний</button>
       <button data-l="fit" class="${lvl==='fit'?'on':''}" onclick="adjSeg(this,'adj-lvl')">Опытный</button></div>
-    <div class="tiny">«С нуля» — щадящие варианты (отжимания от стены/с колен вместо полных) и на подход меньше в тяжёлых фазах.</div>
+    <div class="tiny">«С нуля» — щадящие варианты (отжимания от стены/с колен вместо полных) и на подход меньше до первой разгрузки; после неё подходы как у всех — к тому моменту ты уже не новичок.</div>
     <div class="wlab" style="margin-top:10px">Разнообразие</div>
     <div class="seg" id="adj-var">
-      <button data-v="rotate" class="${(PROF.variety||'rotate')!=='stable'?'on':''}" onclick="adjSeg(this,'adj-var')">Ротация</button>
-      <button data-v="stable" class="${(PROF.variety||'rotate')==='stable'?'on':''}" onclick="adjSeg(this,'adj-var')">Стабильная</button></div>
-    <div class="tiny">Ротация: вспомогательные упражнения меняются каждые 2 недели по кругу аналогов — например грудь: штанга → гантели → тренажёр. Якорное упражнение не меняется — там идёт линейная прогрессия. История весов у каждого варианта своя, разгрузочная неделя блок не сдвигает.</div>
+      <button data-v="rotate" class="${!['stable','weekly'].includes(PROF.variety||'rotate')?'on':''}" onclick="adjSeg(this,'adj-var')">Блоками по 3 нед.</button>
+      <button data-v="weekly" class="${PROF.variety==='weekly'?'on':''}" onclick="adjSeg(this,'adj-var')">Каждую неделю</button>
+      <button data-v="stable" class="${PROF.variety==='stable'?'on':''}" onclick="adjSeg(this,'adj-var')">Стабильная</button></div>
+    <div class="tiny">Блоками: вспомогательные упражнения меняются раз в 3 недели по кругу аналогов (грудь: штанга → гантели → тренажёр) — за блок успеваешь прибавить вес, и разнообразие остаётся. Каждую неделю — вариант возвращается раз в 1–1,5 месяца, прогрессия на нём почти не идёт. Якорное упражнение не меняется никогда — там линейная прогрессия. История весов у каждого варианта своя, разгрузка блок не сдвигает.</div>
     <div class="wlab" style="margin-top:10px">Ограничения</div>
     <div class="seg" id="adj-inj">
       <button data-i="knee" class="${inj.knee?'on':''}" onclick="this.classList.toggle('on')">Колени</button>
@@ -11396,7 +11486,7 @@ function wizard(){
       <div class="seg" id="wz-split">
         <button data-s="ppl" class="on" onclick="wzSetSplit('ppl')">PPL · 4 дня</button>
         <button data-s="fb" onclick="wzSetSplit('fb')">Фулбади · 3 дня</button></div>
-      <div class="tiny">PPL — Push/Pull/Legs, Пн-Вт-Чт-Сб, больше объёма на группу. Фулбади — всё тело за тренировку, Пн-Ср-Пт, две чередующиеся программы A/B: проще вписать в неделю, каждая мышца работает чаще.</div></div>
+      <div class="tiny">PPL — Push, Pull, Legs и четвёртый день фулбади (Пн-Вт-Чт-Сб): каждая группа 2 раза в неделю, больше объёма. Фулбади — всё тело за тренировку, Пн-Ср-Пт, две чередующиеся программы A/B: проще вписать в неделю, каждая мышца работает 3 раза.</div></div>
     <div class="card"><h3>Где тренируешься</h3>
       <div class="seg" id="wz-place">
         <button data-p="gym" class="on" onclick="wzSetPlace('gym')">В зале</button>
@@ -11470,7 +11560,8 @@ window.wizardCalc = function(){
     : {bench:num('#wz-b'), pull:num('#wz-p'), leg:num('#wz-l'), thrust:num('#wz-t')};
   if (wzDays.length !== wzDaysNeed()) return toast('Выбери ровно '+wzDaysNeed()+' дня тренировок');
   const p = {name, sex:wzSex, age, height:h, startWeight:Math.round(w*10)/10, starts, weeks:wzWeeks,
-    place:wzPlace, equip:{...wzEq}, split:wzSplit, days:[...wzDays], inj:{...wzInj}, activity:wzAct, level:wzLvl, goalMode:wzGoal};
+    place:wzPlace, equip:{...wzEq}, split:wzSplit, days:[...wzDays], inj:{...wzInj}, activity:wzAct, level:wzLvl, goalMode:wzGoal,
+    hybridFrom: wzSplit==='fb' ? null : 1};   // новый PPL сразу фиксированной неделей Push·Pull·Legs·Фулбади (v8.3)
   const c = calcPlan(p);
   const t = today(); const dow = (t.getDay()+6)%7;
   const monday = new Date(t.getTime() + ((7-dow)%7)*864e5);
@@ -11482,7 +11573,7 @@ window.wizardCalc = function(){
     <div class="kv"><span>Траектория ${wzWeeks} недель</span><b>${p.startWeight} → ~${c.targets[wzWeeks]} кг</b></div>
     <div class="kv"><span>Старт → финиш</span><b>${fmtD(monday)} (Пн) → ${fmtD(finish)}</b></div>
     <div class="kv"><span>Дни</span><b>${wzDays.map(d=>DAY_N[d]).join(' · ')}</b></div>
-    <div class="kv"><span>Формат</span><b>${wzPlace==='home' ? 'Дом · '+(['db','band','bar'].filter(k=>wzEq[k]).map(k=>({db:'гантели',band:'резинка',bar:'турник'})[k]).join(', ')||'вес тела') : 'Зал'} · ${wzSplit==='fb'?'Фулбади A/B':'Push/Pull/Legs'}</b></div>
+    <div class="kv"><span>Формат</span><b>${wzPlace==='home' ? 'Дом · '+(['db','band','bar'].filter(k=>wzEq[k]).map(k=>({db:'гантели',band:'резинка',bar:'турник'})[k]).join(', ')||'вес тела') : 'Зал'} · ${wzSplit==='fb'?'Фулбади A/B':'Push/Pull/Legs + фулбади'}</b></div>
     <div class="kv"><span>Тренировок</span><b>${wzWeeks*(wzSplit==='fb'?3:4)} за ${wzWeeks} недель</b></div>
     <div class="kv"><span>Стартовые веса</span><b>${starts.bench?('жим '+(Math.round(starts.bench*0.7/2.5)*2.5)+' кг'):(starts.hbench?('жим гантелей '+(Math.round(starts.hbench*0.7/2)*2)+' кг'):'подбор на 1-й неделе')}</b></div>
     <div class="tiny" style="margin-top:8px">Начинаем с ~70% рабочих весов — первые 2 недели лёгкие, это план, а не осторожничание. Калории можно будет менять корректировками.</div>
@@ -11533,8 +11624,10 @@ window.tourDlg = function(i){
       ${i>0?`<button class="btn sec" onclick="tourDlg(${i-1})">←</button>`:`<button class="btn sec" onclick="DB.tourDone=1;save();closeModal()">Пропустить</button>`}
       <button class="btn grow" onclick="${i<TOUR.length-1?`tourDlg(${i+1})`:'DB.tourDone=1;save();closeModal()'}">${i<TOUR.length-1?'Дальше':'Погнали 🚀'}</button></div>`);
 };
-const APP_VER = '8.2.0';
+const APP_VER = '8.3.0';
 const WHATS_NEW = [
+  '🏋️ Программа 2.0. PPL получил 4-й день «Фулбади» (Сб): каждая группа теперь 2 раза в неделю вместо 1,3 — со следующей недели, прошлые тренировки не меняются.',
+  '📈 Периодизация по-настоящему: +1 подход на компаунды каждые 2 недели блока (якоря до +2), топ-сет на якорях с расчётом веса (1 тяжёлый + остальные −10%), ротация вспомогательных блоками по 3 недели — чтобы вес на них успевал расти. Режим «с нуля» снимается после первой разгрузки. В фулбади A/B добавлены квадрицепсы в день B.',
   '🛒 Магазин 2.0: +800 популярных продуктов — Сникерс, Лейс, Простоквашино, Активиа, Кока-Кола, Доширак, колбасы, хлеб, спортпит, меню Вкусно и точка / Ростикс / Burger King / Додо… Ищутся мгновенно без интернета, по-русски и латиницей.',
   '📷 Штрихкоды запоминаются: отсканировал неизвестный → нашёл по названию или ввёл с упаковки → в следующий раз найдётся сразу и офлайн.',
   '🔎 Интернет-поиск больше не виснет: два источника одновременно, жёсткий таймаут, честное «не ответил». «Своё» теперь сохраняет продукт (КБЖУ на 100 г) в «Мои продукты» — не разовое блюдо.',
@@ -11576,7 +11669,7 @@ window.journalOpen = function(){
   }
   list.sort((a,b)=> a.st.done < b.st.done ? -1 : 1);
   if (!list.length) return toast('Журнал пока пуст — заполнится после первой тренировки');
-  const TYPE_N = {Push:'Push · жимы', Pull:'Pull · тяги', Legs:'Legs · ноги', FB:'Фулбади'};
+  const TYPE_N = {Push:'Push · жимы', Pull:'Pull · тяги', Legs:'Legs · ноги', Full:'Фулбади · всё тело', FB:'Фулбади'};
   const tonOf = st => Object.values(st.sets||{}).flat().filter(Boolean).reduce((a,z)=>a+(z.w||0)*(z.r||0),0);
   const totTon = list.reduce((a,x)=>a+tonOf(x.st),0);
   // рекорды: топ-5 упражнений по расчётному максимуму
@@ -11786,7 +11879,16 @@ window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); window
     const hasData = (Object.keys(DB.weights||{}).length + Object.keys(DB.sessions||{}).length + Object.keys(DB.food||{}).length) > 0;
     if (hasData){ DB.profile = EGOR; save(); }   // миграция существующего пользователя
   }
-  if (DB.profile){ PROF = DB.profile; buildProgram(); render(); whatsNewCheck(); goShortcut(); entryNudges(); }
+  if (DB.profile){
+    PROF = DB.profile;
+    // v8.3: PPL переводится на фиксированную неделю Push·Pull·Legs·Фулбади — со СЛЕДУЮЩЕЙ недели, текущая и прошлые не трогаются
+    if (PROF.split !== 'fb' && PROF.hybridFrom == null){
+      let wk = 0;
+      try { const w1 = fromKey(PROF.w1); wk = Math.max(0, Math.floor((today() - w1)/864e5/7) + 1); } catch(e){}
+      PROF.hybridFrom = wk + 1; save();
+    }
+    buildProgram(); render(); whatsNewCheck(); goShortcut(); entryNudges();
+  }
   else wizard();
 })();
 /* — ярлыки с иконки приложения: ./?go=train|water|weight|food — */
